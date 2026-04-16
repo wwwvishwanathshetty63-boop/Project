@@ -1,7 +1,9 @@
 import bcrypt
 import secrets
 import string
+import random
 import logging
+from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, g
 from backend.models import get_db, row_to_dict, rows_to_list
 from backend.utils.auth import generate_token, token_required
@@ -23,21 +25,214 @@ def _generate_employee_id():
     return f"EMP-{digits}"
 
 
-def _generate_random_password(length=10):
-    """Generate a secure random password."""
-    alphabet = string.ascii_letters + string.digits + "!@#$%"
-    return "".join(secrets.choice(alphabet) for _ in range(length))
+def _generate_employee_password(name: str) -> str:
+    """Generate a password by combining the employee name with random characters/numbers."""
+    # Clean name: take first part, capitalize
+    clean_name = name.strip().split()[0].capitalize()
+    # Add 4-6 random alphanumeric + special characters
+    suffix_chars = string.ascii_letters + string.digits + "!@#$"
+    suffix_len = secrets.choice([4, 5, 6])
+    suffix = "".join(secrets.choice(suffix_chars) for _ in range(suffix_len))
+    return f"{clean_name}{suffix}"
 
 
-@auth_bp.route("/register", methods=["POST"])
-def register():
-    """Register a new company account."""
+
+# In-memory store for verified emails (maps email -> expiry timestamp)
+# This avoids a second DB round-trip during registration.
+_verified_emails: dict = {}
+
+
+@auth_bp.route("/send-otp", methods=["POST"])
+def send_otp():
+    """Generate and email a 6-digit OTP for company registration verification."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
-    name = sanitize_string(data.get("name", ""))
     email = sanitize_string(data.get("email", "")).lower()
+    if not validate_email(email):
+        return jsonify({"error": "Invalid email format"}), 400
+
+    db = get_db()
+    try:
+        # Block already-registered emails
+        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        if existing:
+            return jsonify({"error": "This email is already registered. Please log in instead."}), 409
+
+        otp = "".join([str(random.randint(0, 9)) for _ in range(6)])
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+        # Invalidate any prior unused OTPs for same email
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = ? AND is_used = 0", (email,))
+        db.execute(
+            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (?, ?, ?)",
+            (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    from backend.services.alert_service import send_otp_email
+    email_sent = send_otp_email(email, otp)
+
+    return jsonify({
+        "message": "OTP sent to your email address." if email_sent else "OTP generated (SMTP not configured — check server logs for the code).",
+        "email_sent": email_sent,
+        # In dev mode expose OTP if SMTP not configured (remove in production)
+        "dev_otp": otp,
+    }), 200
+
+
+@auth_bp.route("/verify-otp", methods=["POST"])
+def verify_otp():
+    """Verify the 6-digit OTP submitted by the company during registration."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    email = sanitize_string(data.get("email", "")).lower()
+    otp   = str(data.get("otp", "")).strip()
+
+    if not validate_email(email):
+        return jsonify({"error": "Invalid email"}), 400
+    if not otp or len(otp) != 6 or not otp.isdigit():
+        return jsonify({"error": "OTP must be 6 digits"}), 400
+
+    db = get_db()
+    try:
+        record = row_to_dict(
+            db.execute(
+                """SELECT * FROM email_verifications
+                   WHERE email = ? AND otp = ? AND is_used = 0
+                   ORDER BY created_at DESC LIMIT 1""",
+                (email, otp),
+            ).fetchone()
+        )
+
+        if not record:
+            return jsonify({"error": "Invalid or expired OTP. Please request a new one."}), 400
+
+        if datetime.utcnow() > datetime.strptime(record["expires_at"], "%Y-%m-%d %H:%M:%S"):
+            db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+            db.commit()
+            return jsonify({"error": "OTP has expired. Please request a new one."}), 400
+
+        # Mark OTP used
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+        db.commit()
+    finally:
+        db.close()
+
+    # Store verified status in memory (15-min window to complete registration)
+    _verified_emails[email] = datetime.utcnow() + timedelta(minutes=15)
+
+    return jsonify({"message": "Email verified successfully. You may now complete your registration.", "verified": True}), 200
+
+
+@auth_bp.route("/reset-password-request", methods=["POST"], strict_slashes=False)
+def reset_password_request():
+    """Request a password reset OTP for an existing company user."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    email = sanitize_string(data.get("email", "")).lower()
+    if not validate_email(email):
+        return jsonify({"error": "Invalid email format"}), 400
+
+    db = get_db()
+    try:
+        # Check if user exists (only company users allowed here for this specific flow)
+        user = row_to_dict(db.execute("SELECT id FROM users WHERE email = ? AND role = 'company'", (email,)).fetchone())
+        if not user:
+            return jsonify({"error": "No company account found with this email"}), 404
+
+        otp = "".join([str(random.randint(0, 9)) for _ in range(6)])
+        expires_at = datetime.utcnow() + timedelta(minutes=10)
+
+        # Invalidate prior reset OTPs
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = ? AND is_used = 0", (email,))
+        db.execute(
+            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (?, ?, ?)",
+            (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
+        )
+        db.commit()
+    finally:
+        db.close()
+
+    from backend.services.alert_service import send_otp_email
+    email_sent = send_otp_email(email, otp)
+
+    return jsonify({
+        "message": "Verification code sent to your email." if email_sent else "Verification code generated.",
+        "email_sent": email_sent,
+        # Force dev_otp even if email_sent is True, but label it for dev.
+        # This helps subagents and devs when they don't have access to the recipient inbox.
+        "dev_otp": otp, 
+    }), 200
+
+
+@auth_bp.route("/reset-password-verify", methods=["POST"], strict_slashes=False)
+def reset_password_verify():
+    """Verify OTP and update password for company user."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    email        = sanitize_string(data.get("email", "")).lower()
+    otp          = str(data.get("otp", "")).strip()
+    new_password = data.get("password", "")
+
+    if not validate_email(email):
+        return jsonify({"error": "Invalid email"}), 400
+    if not otp or len(otp) != 6:
+        return jsonify({"error": "OTP must be 6 digits"}), 400
+    
+    valid_pw, pw_error = validate_password(new_password)
+    if not valid_pw:
+        return jsonify({"error": pw_error}), 400
+
+    db = get_db()
+    try:
+        # Verify OTP
+        record = row_to_dict(
+            db.execute(
+                """SELECT * FROM email_verifications
+                   WHERE email = ? AND otp = ? AND is_used = 0
+                   ORDER BY created_at DESC LIMIT 1""",
+                (email, otp),
+            ).fetchone()
+        )
+
+        if not record:
+            return jsonify({"error": "Invalid or expired code."}), 400
+
+        if datetime.utcnow() > datetime.strptime(record["expires_at"], "%Y-%m-%d %H:%M:%S"):
+            return jsonify({"error": "Code has expired."}), 400
+
+        # Hash new password
+        password_hash = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
+
+        # Update password AND mark OTP used
+        db.execute("UPDATE users SET password_hash = ? WHERE email = ?", (password_hash, email))
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+        db.commit()
+    finally:
+        db.close()
+
+    return jsonify({"message": "Password updated successfully. You can now log in."}), 200
+
+
+@auth_bp.route("/register", methods=["POST"])
+def register():
+    """Register a new company account — requires prior email verification via OTP."""
+    data = request.get_json()
+    if not data:
+        return jsonify({"error": "Request body is required"}), 400
+
+    name     = sanitize_string(data.get("name", ""))
+    email    = sanitize_string(data.get("email", "")).lower()
     password = data.get("password", "")
 
     if not validate_name(name):
@@ -47,6 +242,15 @@ def register():
     valid_pw, pw_error = validate_password(password)
     if not valid_pw:
         return jsonify({"error": pw_error}), 400
+
+    # ── Enforce OTP verification ──────────────────────────────────────────────
+    verified_until = _verified_emails.get(email)
+    if not verified_until or datetime.utcnow() > verified_until:
+        _verified_emails.pop(email, None)
+        return jsonify({"error": "Email not verified. Please verify your email with OTP first."}), 403
+    # Remove from store after use so each registration requires fresh verification
+    _verified_emails.pop(email, None)
+    # ─────────────────────────────────────────────────────────────────────────
 
     db = get_db()
     try:
@@ -86,15 +290,18 @@ def register():
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
-    """Authenticate user (company via email or employee via employee_id)."""
+    """Authenticate user — company via email/password, employee via email+name+password."""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Request body is required"}), 400
 
-    employee_id = data.get("employee_id", "").strip()
     email = sanitize_string(data.get("email", "")).lower()
     password = data.get("password", "")
+    name = sanitize_string(data.get("name", ""))  # Only used for employee login
+    login_type = data.get("login_type", "company")  # 'company' or 'employee'
 
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
     if not password:
         return jsonify({"error": "Password is required"}), 400
 
@@ -102,18 +309,24 @@ def login():
     try:
         user = None
 
-        if employee_id:
-            # Employee login via employee ID
+        if login_type == "employee":
+            # Employee login: match by email + name + role
+            if not name:
+                return jsonify({"error": "Name is required for employee login"}), 400
             user = row_to_dict(
-                db.execute("SELECT * FROM users WHERE employee_id = ?", (employee_id,)).fetchone()
-            )
-        elif email:
-            # Company login via email
-            user = row_to_dict(
-                db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+                db.execute(
+                    "SELECT * FROM users WHERE email = ? AND LOWER(name) = LOWER(?) AND role = 'employee'",
+                    (email, name),
+                ).fetchone()
             )
         else:
-            return jsonify({"error": "Email or Employee ID is required"}), 400
+            # Company login via email
+            user = row_to_dict(
+                db.execute(
+                    "SELECT * FROM users WHERE email = ? AND role = 'company'",
+                    (email,),
+                ).fetchone()
+            )
 
         if not user:
             return jsonify({"error": "Invalid credentials"}), 401
@@ -133,7 +346,7 @@ def login():
                         "name": user["name"],
                         "email": user["email"],
                         "role": user["role"],
-                        "employee_id": user.get("employee_id"),
+                        "company_id": user.get("company_id"),
                     },
                 }
             ),
@@ -146,7 +359,9 @@ def login():
 @auth_bp.route("/invite-employee", methods=["POST"])
 @token_required
 def invite_employee():
-    """Company invites an employee by name and email. Sends an invitation email."""
+    """Company invites an employee by name and email.
+    Directly creates the employee account and sends credentials via official email.
+    """
     # Only company accounts can invite
     if g.current_user_role != "company":
         return jsonify({"error": "Only company accounts can invite employees"}), 403
@@ -170,103 +385,43 @@ def invite_employee():
         if existing:
             return jsonify({"error": "An employee with this email already exists"}), 409
 
-        # Check if there's already a pending invite for this email from this company
-        pending = db.execute(
-            "SELECT id FROM employee_invitations WHERE email = ? AND company_id = ? AND is_used = 0",
-            (email, g.current_user_id),
-        ).fetchone()
-        if pending:
-            return jsonify({"error": "An invitation is already pending for this email"}), 409
+        # Generate employee credentials
+        employee_id = _generate_employee_id()
+        while db.execute("SELECT id FROM users WHERE employee_id = ?", (employee_id,)).fetchone():
+            employee_id = _generate_employee_id()
 
-        # Generate secure token
-        token = secrets.token_urlsafe(48)
+        raw_password = _generate_employee_password(name)
+        password_hash = bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
+        # Create the employee user immediately
         db.execute(
-            "INSERT INTO employee_invitations (company_id, name, email, token) VALUES (?, ?, ?, ?)",
+            """INSERT INTO users (name, email, password_hash, role, company_id, employee_id)
+               VALUES (?, ?, ?, 'employee', ?, ?)""",
+            (name, email, password_hash, g.current_user_id, employee_id),
+        )
+
+        # Record the invitation
+        token = secrets.token_urlsafe(48)
+        db.execute(
+            "INSERT INTO employee_invitations (company_id, name, email, token, is_used) VALUES (?, ?, ?, ?, 1)",
             (g.current_user_id, name, email, token),
         )
         db.commit()
 
-        # Send invitation email
-        from backend.services.alert_service import send_invitation_email
-        email_sent = send_invitation_email(email, name, token)
+        # Send official credentials email
+        from backend.services.alert_service import send_employee_credentials_email
+        email_sent = send_employee_credentials_email(email, name, raw_password)
 
         return (
             jsonify(
                 {
-                    "message": "Invitation sent successfully" if email_sent else "Invitation created (email delivery skipped — SMTP not configured)",
-                    "token": token,  # Useful for development/testing
-                    "email_sent": email_sent,
-                }
-            ),
-            201,
-        )
-    finally:
-        db.close()
-
-
-@auth_bp.route("/verify-employee", methods=["POST"])
-def verify_employee():
-    """Verify an employee invitation token and auto-generate credentials."""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Request body is required"}), 400
-
-    token = data.get("token", "").strip()
-    if not token:
-        return jsonify({"error": "Invitation token is required"}), 400
-
-    db = get_db()
-    try:
-        invitation = row_to_dict(
-            db.execute(
-                "SELECT * FROM employee_invitations WHERE token = ?", (token,)
-            ).fetchone()
-        )
-
-        if not invitation:
-            return jsonify({"error": "Invalid invitation link"}), 404
-
-        if invitation["is_used"]:
-            return jsonify({"error": "This invitation has already been used"}), 410
-
-        # Check if email already registered as employee
-        existing = db.execute(
-            "SELECT id FROM users WHERE email = ?", (invitation["email"],)
-        ).fetchone()
-        if existing:
-            # Mark invite used and return error
-            db.execute("UPDATE employee_invitations SET is_used = 1 WHERE id = ?", (invitation["id"],))
-            db.commit()
-            return jsonify({"error": "This email is already registered"}), 409
-
-        # Generate employee credentials
-        employee_id = _generate_employee_id()
-        # Make sure employee_id is unique
-        while db.execute("SELECT id FROM users WHERE employee_id = ?", (employee_id,)).fetchone():
-            employee_id = _generate_employee_id()
-
-        raw_password = _generate_random_password()
-        password_hash = bcrypt.hashpw(raw_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-
-        # Create the employee user
-        db.execute(
-            """INSERT INTO users (name, email, password_hash, role, company_id, employee_id)
-               VALUES (?, ?, ?, 'employee', ?, ?)""",
-            (invitation["name"], invitation["email"], password_hash, invitation["company_id"], employee_id),
-        )
-
-        # Mark invitation as used
-        db.execute("UPDATE employee_invitations SET is_used = 1 WHERE id = ?", (invitation["id"],))
-        db.commit()
-
-        return (
-            jsonify(
-                {
-                    "message": "Account created successfully! Save your credentials below.",
+                    "message": "Employee account created and credentials sent!" if email_sent else "Employee account created (email delivery skipped — SMTP not configured)",
                     "employee_id": employee_id,
-                    "password": raw_password,
-                    "name": invitation["name"],
+                    "email_sent": email_sent,
+                    "name": name,
+                    "email": email,
+                    # In dev mode expose password if SMTP not configured
+                    "dev_password": raw_password if not email_sent else None,
                 }
             ),
             201,

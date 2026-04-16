@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Profile</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+
+    <style>
+        /* ── Profile-specific styles ── */
+        .profile-hero {
+            position: relative;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #06b6d4 100%);
+            border-radius: 16px;
+            padding: 2.5rem 2rem 5rem;
+            margin-bottom: 0;
+            overflow: hidden;
+        }
+
+        .profile-hero::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.05'%3E%3Ccircle cx='30' cy='30' r='20'/%3E%3Ccircle cx='0' cy='0' r='10'/%3E%3Ccircle cx='60' cy='60' r='10'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .profile-hero-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .profile-avatar-wrap {
+            position: relative;
+        }
+
+        .profile-avatar {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #f59e0b, #ef4444);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: #fff;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+            letter-spacing: 1px;
+        }
+
+        .profile-avatar-edit {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            width: 26px;
+            height: 26px;
+            background: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 0.65rem;
+            color: #6366f1;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: transform 0.2s;
+        }
+
+        .profile-avatar-edit:hover { transform: scale(1.15); }
+
+        .profile-hero-info h2 {
+            margin: 0 0 0.25rem;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .profile-hero-info p {
+            margin: 0;
+            color: rgba(255,255,255,0.75);
+            font-size: 0.9rem;
+        }
+
+        .profile-badges {
+            display: flex;
+            gap: 0.5rem;
+            margin-top: 0.75rem;
+            flex-wrap: wrap;
+        }
+
+        .profile-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge-admin {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+
+        .badge-verified {
+            background: rgba(16,185,129,0.25);
+            color: #6ee7b7;
+            border: 1px solid rgba(16,185,129,0.4);
+        }
+
+        /* Stats strip */
+        .profile-stats-strip {
+            display: flex;
+            gap: 0;
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-top: none;
+            border-radius: 0 0 16px 16px;
+            overflow: hidden;
+            margin-bottom: 2rem;
+        }
+
+        .profile-stat-item {
+            flex: 1;
+            padding: 1.25rem 1rem;
+            text-align: center;
+            border-right: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .profile-stat-item:last-child { border-right: none; }
+        .profile-stat-item:hover { background: rgba(99,102,241,0.05); }
+
+        .profile-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            line-height: 1;
+        }
+
+        .profile-stat-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        /* Two-column layout */
+        .profile-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 800px) {
+            .profile-grid { grid-template-columns: 1fr; }
+        }
+
+        .profile-full-width { grid-column: 1 / -1; }
+
+        /* Section card */
+        .profile-section {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .profile-section-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .profile-section-title {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-weight: 600;
+            font-size: 0.95rem;
+            color: var(--text-primary);
+        }
+
+        .profile-section-title i {
+            color: #6366f1;
+            font-size: 1rem;
+        }
+
+        .profile-section-body {
+            padding: 1.5rem;
+        }
+
+        /* Editable field row */
+        .field-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 0.85rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .field-row:last-child { border-bottom: none; }
+
+        .field-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: rgba(99,102,241,0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 0.85rem;
+            color: #6366f1;
+        }
+
+        .field-info { flex: 1; }
+
+        .field-label {
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            margin-bottom: 0.2rem;
+        }
+
+        .field-value {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Edit input overlay */
+        .field-edit-btn {
+            opacity: 0;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 0.3rem 0.5rem;
+            border-radius: 6px;
+            transition: background 0.15s, color 0.15s, opacity 0.2s;
+        }
+
+        .field-row:hover .field-edit-btn { opacity: 1; }
+        .field-edit-btn:hover { background: rgba(99,102,241,0.1); color: #6366f1; }
+
+        /* Inline edit input */
+        .field-input {
+            width: 100%;
+            background: var(--bg-secondary, rgba(255,255,255,0.05));
+            border: 1px solid #6366f1;
+            border-radius: 8px;
+            padding: 0.4rem 0.7rem;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: inherit;
+            outline: none;
+            display: none;
+        }
+
+        .field-input.active { display: block; }
+
+        /* Toggle switch */
+        .toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.9rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .toggle-row:last-child { border-bottom: none; }
+
+        .toggle-left { display: flex; align-items: center; gap: 0.75rem; }
+
+        .toggle-icon {
+            width: 34px;
+            height: 34px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+        }
+
+        .toggle-icon.green { background: rgba(16,185,129,0.1); color: #10b981; }
+        .toggle-icon.yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+        .toggle-icon.blue { background: rgba(6,182,212,0.1); color: #06b6d4; }
+        .toggle-icon.purple { background: rgba(139,92,246,0.1); color: #8b5cf6; }
+
+        .toggle-desc {}
+        .toggle-title { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); }
+        .toggle-subtitle { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+        /* iOS-style toggle */
+        .toggle-switch {
+            position: relative;
+            width: 42px;
+            height: 24px;
+        }
+
+        .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+        .toggle-slider {
+            position: absolute;
+            inset: 0;
+            background: var(--border-color);
+            border-radius: 24px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform 0.3s;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .toggle-switch input:checked + .toggle-slider { background: #6366f1; }
+        .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); }
+
+        /* Security items */
+        .security-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .security-item:last-child { border-bottom: none; }
+
+        .security-left { display: flex; align-items: center; gap: 0.75rem; }
+        .security-icon {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.9rem;
+        }
+
+        .si-red { background: rgba(239,68,68,0.1); color: #ef4444; }
+        .si-green { background: rgba(16,185,129,0.1); color: #10b981; }
+        .si-blue { background: rgba(6,182,212,0.1); color: #06b6d4; }
+        .si-yellow { background: rgba(245,158,11,0.1); color: #f59e0b; }
+
+        .security-title { font-size: 0.875rem; font-weight: 500; color: var(--text-primary); }
+        .security-sub { font-size: 0.75rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+        .btn-sm {
+            padding: 0.35rem 0.85rem;
+            font-size: 0.78rem;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-sm:hover { border-color: #6366f1; color: #6366f1; background: rgba(99,102,241,0.08); }
+
+        .btn-danger-sm {
+            border-color: rgba(239,68,68,0.4);
+            color: #ef4444;
+        }
+
+        .btn-danger-sm:hover { border-color: #ef4444; background: rgba(239,68,68,0.08); color: #ef4444; }
+
+        /* Activity list */
+        .activity-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 0.85rem;
+            padding: 0.7rem 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .activity-item:last-child { border-bottom: none; }
+
+        .activity-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 5px;
+            flex-shrink: 0;
+        }
+
+        .dot-green { background: #10b981; box-shadow: 0 0 6px rgba(16,185,129,0.5); }
+        .dot-yellow { background: #f59e0b; box-shadow: 0 0 6px rgba(245,158,11,0.5); }
+        .dot-red { background: #ef4444; box-shadow: 0 0 6px rgba(239,68,68,0.5); }
+        .dot-blue { background: #6366f1; box-shadow: 0 0 6px rgba(99,102,241,0.5); }
+
+        .activity-text { flex: 1; }
+        .activity-desc { font-size: 0.85rem; color: var(--text-primary); }
+        .activity-time { font-size: 0.72rem; color: var(--text-muted); margin-top: 0.1rem; }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: #10b981;
+            color: #fff;
+            padding: 0.8rem 1.4rem;
+            border-radius: 10px;
+            font-size: 0.875rem;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 8px 24px rgba(16,185,129,0.35);
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 9999;
+        }
+
+        .toast.show { transform: translateY(0); opacity: 1; }
+
+        /* Danger zone */
+        .danger-zone {
+            border: 1px solid rgba(239,68,68,0.3);
+            border-radius: 14px;
+            overflow: hidden;
+        }
+
+        .danger-zone .profile-section-header {
+            border-bottom-color: rgba(239,68,68,0.2);
+        }
+        .danger-zone .profile-section-title i { color: #ef4444; }
+    </style>
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>API Endpoints</span>
+                </a>
+                <a href="logs.html" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Monitoring Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alerts</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item active">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar-small" id="sidebar-avatar">AU</div>
+            <div class="user-info">
+                <span class="user-name" id="sidebar-name">Admin User</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2>My Profile</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-avatar-small" id="topbar-avatar">AU</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+
+            <!-- Hero Banner -->
+            <div class="profile-hero">
+                <div class="profile-hero-content">
+                    <div class="profile-avatar-wrap">
+                        <div class="profile-avatar" id="hero-avatar">AU</div>
+                        <div class="profile-avatar-edit" title="Change avatar">
+                            <i class="fa-solid fa-camera"></i>
+                        </div>
+                    </div>
+                    <div class="profile-hero-info">
+                        <h2 id="hero-name">Admin User</h2>
+                        <p id="hero-email">admin@example.com</p>
+                        <div class="profile-badges">
+                            <span class="profile-badge badge-admin">
+                                <i class="fa-solid fa-shield-halved"></i> Company Admin
+                            </span>
+                            <span class="profile-badge badge-verified">
+                                <i class="fa-solid fa-circle-check"></i> Verified
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Strip -->
+            <div class="profile-stats-strip">
+                <div class="profile-stat-item">
+                    <div class="profile-stat-value" id="stat-apis">24</div>
+                    <div class="profile-stat-label">APIs Monitored</div>
+                </div>
+                <div class="profile-stat-item">
+                    <div class="profile-stat-value" id="stat-alerts">3</div>
+                    <div class="profile-stat-label">Active Alerts</div>
+                </div>
+                <div class="profile-stat-item">
+                    <div class="profile-stat-value">98.7%</div>
+                    <div class="profile-stat-label">Avg Uptime</div>
+                </div>
+                <div class="profile-stat-item">
+                    <div class="profile-stat-value" id="stat-days">—</div>
+                    <div class="profile-stat-label">Member Since</div>
+                </div>
+            </div>
+
+            <!-- Grid -->
+            <div class="profile-grid">
+
+                <!-- Personal Information -->
+                <div class="profile-section">
+                    <div class="profile-section-header">
+                        <div class="profile-section-title">
+                            <i class="fa-solid fa-id-card"></i> Personal Information
+                        </div>
+                        <button class="btn-sm" id="save-info-btn" onclick="saveInfo()" style="display:none;">
+                            <i class="fa-solid fa-check"></i> Save
+                        </button>
+                    </div>
+                    <div class="profile-section-body">
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-user"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Full Name</div>
+                                <div class="field-value" id="val-name">Admin User</div>
+                                <input class="field-input" id="inp-name" type="text" value="Admin User">
+                            </div>
+                            <button class="field-edit-btn" onclick="editField('name')"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-envelope"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Email Address</div>
+                                <div class="field-value" id="val-email">admin@example.com</div>
+                                <input class="field-input" id="inp-email" type="email" value="admin@example.com">
+                            </div>
+                            <button class="field-edit-btn" onclick="editField('email')"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-building"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Company</div>
+                                <div class="field-value" id="val-company">Acme Corporation</div>
+                                <input class="field-input" id="inp-company" type="text" value="Acme Corporation">
+                            </div>
+                            <button class="field-edit-btn" onclick="editField('company')"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-phone"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Phone</div>
+                                <div class="field-value" id="val-phone">+1 (555) 000-1234</div>
+                                <input class="field-input" id="inp-phone" type="tel" value="+1 (555) 000-1234">
+                            </div>
+                            <button class="field-edit-btn" onclick="editField('phone')"><i class="fa-solid fa-pen"></i></button>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-location-dot"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Timezone</div>
+                                <div class="field-value">Asia / Kolkata (UTC+5:30)</div>
+                            </div>
+                        </div>
+
+                        <div class="field-row">
+                            <div class="field-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                            <div class="field-info">
+                                <div class="field-label">Role</div>
+                                <div class="field-value">Company Admin</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Notification Preferences -->
+                <div class="profile-section">
+                    <div class="profile-section-header">
+                        <div class="profile-section-title">
+                            <i class="fa-solid fa-bell"></i> Notification Preferences
+                        </div>
+                    </div>
+                    <div class="profile-section-body">
+
+                        <div class="toggle-row">
+                            <div class="toggle-left">
+                                <div class="toggle-icon green"><i class="fa-solid fa-envelope"></i></div>
+                                <div class="toggle-desc">
+                                    <div class="toggle-title">Email Alerts</div>
+                                    <div class="toggle-subtitle">Receive alerts via email</div>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked onchange="showToast('Preference saved')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-left">
+                                <div class="toggle-icon blue"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div class="toggle-desc">
+                                    <div class="toggle-title">Critical Downtime Alerts</div>
+                                    <div class="toggle-subtitle">Instant notify on API failure</div>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked onchange="showToast('Preference saved')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-left">
+                                <div class="toggle-icon yellow"><i class="fa-solid fa-clock"></i></div>
+                                <div class="toggle-desc">
+                                    <div class="toggle-title">Daily Digest</div>
+                                    <div class="toggle-subtitle">Daily summary every morning</div>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" onchange="showToast('Preference saved')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-left">
+                                <div class="toggle-icon purple"><i class="fa-solid fa-chart-bar"></i></div>
+                                <div class="toggle-desc">
+                                    <div class="toggle-title">Weekly Reports</div>
+                                    <div class="toggle-subtitle">Performance summary each week</div>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" checked onchange="showToast('Preference saved')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                        <div class="toggle-row">
+                            <div class="toggle-left">
+                                <div class="toggle-icon blue"><i class="fa-solid fa-moon"></i></div>
+                                <div class="toggle-desc">
+                                    <div class="toggle-title">Silence Night Alerts</div>
+                                    <div class="toggle-subtitle">Mute from 11 PM – 7 AM</div>
+                                </div>
+                            </div>
+                            <label class="toggle-switch">
+                                <input type="checkbox" onchange="showToast('Preference saved')">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Security -->
+                <div class="profile-section">
+                    <div class="profile-section-header">
+                        <div class="profile-section-title">
+                            <i class="fa-solid fa-lock"></i> Security
+                        </div>
+                    </div>
+                    <div class="profile-section-body">
+
+                        <div class="security-item">
+                            <div class="security-left">
+                                <div class="security-icon si-blue"><i class="fa-solid fa-key"></i></div>
+                                <div>
+                                    <div class="security-title">Password</div>
+                                    <div class="security-sub">Last changed 30 days ago</div>
+                                </div>
+                            </div>
+                            <button class="btn-sm" onclick="showToast('Password reset email sent!')">Change</button>
+                        </div>
+
+                        <div class="security-item">
+                            <div class="security-left">
+                                <div class="security-icon si-green"><i class="fa-solid fa-shield-halved"></i></div>
+                                <div>
+                                    <div class="security-title">Two-Factor Authentication</div>
+                                    <div class="security-sub">Authenticator app enabled</div>
+                                </div>
+                            </div>
+                            <button class="btn-sm" onclick="showToast('2FA settings updated')">Manage</button>
+                        </div>
+
+                        <div class="security-item">
+                            <div class="security-left">
+                                <div class="security-icon si-yellow"><i class="fa-solid fa-code"></i></div>
+                                <div>
+                                    <div class="security-title">API Access Token</div>
+                                    <div class="security-sub">••••••••••••••••abc3</div>
+                                </div>
+                            </div>
+                            <button class="btn-sm" onclick="showToast('New token generated & copied')">Regenerate</button>
+                        </div>
+
+                        <div class="security-item">
+                            <div class="security-left">
+                                <div class="security-icon si-blue"><i class="fa-solid fa-clock-rotate-left"></i></div>
+                                <div>
+                                    <div class="security-title">Active Sessions</div>
+                                    <div class="security-sub">2 active sessions</div>
+                                </div>
+                            </div>
+                            <button class="btn-sm" onclick="showToast('All other sessions revoked')">Revoke All</button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Recent Activity -->
+                <div class="profile-section">
+                    <div class="profile-section-header">
+                        <div class="profile-section-title">
+                            <i class="fa-solid fa-timeline"></i> Recent Activity
+                        </div>
+                    </div>
+                    <div class="profile-section-body">
+
+                        <div class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-text">
+                                <div class="activity-desc">Logged in from Chrome / Windows</div>
+                                <div class="activity-time">2 minutes ago · 192.168.0.130</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-blue"></div>
+                            <div class="activity-text">
+                                <div class="activity-desc">Added new endpoint: <strong>Payment Gateway</strong></div>
+                                <div class="activity-time">1 hour ago</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-yellow"></div>
+                            <div class="activity-text">
+                                <div class="activity-desc">Alert threshold updated for <strong>Auth API</strong></div>
+                                <div class="activity-time">3 hours ago</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-red"></div>
+                            <div class="activity-text">
+                                <div class="activity-desc"><strong>Users API</strong> went down — alert triggered</div>
+                                <div class="activity-time">Yesterday, 11:42 PM</div>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-dot dot-green"></div>
+                            <div class="activity-text">
+                                <div class="activity-desc">Account created & email verified</div>
+                                <div class="activity-time">Mar 1, 2026</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Danger Zone -->
+                <div class="profile-section danger-zone profile-full-width">
+                    <div class="profile-section-header">
+                        <div class="profile-section-title">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Danger Zone
+                        </div>
+                    </div>
+                    <div class="profile-section-body" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:center; justify-content:space-between;">
+                        <div>
+                            <div style="font-weight:500; font-size:0.9rem; color:var(--text-primary);">Delete Account</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:0.25rem;">Permanently remove your account and all monitoring data. This cannot be undone.</div>
+                        </div>
+                        <div style="display:flex; gap:0.75rem;">
+                            <button class="btn btn-secondary" id="logout-btn" style="font-size:0.85rem; padding:0.5rem 1.1rem;">
+                                <i class="fa-solid fa-right-from-bracket"></i> Sign Out
+                            </button>
+                            <button class="btn-sm btn-danger-sm" onclick="showToast('Please confirm via email to delete your account')">
+                                <i class="fa-solid fa-trash"></i> Delete Account
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            <!-- /grid -->
+
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <i class="fa-solid fa-circle-check"></i>
+        <span id="toast-msg">Saved</span>
+    </div>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // ── Inline edit ──────────────────────────────────────────
+        const editingFields = new Set();
+
+        function editField(field) {
+            const val = document.getElementById('val-' + field);
+            const inp = document.getElementById('inp-' + field);
+            val.style.display = 'none';
+            inp.classList.add('active');
+            inp.focus();
+            editingFields.add(field);
+            document.getElementById('save-info-btn').style.display = 'inline-flex';
+
+            inp.addEventListener('keydown', function onKey(e) {
+                if (e.key === 'Enter') { saveInfo(); inp.removeEventListener('keydown', onKey); }
+                if (e.key === 'Escape') { cancelEdit(field); inp.removeEventListener('keydown', onKey); }
+            });
+        }
+
+        function saveInfo() {
+            editingFields.forEach(field => {
+                const val = document.getElementById('val-' + field);
+                const inp = document.getElementById('inp-' + field);
+                const newVal = inp.value.trim() || val.textContent;
+                val.textContent = newVal;
+                val.style.display = '';
+                inp.classList.remove('active');
+
+                // Sync hero + sidebar
+                if (field === 'name') {
+                    document.getElementById('hero-name').textContent = newVal;
+                    document.getElementById('sidebar-name').textContent = newVal;
+                    const initials = newVal.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+                    document.getElementById('hero-avatar').textContent = initials;
+                    document.getElementById('sidebar-avatar').textContent = initials;
+                    document.getElementById('topbar-avatar').textContent = initials;
+                }
+                if (field === 'email') {
+                    document.getElementById('hero-email').textContent = newVal;
+                }
+            });
+            editingFields.clear();
+            document.getElementById('save-info-btn').style.display = 'none';
+            showToast('Profile updated successfully');
+        }
+
+        function cancelEdit(field) {
+            const val = document.getElementById('val-' + field);
+            const inp = document.getElementById('inp-' + field);
+            val.style.display = '';
+            inp.classList.remove('active');
+            editingFields.delete(field);
+            if (editingFields.size === 0) document.getElementById('save-info-btn').style.display = 'none';
+        }
+
+        // ── Toast ──────────────────────────────────────────────────
+        let toastTimer;
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toast-msg').textContent = msg;
+            t.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => t.classList.remove('show'), 3000);
+        }
+
+        // ── Stats: member since ────────────────────────────────────
+        (() => {
+            const joined = new Date('2026-03-01');
+            const now = new Date();
+            const days = Math.floor((now - joined) / 86400000);
+            document.getElementById('stat-days').textContent = days + 'd';
+        })();
+
+        // ── Logout ────────────────────────────────────────────────
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            localStorage.removeItem('auth_token');
+            window.location.href = 'login.html';
+        });
+    </script>
+</body>
+
+</html>

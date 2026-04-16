@@ -1,6 +1,6 @@
 import datetime
 import logging
-from flask import Blueprint, jsonify, g
+from flask import Blueprint, jsonify, request, g
 from backend.models import get_db, row_to_dict, rows_to_list
 from backend.utils.auth import token_required
 
@@ -16,6 +16,17 @@ def get_stats():
     db = get_db()
     try:
         user_id = g.current_user_id
+        user_role = g.current_user_role
+        time_range = request.args.get("range", "1d")
+
+        days_map = {"1d": 1, "7d": 7, "30d": 30}
+        days = days_map.get(time_range, 1)
+
+        # For employees, show endpoints from their company
+        if user_role == "employee":
+            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = ?", (user_id,)).fetchone())
+            if user_row and user_row.get("company_id"):
+                user_id = user_row["company_id"]
 
         endpoints = rows_to_list(
             db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
@@ -41,7 +52,7 @@ def get_stats():
                 200,
             )
 
-        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)).strftime(
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
 
@@ -129,10 +140,21 @@ def get_stats():
 @dashboard_bp.route("/response-times", methods=["GET"])
 @token_required
 def get_response_times():
-    """Get response time data for charts (last 24 hours)."""
+    """Get response time data for charts."""
     db = get_db()
     try:
         user_id = g.current_user_id
+        user_role = g.current_user_role
+        time_range = request.args.get("range", "1d")
+
+        days_map = {"1d": 1, "7d": 7, "30d": 30}
+        days = days_map.get(time_range, 1)
+
+        # For employees, show endpoints from their company
+        if user_role == "employee":
+            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = ?", (user_id,)).fetchone())
+            if user_row and user_row.get("company_id"):
+                user_id = user_row["company_id"]
 
         endpoints = rows_to_list(
             db.execute("SELECT id, name FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
@@ -141,7 +163,7 @@ def get_response_times():
         if not endpoints:
             return jsonify({"series": []}), 200
 
-        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=24)).strftime(
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
 
@@ -170,5 +192,230 @@ def get_response_times():
     except Exception as e:
         logger.error(f"Error fetching response times: {e}")
         return jsonify({"error": "Failed to load response times. Please try again."}), 500
+    finally:
+        db.close()
+
+
+@dashboard_bp.route("/analytics", methods=["GET"])
+@token_required
+def get_analytics():
+    """Get real-time analytics data for the Company dashboard."""
+    if g.current_user_role != "company":
+        return jsonify({"error": "Only company accounts can view analytics"}), 403
+
+    db = get_db()
+    try:
+        user_id = g.current_user_id
+
+        # Get all endpoints for company
+        endpoints = rows_to_list(
+            db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+        )
+
+        total_apis = len(endpoints)
+        if total_apis == 0:
+            return jsonify({
+                "total_apis": 0,
+                "total_checks_today": 0,
+                "successful_today": 0,
+                "failed_today": 0,
+                "avg_response_time": 0,
+                "uptime_percentage": 100,
+                "error_rate": 0,
+                "down_apis": 0,
+                "hourly_data": [],
+                "incidents": [],
+                "employees": [],
+            }), 200
+
+        # Today's data
+        today_start = datetime.datetime.now(datetime.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        endpoint_ids = [e["id"] for e in endpoints]
+        placeholders = ",".join(["?"] * len(endpoint_ids))
+
+        # Today's logs
+        today_logs = rows_to_list(
+            db.execute(
+                f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?",
+                (*endpoint_ids, today_start),
+            ).fetchall()
+        )
+
+        total_checks_today = len(today_logs)
+        successful_today = sum(1 for log in today_logs if log.get("is_success"))
+        failed_today = total_checks_today - successful_today
+
+        response_times = [log["response_time"] for log in today_logs if log.get("response_time") is not None]
+        avg_response_time = round(sum(response_times) / len(response_times), 2) if response_times else 0
+
+        uptime_pct = round((successful_today / total_checks_today) * 100, 2) if total_checks_today > 0 else 100
+        error_rate = round((failed_today / total_checks_today) * 100, 2) if total_checks_today > 0 else 0
+
+        # Down APIs
+        down_apis = 0
+        for ep in endpoints:
+            latest = row_to_dict(
+                db.execute(
+                    "SELECT is_success FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+                    (ep["id"],),
+                ).fetchone()
+            )
+            if latest and not latest.get("is_success"):
+                down_apis += 1
+
+        # Hourly breakdown for chart
+        hourly_data = []
+        for hour in range(24):
+            hour_start = datetime.datetime.now(datetime.timezone.utc).replace(
+                hour=hour, minute=0, second=0, microsecond=0
+            )
+            hour_end = hour_start + datetime.timedelta(hours=1)
+            hour_logs = [
+                log for log in today_logs
+                if log.get("checked_at") and hour_start.strftime("%Y-%m-%d %H:%M:%S") <= log["checked_at"] < hour_end.strftime("%Y-%m-%d %H:%M:%S")
+            ]
+            hour_rts = [log["response_time"] for log in hour_logs if log.get("response_time") is not None]
+            hourly_data.append({
+                "hour": f"{hour:02d}:00",
+                "checks": len(hour_logs),
+                "avg_response_time": round(sum(hour_rts) / len(hour_rts), 2) if hour_rts else 0,
+                "failures": sum(1 for log in hour_logs if not log.get("is_success")),
+            })
+
+        # Incidents (failed checks today)
+        incidents = []
+        failed_logs = [log for log in today_logs if not log.get("is_success")]
+        ep_map = {e["id"]: e["name"] for e in endpoints}
+        for log in failed_logs[-20:]:  # Last 20 incidents
+            incidents.append({
+                "name": ep_map.get(log["endpoint_id"], "Unknown"),
+                "error": f"HTTP {log.get('status_code', 0)}" if log.get("status_code") else "Connection failed",
+                "time": log.get("checked_at", ""),
+                "response_time": log.get("response_time"),
+            })
+
+        # Employees under this company
+        employees = rows_to_list(
+            db.execute(
+                "SELECT id, name, email, employee_id, created_at FROM users WHERE company_id = ? AND role = 'employee'",
+                (user_id,),
+            ).fetchall()
+        )
+
+        return jsonify({
+            "total_apis": total_apis,
+            "total_checks_today": total_checks_today,
+            "successful_today": successful_today,
+            "failed_today": failed_today,
+            "avg_response_time": avg_response_time,
+            "uptime_percentage": uptime_pct,
+            "error_rate": error_rate,
+            "down_apis": down_apis,
+            "hourly_data": hourly_data,
+            "incidents": incidents,
+            "employees": employees,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error fetching analytics: {e}")
+        return jsonify({"error": "Failed to load analytics"}), 500
+    finally:
+        db.close()
+
+
+@dashboard_bp.route("/send-daily-report", methods=["POST"])
+@token_required
+def send_daily_report():
+    """Manually trigger a daily summary email to the company admin."""
+    if g.current_user_role != "company":
+        return jsonify({"error": "Only company accounts can send reports"}), 403
+
+    db = get_db()
+    try:
+        user_id = g.current_user_id
+        user = row_to_dict(db.execute("SELECT email, name FROM users WHERE id = ?", (user_id,)).fetchone())
+        if not user:
+            return jsonify({"error": "User not found"}), 404
+
+        # Get today's data
+        endpoints = rows_to_list(
+            db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+        )
+
+        today_start = datetime.datetime.now(datetime.timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).strftime("%Y-%m-%d %H:%M:%S")
+
+        endpoint_ids = [e["id"] for e in endpoints]
+        total_checks = 0
+        successful = 0
+        failed = 0
+        all_rts = []
+        incidents = []
+        down_count = 0
+
+        if endpoint_ids:
+            placeholders = ",".join(["?"] * len(endpoint_ids))
+            logs = rows_to_list(
+                db.execute(
+                    f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?",
+                    (*endpoint_ids, today_start),
+                ).fetchall()
+            )
+            ep_map = {e["id"]: e["name"] for e in endpoints}
+
+            total_checks = len(logs)
+            successful = sum(1 for l in logs if l.get("is_success"))
+            failed = total_checks - successful
+            all_rts = [l["response_time"] for l in logs if l.get("response_time") is not None]
+
+            for l in logs:
+                if not l.get("is_success"):
+                    incidents.append({
+                        "name": ep_map.get(l["endpoint_id"], "Unknown"),
+                        "error": f"HTTP {l.get('status_code', 0)}",
+                        "time": l.get("checked_at", ""),
+                    })
+
+            for ep in endpoints:
+                latest = row_to_dict(
+                    db.execute(
+                        "SELECT is_success FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+                        (ep["id"],),
+                    ).fetchone()
+                )
+                if latest and not latest.get("is_success"):
+                    down_count += 1
+
+        avg_rt = round(sum(all_rts) / len(all_rts), 2) if all_rts else 0
+        uptime = round((successful / total_checks) * 100, 2) if total_checks > 0 else 100
+
+        summary_data = {
+            "total_checks": total_checks,
+            "successful_checks": successful,
+            "failed_checks": failed,
+            "avg_response_time": avg_rt,
+            "uptime_percentage": uptime,
+            "total_apis": len(endpoints),
+            "down_apis": down_count,
+            "incidents": incidents[:10],
+            "date": datetime.datetime.now(datetime.timezone.utc).strftime("%B %d, %Y"),
+        }
+
+        from backend.services.alert_service import send_daily_summary_email
+        email_sent = send_daily_summary_email(user["email"], summary_data)
+
+        return jsonify({
+            "message": "Daily report sent!" if email_sent else "Report generated (SMTP not configured)",
+            "email_sent": email_sent,
+            "summary": summary_data,
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error sending daily report: {e}")
+        return jsonify({"error": "Failed to send daily report"}), 500
     finally:
         db.close()

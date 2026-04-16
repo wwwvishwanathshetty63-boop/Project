@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor — Company Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background-color:var(--bg-color); margin:0; padding:1rem; }
+        .auth-container { width:100%; max-width:440px; animation:fadeIn 0.5s ease-out; }
+        .auth-header    { text-align:center; margin-bottom:2rem; }
+        .auth-logo      { font-size:3rem; color:var(--accent-color); margin-bottom:1rem; filter:drop-shadow(0 0 10px rgba(124,58,237,0.4)); }
+        .auth-sub-tabs  { display:flex; border-bottom:1px solid var(--border-color); margin-bottom:1.5rem; }
+        .sub-tab        { flex:1; text-align:center; padding:0.75rem; cursor:pointer; font-size:0.875rem; font-weight:500; color:var(--text-muted); border-bottom:2px solid transparent; transition:all 0.2s; }
+        .sub-tab.active { color:var(--accent-color); border-bottom-color:var(--accent-color); }
+        .auth-form      { display:none; }
+        .auth-form.active { display:block; animation:fadeIn 0.3s ease; }
+        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-size: 0.85rem; margin-bottom: 1.5rem; transition: color 0.2s; }
+        .back-link:hover { color: var(--accent-color); }
+        .company-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(124,58,237,0.15), rgba(99,102,241,0.1)); border: 1px solid rgba(124,58,237,0.25); padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; color: #a78bfa; margin-bottom: 1rem; }
+
+        /* Step Progress */
+        .otp-steps { display:flex; align-items:center; justify-content:center; margin-bottom:1.75rem; }
+        .otp-step  { display:flex; flex-direction:column; align-items:center; gap:4px; }
+        .otp-step-dot { width:28px; height:28px; border-radius:50%; border:2px solid var(--border-color);
+                        display:flex; align-items:center; justify-content:center;
+                        font-size:0.7rem; font-weight:700; color:var(--text-muted); transition:all 0.3s; flex-shrink:0; }
+        .otp-step-dot.active { border-color:var(--accent-color); background:var(--accent-color); color:#fff; box-shadow:0 0 10px rgba(124,58,237,0.4); }
+        .otp-step-dot.done   { border-color:#22c55e; background:#22c55e; color:#fff; }
+        .otp-step-label { font-size:0.65rem; color:var(--text-muted); white-space:nowrap; }
+        .otp-step-line  { flex:1; height:2px; background:var(--border-color); margin:0 8px; margin-bottom:14px; transition:background 0.3s; }
+        .otp-step-line.done { background:#22c55e; }
+
+        /* OTP digits */
+        .otp-input-row { display:flex; gap:8px; justify-content:center; margin:1.25rem 0; }
+        .otp-digit     { width:48px; height:56px; border:2px solid var(--border-color);
+                         background:var(--bg-color); border-radius:10px;
+                         font-size:1.5rem; font-weight:700; text-align:center;
+                         color:var(--text-color); font-family:'JetBrains Mono',monospace;
+                         transition:border-color 0.2s,box-shadow 0.2s; outline:none; }
+        .otp-digit:focus     { border-color:var(--accent-color); box-shadow:0 0 0 3px rgba(124,58,237,0.2); }
+        .otp-digit.has-value { border-color:var(--accent-color); background:rgba(124,58,237,0.07); }
+
+        .otp-timer { font-size:0.8rem; color:var(--text-muted); text-align:center; margin-top:0.5rem; }
+        .otp-timer span { color:var(--accent-color); font-weight:700; font-family:monospace; }
+
+        .verified-badge { display:flex; align-items:center; gap:8px; background:rgba(34,197,94,0.1);
+                          border:1px solid rgba(34,197,94,0.3); border-radius:8px;
+                          padding:0.6rem 1rem; margin-bottom:1.25rem; font-size:0.85rem; color:#22c55e; }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <a href="landing.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+
+    <div class="auth-header">
+        <div class="auth-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+        <div class="company-badge"><i class="fa-solid fa-building"></i> Company Portal</div>
+        <h1 id="auth-title">Welcome back</h1>
+        <p id="auth-subtitle" style="color: var(--text-muted); font-size: 0.95rem;">Sign in to your company dashboard</p>
+    </div>
+
+    <div class="card" style="padding:2.5rem;">
+        <div class="auth-sub-tabs">
+            <div class="sub-tab active" id="login-tab">Log In</div>
+            <div class="sub-tab" id="register-tab">Sign Up</div>
+        </div>
+
+        <!-- Company login -->
+        <form id="login-form" class="auth-form active">
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <div style="position:relative;">
+                    <i class="fa-solid fa-envelope" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="email" id="login-email" class="form-control" style="padding-left:2.5rem;" placeholder="admin@company.com" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div style="position:relative;">
+                    <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="password" id="login-password" class="form-control" style="padding-left:2.5rem;" placeholder="••••••••" required>
+                </div>
+                <div style="text-align:right;margin-top:0.5rem;">
+                    <a href="#" id="forgot-password-link" style="font-size:0.8rem;color:var(--accent-color);text-decoration:none;">Forgot Password?</a>
+                </div>
+            </div>
+            <button type="submit" class="btn" style="width:100%;justify-content:center;padding:0.75rem;">Sign In</button>
+        </form>
+
+        <!-- Reset Password — 3-step OTP -->
+        <div id="reset-password-form" class="auth-form">
+            <div class="otp-steps">
+                <div class="otp-step"><div class="otp-step-dot active" id="reset-dot-1">1</div><div class="otp-step-label">Identify</div></div>
+                <div class="otp-step-line" id="reset-line-1"></div>
+                <div class="otp-step"><div class="otp-step-dot" id="reset-dot-2">2</div><div class="otp-step-label">Verify</div></div>
+                <div class="otp-step-line" id="reset-line-2"></div>
+                <div class="otp-step"><div class="otp-step-dot" id="reset-dot-3">3</div><div class="otp-step-label">Reset</div></div>
+            </div>
+
+            <!-- Reset Step 1: Email -->
+            <div id="reset-step-1">
+                <div class="form-group">
+                    <label class="form-label">Registered Email</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-envelope" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="email" id="reset-email" class="form-control" style="padding-left:2.5rem;" placeholder="your@email.com" required>
+                    </div>
+                </div>
+                <button class="btn" id="btn-send-reset-otp" style="width:100%;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-paper-plane"></i> Send Reset Code
+                </button>
+                <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--text-muted);">
+                    Enter your email to receive a password reset code.
+                </p>
+            </div>
+
+            <!-- Reset Step 2: OTP -->
+            <div id="reset-step-2" style="display:none;">
+                <div class="verified-badge">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>Code sent to <strong id="reset-otp-sent-email"></strong></span>
+                </div>
+                <p style="text-align:center;font-size:0.88rem;color:var(--text-muted);margin-top:0;">Enter the 6-digit reset code</p>
+                <div class="otp-input-row reset-otp-inputs">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                </div>
+                <button class="btn" id="btn-verify-reset-otp" style="width:100%;margin-top:1rem;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-shield-check"></i> Continue
+                </button>
+            </div>
+
+            <!-- Reset Step 3: New Password -->
+            <div id="reset-step-3" style="display:none;">
+                <div class="form-group">
+                    <label class="form-label">New Password</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="password" id="reset-password" class="form-control" style="padding-left:2.5rem;" placeholder="Min 8 chars" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="password" id="reset-confirm-password" class="form-control" style="padding-left:2.5rem;" placeholder="Confirm password" required>
+                    </div>
+                </div>
+                <button class="btn" id="btn-reset-password" style="width:100%;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-key"></i> Reset Password
+                </button>
+            </div>
+            
+            <p style="text-align:center;margin-top:1rem;font-size:0.85rem;">
+                Remembered your password? <a href="#" id="back-to-login" style="color:var(--accent-color);text-decoration:none;font-weight:600;">Log In</a>
+            </p>
+        </div>
+
+        <!-- Company register — 3-step OTP -->
+        <div id="register-form" class="auth-form">
+            <!-- Step progress -->
+            <div class="otp-steps">
+                <div class="otp-step"><div class="otp-step-dot active" id="dot-1">1</div><div class="otp-step-label">Email</div></div>
+                <div class="otp-step-line" id="line-1"></div>
+                <div class="otp-step"><div class="otp-step-dot" id="dot-2">2</div><div class="otp-step-label">Verify</div></div>
+                <div class="otp-step-line" id="line-2"></div>
+                <div class="otp-step"><div class="otp-step-dot" id="dot-3">3</div><div class="otp-step-label">Register</div></div>
+            </div>
+
+            <!-- Step 1: Email -->
+            <div id="reg-step-1">
+                <div class="form-group">
+                    <label class="form-label">Company Email</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-envelope" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="email" id="reg-email" class="form-control" style="padding-left:2.5rem;" placeholder="admin@company.com" required>
+                    </div>
+                </div>
+                <button class="btn" id="btn-send-otp" style="width:100%;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-paper-plane"></i> Send Verification Code
+                </button>
+                <p style="text-align:center;margin-top:1rem;font-size:0.82rem;color:var(--text-muted);">
+                    A 6-digit code will be sent to verify your email.
+                </p>
+            </div>
+
+            <!-- Step 2: OTP -->
+            <div id="reg-step-2" style="display:none;">
+                <div class="verified-badge">
+                    <i class="fa-solid fa-envelope-open-text"></i>
+                    <span>Code sent to <strong id="otp-sent-email"></strong></span>
+                </div>
+                <p style="text-align:center;font-size:0.88rem;color:var(--text-muted);margin-top:0;">Enter the 6-digit verification code</p>
+                <div class="otp-input-row">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                    <input class="otp-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]">
+                </div>
+                <div class="otp-timer">Code expires in <span id="otp-countdown">10:00</span></div>
+                <button class="btn" id="btn-verify-otp" style="width:100%;margin-top:1rem;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-shield-check"></i> Verify Code
+                </button>
+                <p style="text-align:center;margin-top:0.75rem;font-size:0.8rem;color:var(--text-muted);">
+                    Didn't receive it? <a href="#" id="btn-resend-otp" style="color:var(--accent-color);text-decoration:none;">Resend</a>
+                </p>
+            </div>
+
+            <!-- Step 3: Registration -->
+            <div id="reg-step-3" style="display:none;">
+                <div class="verified-badge">
+                    <i class="fa-solid fa-circle-check"></i>
+                    <span>Email verified — <strong id="reg-verified-email"></strong></span>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Company Name</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-building" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="text" id="register-name" class="form-control" style="padding-left:2.5rem;" placeholder="Acme Corp" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Password</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                        <input type="password" id="register-password" class="form-control" style="padding-left:2.5rem;" placeholder="Min 8 chars, with number" required>
+                    </div>
+                </div>
+                <button class="btn" id="btn-register" style="width:100%;justify-content:center;padding:0.75rem;">
+                    <i class="fa-solid fa-rocket"></i> Create Company Account
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <p style="text-align:center;margin-top:1.25rem;font-size:0.82rem;color:var(--text-muted);">
+        Are you an employee? <a href="employee-login.html" style="color:#22d3ee;text-decoration:none;font-weight:500;">Login here</a>
+    </p>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+// ─── Tab switching ──────────────────────────────────────────────────────────
+document.getElementById('login-tab').addEventListener('click', function() {
+    this.classList.add('active'); document.getElementById('register-tab').classList.remove('active');
+    document.getElementById('login-form').classList.add('active'); 
+    document.getElementById('register-form').classList.remove('active');
+    document.getElementById('reset-password-form').classList.remove('active');
+    document.getElementById('auth-title').textContent = 'Welcome back';
+    document.getElementById('auth-subtitle').textContent = 'Sign in to your company dashboard';
+});
+document.getElementById('register-tab').addEventListener('click', function() {
+    this.classList.add('active'); document.getElementById('login-tab').classList.remove('active');
+    document.getElementById('register-form').classList.add('active'); 
+    document.getElementById('login-form').classList.remove('active');
+    document.getElementById('reset-password-form').classList.remove('active');
+    document.getElementById('auth-title').textContent = 'Create Account';
+    document.getElementById('auth-subtitle').textContent = 'Register your company to get started';
+});
+
+// ─── Company Login ──────────────────────────────────────────────────────────
+document.getElementById('login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Signing in...';
+    try {
+        const d = await apiRequest('/api/auth/login', { method:'POST', body:{ email:document.getElementById('login-email').value, password:document.getElementById('login-password').value, login_type:'company' }});
+        saveAuth(d.token, d.user); showToast('Login successful!');
+        setTimeout(()=>window.location.href='company-dashboard.html', 800);
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='Sign In'; }
+});
+
+// ─── OTP Flow ───────────────────────────────────────────────────────────────
+let otpEmail='', countdownTimer=null;
+
+function goToStep(step) {
+    [1,2,3].forEach(s => document.getElementById('reg-step-'+s).style.display = s===step?'block':'none');
+    ['dot-1','dot-2','dot-3'].forEach((id,i) => {
+        const el=document.getElementById(id);
+        el.classList.remove('active','done');
+        if(i+1<step) el.classList.add('done');
+        if(i+1===step) el.classList.add('active');
+    });
+    document.getElementById('line-1').classList.toggle('done', step>1);
+    document.getElementById('line-2').classList.toggle('done', step>2);
+}
+
+function startCountdown(seconds) {
+    clearInterval(countdownTimer);
+    let rem=seconds;
+    const el=document.getElementById('otp-countdown');
+    countdownTimer=setInterval(()=>{ rem--;
+        el.textContent=Math.floor(rem/60).toString().padStart(2,'0')+':'+((rem%60).toString().padStart(2,'0'));
+        if(rem<=0){ clearInterval(countdownTimer); el.textContent='Expired'; }
+    },1000);
+}
+
+// ─── Forgot Password Flow ───────────────────────────────────────────────────
+let resetEmail = '';
+const forgotLink = document.getElementById('forgot-password-link');
+const backToLogin = document.getElementById('back-to-login');
+const resetForm = document.getElementById('reset-password-form');
+
+forgotLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('login-form').classList.remove('active');
+    document.getElementById('register-form').classList.remove('active');
+    resetForm.classList.add('active');
+    document.getElementById('auth-title').textContent = 'Reset Password';
+    document.getElementById('auth-subtitle').textContent = 'Enter your details to reset your password';
+    goToResetStep(1);
+});
+
+backToLogin.addEventListener('click', (e) => {
+    e.preventDefault();
+    resetForm.classList.remove('active');
+    document.getElementById('login-form').classList.add('active');
+    document.getElementById('auth-title').textContent = 'Welcome back';
+    document.getElementById('auth-subtitle').textContent = 'Sign in to your company dashboard';
+});
+
+function goToResetStep(step) {
+    [1,2,3].forEach(s => document.getElementById('reset-step-'+s).style.display = s===step?'block':'none');
+    ['reset-dot-1','reset-dot-2','reset-dot-3'].forEach((id,i) => {
+        const el=document.getElementById(id);
+        el.classList.remove('active','done');
+        if(i+1<step) el.classList.add('done');
+        if(i+1===step) el.classList.add('active');
+    });
+    document.getElementById('reset-line-1').classList.toggle('done', step>1);
+    document.getElementById('reset-line-2').classList.toggle('done', step>2);
+}
+
+document.getElementById('btn-send-reset-otp').addEventListener('click', async () => {
+    const email = document.getElementById('reset-email').value.trim();
+    if(!email) { showToast('Please enter your email.','error'); return; }
+    const btn = document.getElementById('btn-send-reset-otp');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Sending...';
+    try {
+        const res = await apiRequest('/api/auth/reset-password-request', { method:'POST', body:{ email }});
+        resetEmail = email;
+        document.getElementById('reset-otp-sent-email').textContent = email;
+        if(res.dev_otp) showToast('Dev mode — OTP: '+res.dev_otp,'warning',12000);
+        goToResetStep(2);
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Send Reset Code'; }
+});
+
+document.getElementById('btn-verify-reset-otp').addEventListener('click', () => {
+    const otp = [...document.querySelectorAll('.reset-otp-inputs .otp-digit')].map(d=>d.value).join('');
+    if(otp.length !== 6) { showToast('Please enter the 6-digit code.','error'); return; }
+    goToResetStep(3);
+});
+
+document.getElementById('btn-reset-password').addEventListener('click', async () => {
+    const password = document.getElementById('reset-password').value;
+    const confirm = document.getElementById('reset-confirm-password').value;
+    const otp = [...document.querySelectorAll('.reset-otp-inputs .otp-digit')].map(d=>d.value).join('');
+
+    if(!password || password.length < 8) { showToast('Password must be at least 8 characters.','error'); return; }
+    if(password !== confirm) { showToast('Passwords do not match.','error'); return; }
+
+    const btn = document.getElementById('btn-reset-password');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Resetting...';
+    try {
+        await apiRequest('/api/auth/reset-password-verify', { method:'POST', body:{ email:resetEmail, otp, password }});
+        showToast('Password reset successful! You can now log in.','success');
+        resetForm.classList.remove('active');
+        document.getElementById('login-form').classList.add('active');
+        document.getElementById('auth-title').textContent = 'Welcome back';
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-key"></i> Reset Password'; }
+});
+
+// ─── OTP Digit Input Logic (Reusable) ───────────────────────────────────────
+function initOtpInputs(containerSelector) {
+    const digits = document.querySelectorAll(containerSelector + ' .otp-digit');
+    digits.forEach((inp,idx) => {
+        inp.addEventListener('input',()=>{
+            inp.value=inp.value.replace(/[^0-9]/g,'').slice(-1);
+            inp.classList.toggle('has-value', inp.value!=='');
+            if(inp.value && idx<digits.length-1) digits[idx+1].focus();
+        });
+        inp.addEventListener('keydown',e=>{ if(e.key==='Backspace'&&!inp.value&&idx>0) digits[idx-1].focus(); });
+        inp.addEventListener('paste',e=>{
+            e.preventDefault();
+            const p=(e.clipboardData.getData('text')||'').replace(/\D/g,'');
+            [...p].slice(0,6).forEach((ch,i)=>{ if(digits[i]){digits[i].value=ch;digits[i].classList.add('has-value');} });
+            if(p.length>=6) digits[5].focus();
+        });
+    });
+}
+
+initOtpInputs('#register-form');
+initOtpInputs('.reset-otp-inputs');
+
+function getOtp(selector) { 
+    return [...document.querySelectorAll(selector + ' .otp-digit')].map(d=>d.value).join(''); 
+}
+
+async function sendOtp(email) {
+    const btn=document.getElementById('btn-send-otp');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Sending...';
+    try {
+        const res=await apiRequest('/api/auth/send-otp',{method:'POST',body:{email}});
+        otpEmail=email;
+        document.getElementById('otp-sent-email').textContent=email;
+        if(res.dev_otp) showToast('Dev mode — OTP: '+res.dev_otp,'warning',12000);
+        goToStep(2); startCountdown(600);
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-paper-plane"></i> Send Verification Code'; }
+}
+
+document.getElementById('btn-send-otp').addEventListener('click', async ()=>{
+    const email=document.getElementById('reg-email').value.trim();
+    if(!email){ showToast('Please enter your email address.','error'); return; }
+    await sendOtp(email);
+});
+
+document.getElementById('btn-resend-otp').addEventListener('click', async e=>{
+    e.preventDefault();
+    if(otpEmail){ 
+        document.querySelectorAll('#register-form .otp-digit').forEach(d=>{d.value='';d.classList.remove('has-value');}); 
+        document.querySelector('#register-form .otp-digit').focus();
+        await sendOtp(otpEmail); 
+    }
+});
+
+document.getElementById('btn-verify-otp').addEventListener('click', async ()=>{
+    const otp=getOtp('#register-form');
+    if(otp.length!==6||!/^\d{6}$/.test(otp)){ showToast('Please enter all 6 digits.','error'); return; }
+    const btn=document.getElementById('btn-verify-otp');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Verifying...';
+    try {
+        await apiRequest('/api/auth/verify-otp',{method:'POST',body:{email:otpEmail,otp}});
+        clearInterval(countdownTimer);
+        document.getElementById('reg-verified-email').textContent=otpEmail;
+        showToast('Email verified! Complete your registration.','success');
+        goToStep(3);
+    } catch(err) {
+        showToast(err.message,'error');
+        document.querySelectorAll('#register-form .otp-digit').forEach(d=>{d.value='';d.classList.remove('has-value');}); 
+        document.querySelector('#register-form .otp-digit').focus();
+    }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-shield-check"></i> Verify Code'; }
+});
+
+document.getElementById('btn-register').addEventListener('click', async ()=>{
+    const name=document.getElementById('register-name').value.trim();
+    const password=document.getElementById('register-password').value;
+    if(!name||!password){ showToast('Please fill in all fields.','error'); return; }
+    const btn=document.getElementById('btn-register');
+    btn.disabled=true; btn.innerHTML='<div class="spinner"></div> Creating account...';
+    try {
+        const data=await apiRequest('/api/auth/register',{method:'POST',body:{name,email:otpEmail,password}});
+        saveAuth(data.token,data.user);
+        showToast('Account created! Redirecting...');
+        setTimeout(()=>window.location.href='company-dashboard.html',800);
+    } catch(err) { showToast(err.message,'error'); }
+    finally { btn.disabled=false; btn.innerHTML='<i class="fa-solid fa-rocket"></i> Create Company Account'; }
+});
+
+if(typeof isAuthenticated==='function'&&isAuthenticated()) window.location.href='company-dashboard.html';
+</script>
+</body>
+</html>

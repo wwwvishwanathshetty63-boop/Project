@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor — Real-Time API Monitoring & Analytics</title>
+    <meta name="description" content="Monitor your APIs in real-time with instant alerts, uptime tracking, and detailed analytics. Built for teams that demand reliability.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg: #060918; --bg-card: #0f1629; --bg-elevated: #161d35;
+            --border: rgba(99,102,241,0.12); --border-hover: rgba(99,102,241,0.3);
+            --text: #e2e8f0; --text-muted: #64748b; --text-dim: #475569;
+            --accent: #7c3aed; --accent-light: #a78bfa;
+            --cyan: #06b6d4; --cyan-light: #22d3ee;
+            --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; line-height:1.6; }
+
+        /* ── Noise texture overlay ── */
+        body::before {
+            content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
+            opacity:.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+        }
+
+        /* ── Animated background ── */
+        .bg-grid { position:fixed; inset:0; z-index:0; pointer-events:none;
+            background-image: linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
+            background-size: 60px 60px;
+        }
+        .bg-orb { position:fixed; border-radius:50%; filter:blur(140px); opacity:.12; pointer-events:none; z-index:0; }
+        .orb-1 { width:600px; height:600px; background:var(--accent); top:-250px; left:-150px; animation:orbFloat1 22s ease-in-out infinite; }
+        .orb-2 { width:500px; height:500px; background:var(--cyan); bottom:-200px; right:-100px; animation:orbFloat2 28s ease-in-out infinite; }
+        .orb-3 { width:350px; height:350px; background:#ec4899; top:40%; left:60%; animation:orbFloat3 20s ease-in-out infinite; }
+        @keyframes orbFloat1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(100px,80px)} }
+        @keyframes orbFloat2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-80px,-100px)} }
+        @keyframes orbFloat3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,40px) scale(1.15)} }
+
+        /* ── Container ── */
+        .container { max-width:1200px; margin:0 auto; padding:0 2rem; position:relative; z-index:1; }
+
+        /* ── Navbar ── */
+        .navbar { position:fixed; top:0; left:0; right:0; z-index:100;
+            background:rgba(6,9,24,0.75); backdrop-filter:blur(20px) saturate(1.4);
+            border-bottom:1px solid var(--border); transition:background .3s; }
+        .navbar .container { display:flex; align-items:center; justify-content:space-between; height:72px; }
+        .nav-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
+        .nav-brand-icon { width:40px; height:40px; border-radius:12px;
+            background:linear-gradient(135deg,var(--accent),var(--cyan)); display:flex; align-items:center; justify-content:center;
+            font-size:1.1rem; color:#fff; }
+        .nav-brand-text { font-size:1.2rem; font-weight:800; color:var(--text);
+            background:linear-gradient(135deg,#fff 30%,var(--accent-light));
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .nav-links { display:flex; align-items:center; gap:2rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:.88rem; font-weight:500; transition:color .2s; }
+        .nav-link:hover { color:var(--text); }
+        .nav-cta { display:inline-flex; align-items:center; gap:6px;
+            padding:9px 22px; border-radius:10px; font-weight:600; font-size:.88rem;
+            background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff;
+            text-decoration:none; border:none; cursor:pointer; transition:transform .2s,box-shadow .2s; }
+        .nav-cta:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(124,58,237,.35); }
+
+        /* ── Hero ── */
+        .hero { padding:10rem 0 6rem; text-align:center; position:relative; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px;
+            background:rgba(124,58,237,0.1); border:1px solid rgba(124,58,237,0.25);
+            border-radius:50px; padding:7px 18px; font-size:.8rem; font-weight:600;
+            color:var(--accent-light); margin-bottom:1.5rem; animation:fadeUp .6s ease-out; }
+        .hero-badge .pulse { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
+        .hero h1 { font-size:clamp(2.5rem,5vw,4.2rem); font-weight:900; line-height:1.1;
+            letter-spacing:-1.5px; margin-bottom:1.5rem; animation:fadeUp .6s .1s ease-out both; }
+        .hero h1 .gradient { background:linear-gradient(135deg,var(--accent-light) 0%,var(--cyan-light) 50%,var(--accent-light) 100%);
+            background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+            animation:shimmer 4s linear infinite; }
+        @keyframes shimmer { to { background-position:200% center; } }
+        .hero-desc { font-size:1.15rem; color:var(--text-muted); max-width:580px; margin:0 auto 2.5rem;
+            line-height:1.7; animation:fadeUp .6s .2s ease-out both; }
+        .hero-actions { display:flex; gap:1rem; justify-content:center; animation:fadeUp .6s .3s ease-out both; }
+        .hero-btn { padding:14px 32px; border-radius:14px; font-size:1rem; font-weight:700;
+            text-decoration:none; display:inline-flex; align-items:center; gap:8px;
+            transition:all .3s; border:none; cursor:pointer; }
+        .hero-btn.primary { background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff;
+            box-shadow:0 4px 20px rgba(124,58,237,.3); }
+        .hero-btn.primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(124,58,237,.5); }
+        .hero-btn.secondary { background:var(--bg-card); color:var(--text); border:1px solid var(--border); }
+        .hero-btn.secondary:hover { border-color:var(--border-hover); background:var(--bg-elevated); }
+
+        /* ── Dashboard preview ── */
+        .hero-preview { margin-top:4rem; perspective:1000px; animation:fadeUp .8s .4s ease-out both; }
+        .preview-wrapper { position:relative; max-width:900px; margin:0 auto;
+            background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
+            overflow:hidden; box-shadow:0 25px 80px rgba(0,0,0,.5);
+            transform:rotateX(4deg); transition:transform .5s; }
+        .preview-wrapper:hover { transform:rotateX(0deg); }
+        .preview-topbar { height:38px; background:var(--bg-elevated); border-bottom:1px solid var(--border);
+            display:flex; align-items:center; gap:6px; padding:0 14px; }
+        .preview-dot { width:10px; height:10px; border-radius:50%; }
+        .preview-dot.r { background:#ef4444; } .preview-dot.y { background:#f59e0b; } .preview-dot.g { background:#22c55e; }
+        .preview-content { padding:1.5rem; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:1rem; }
+        .preview-card { background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px;
+            padding:1rem; position:relative; overflow:hidden; }
+        .preview-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+        .preview-card:nth-child(1)::before { background:linear-gradient(90deg,var(--accent),#6366f1); }
+        .preview-card:nth-child(2)::before { background:linear-gradient(90deg,var(--green),#4ade80); }
+        .preview-card:nth-child(3)::before { background:linear-gradient(90deg,var(--cyan),var(--cyan-light)); }
+        .preview-card:nth-child(4)::before { background:linear-gradient(90deg,var(--red),#f87171); }
+        .preview-label { font-size:.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
+        .preview-value { font-size:1.6rem; font-weight:800; margin-top:4px; font-family:'JetBrains Mono',monospace; }
+        .preview-chart { grid-column:1/-1; height:130px; background:var(--bg-elevated);
+            border:1px solid var(--border); border-radius:10px; overflow:hidden; position:relative; }
+        .preview-chart svg { width:100%; height:100%; }
+
+        /* ── Trust Bar ── */
+        .trust-bar { padding:3rem 0; text-align:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+        .trust-bar p { font-size:.82rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; font-weight:600; margin-bottom:1.5rem; }
+        .trust-logos { display:flex; justify-content:center; align-items:center; gap:3rem; flex-wrap:wrap; }
+        .trust-item { display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:.9rem; font-weight:600; opacity:.6; }
+        .trust-item i { font-size:1.4rem; }
+
+        /* ── Stats ── */
+        .stats { padding:5rem 0; }
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.5rem; }
+        .stat-card { text-align:center; padding:2rem 1rem;
+            background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
+            transition:transform .3s, border-color .3s; }
+        .stat-card:hover { transform:translateY(-4px); border-color:var(--border-hover); }
+        .stat-number { font-size:2.8rem; font-weight:900; font-family:'JetBrains Mono',monospace;
+            background:linear-gradient(135deg,var(--accent-light),var(--cyan-light));
+            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .stat-label { font-size:.85rem; color:var(--text-muted); margin-top:.25rem; font-weight:500; }
+
+        /* ── Features ── */
+        .features { padding:5rem 0; }
+        .section-header { text-align:center; margin-bottom:3.5rem; }
+        .section-label { display:inline-flex; align-items:center; gap:6px;
+            font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;
+            color:var(--accent-light); margin-bottom:.75rem; }
+        .section-title { font-size:clamp(1.8rem,3vw,2.5rem); font-weight:800; letter-spacing:-.5px; margin-bottom:1rem; }
+        .section-desc { font-size:1.05rem; color:var(--text-muted); max-width:540px; margin:0 auto; }
+        .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+        .feature-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
+            padding:2rem; transition:all .3s; position:relative; overflow:hidden; }
+        .feature-card:hover { transform:translateY(-4px); border-color:var(--border-hover);
+            box-shadow:0 20px 40px rgba(0,0,0,.3); }
+        .feature-icon { width:52px; height:52px; border-radius:14px; display:flex;
+            align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:1.2rem; }
+        .feature-card:nth-child(1) .feature-icon { background:rgba(124,58,237,.12); color:var(--accent-light); }
+        .feature-card:nth-child(2) .feature-icon { background:rgba(6,182,212,.12); color:var(--cyan-light); }
+        .feature-card:nth-child(3) .feature-icon { background:rgba(34,197,94,.12); color:var(--green); }
+        .feature-card:nth-child(4) .feature-icon { background:rgba(245,158,11,.12); color:var(--amber); }
+        .feature-card:nth-child(5) .feature-icon { background:rgba(239,68,68,.12); color:var(--red); }
+        .feature-card:nth-child(6) .feature-icon { background:rgba(236,72,153,.12); color:#f472b6; }
+        .feature-card h3 { font-size:1.1rem; font-weight:700; margin-bottom:.5rem; }
+        .feature-card p { font-size:.88rem; color:var(--text-muted); line-height:1.7; }
+
+        /* ── How It Works ── */
+        .how-it-works { padding:5rem 0; }
+        .steps-container { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; position:relative; }
+        .steps-container::before { content:''; position:absolute; top:42px; left:calc(16.67% + 1rem); right:calc(16.67% + 1rem);
+            height:2px; background:linear-gradient(90deg,var(--accent),var(--cyan),var(--green)); z-index:0; }
+        .step-card { text-align:center; position:relative; z-index:1; }
+        .step-number { width:84px; height:84px; border-radius:50%; margin:0 auto 1.5rem;
+            display:flex; align-items:center; justify-content:center;
+            font-size:1.8rem; font-weight:900; font-family:'JetBrains Mono',monospace; }
+        .step-card:nth-child(1) .step-number { background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(124,58,237,.05)); border:2px solid rgba(124,58,237,.3); color:var(--accent-light); }
+        .step-card:nth-child(2) .step-number { background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(6,182,212,.05)); border:2px solid rgba(6,182,212,.3); color:var(--cyan-light); }
+        .step-card:nth-child(3) .step-number { background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.05)); border:2px solid rgba(34,197,94,.3); color:var(--green); }
+        .step-card h3 { font-size:1.15rem; font-weight:700; margin-bottom:.5rem; }
+        .step-card p { font-size:.88rem; color:var(--text-muted); line-height:1.7; max-width:280px; margin:0 auto; }
+
+        /* ── Portals ── */
+        .portals-section { padding:5rem 0; }
+        .portals-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+        .portal-card { background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:3rem 2.5rem;
+            cursor:pointer; transition:all .4s cubic-bezier(.175,.885,.32,1.275);
+            text-decoration:none; color:inherit; position:relative; overflow:hidden; }
+        .portal-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; border-radius:20px 20px 0 0; }
+        .portal-card.company::before { background:linear-gradient(90deg,var(--accent),#6366f1); }
+        .portal-card.employee::before { background:linear-gradient(90deg,var(--cyan),var(--cyan-light)); }
+        .portal-card:hover { transform:translateY(-8px) scale(1.01); }
+        .portal-card.company:hover { border-color:rgba(124,58,237,.3); box-shadow:0 25px 60px rgba(124,58,237,.15); }
+        .portal-card.employee:hover { border-color:rgba(6,182,212,.3); box-shadow:0 25px 60px rgba(6,182,212,.15); }
+        .portal-icon-wrap { width:72px; height:72px; border-radius:18px;
+            display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin-bottom:1.5rem;
+            transition:transform .3s; }
+        .portal-card:hover .portal-icon-wrap { transform:scale(1.08) rotate(-3deg); }
+        .company .portal-icon-wrap { background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(99,102,241,.08)); color:var(--accent-light); }
+        .employee .portal-icon-wrap { background:linear-gradient(135deg,rgba(6,182,212,.12),rgba(34,211,238,.08)); color:var(--cyan-light); }
+        .portal-card h2 { font-size:1.5rem; font-weight:800; margin-bottom:.5rem; }
+        .portal-card .portal-desc { font-size:.9rem; color:var(--text-muted); line-height:1.6; margin-bottom:1.5rem; }
+        .portal-features { list-style:none; text-align:left; }
+        .portal-features li { font-size:.84rem; color:var(--text-muted); padding:.35rem 0; display:flex; align-items:center; gap:8px; }
+        .company .portal-features li i { color:var(--accent-light); font-size:.7rem; }
+        .employee .portal-features li i { color:var(--cyan-light); font-size:.7rem; }
+        .portal-btn { display:flex; align-items:center; justify-content:center; gap:8px;
+            width:100%; padding:.85rem; border-radius:12px; font-weight:700; font-size:.95rem;
+            margin-top:1.5rem; border:none; cursor:pointer; transition:all .3s; }
+        .company .portal-btn { background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff; }
+        .employee .portal-btn { background:linear-gradient(135deg,var(--cyan),var(--cyan-light)); color:#0f172a; }
+        .portal-card:hover .portal-btn { box-shadow:0 8px 25px rgba(0,0,0,.3); }
+
+        /* ── Footer ── */
+        footer { padding:4rem 0 2rem; border-top:1px solid var(--border); }
+        .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem; margin-bottom:3rem; }
+        .footer-brand p { font-size:.88rem; color:var(--text-muted); margin-top:.75rem; line-height:1.7; max-width:300px; }
+        .footer-col h4 { font-size:.82rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); font-weight:700; margin-bottom:1rem; }
+        .footer-col a { display:block; color:var(--text-muted); text-decoration:none; font-size:.88rem; padding:.3rem 0; transition:color .2s; }
+        .footer-col a:hover { color:var(--text); }
+        .footer-bottom { display:flex; justify-content:space-between; align-items:center;
+            padding-top:2rem; border-top:1px solid var(--border); font-size:.8rem; color:var(--text-dim); }
+        .footer-social { display:flex; gap:1rem; }
+        .footer-social a { color:var(--text-dim); font-size:1.1rem; transition:color .2s; }
+        .footer-social a:hover { color:var(--accent-light); }
+
+        /* ── Modal ── */
+        .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(6,9,24,0.85);
+            backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center;
+            opacity:0; pointer-events:none; transition:opacity .3s; padding:20px; }
+        .modal-overlay.active { opacity:1; pointer-events:all; }
+        .modal-container { background:var(--bg-card); border:1px solid var(--border-hover);
+            border-radius:24px; max-width:600px; width:100%; padding:2.5rem;
+            position:relative; transform:scale(0.9); transition:transform .3s;
+            box-shadow:0 30px 60px rgba(0,0,0,.5); }
+        .modal-overlay.active .modal-container { transform:scale(1); }
+        .modal-close { position:absolute; top:20px; right:20px; background:none; border:none;
+            color:var(--text-muted); font-size:1.5rem; cursor:pointer; transition:color .2s; }
+        .modal-close:hover { color:var(--text); }
+        .modal-header { display:flex; align-items:center; gap:16px; margin-bottom:1.5rem; }
+        .modal-icon { width:56px; height:56px; border-radius:16px; display:flex;
+            align-items:center; justify-content:center; font-size:1.5rem; }
+        .modal-title { font-size:1.6rem; font-weight:800; }
+        .modal-body { font-size:1.05rem; color:var(--text-muted); line-height:1.8; margin-bottom:2rem; }
+        .modal-footer { border-top:1px solid var(--border); padding-top:1.5rem; display:flex; justify-content:flex-end; }
+
+        /* ── Clickable Cards ── */
+        .feature-card, .stat-card, .step-card { cursor:pointer; }
+        .feature-card:hover .feature-icon, .stat-card:hover .stat-number, .step-card:hover .step-number {
+             transform: scale(1.1); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        /* ── Utilities ── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+        /* ── Mobile menu ── */
+        .mobile-toggle { display:none; background:none; border:none; color:var(--text); font-size:1.3rem; cursor:pointer; }
+
+        @media(max-width:1024px){
+            .features-grid { grid-template-columns:1fr 1fr; }
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .preview-content { grid-template-columns:1fr 1fr; }
+            .footer-grid { grid-template-columns:1fr 1fr; gap:2rem; }
+        }
+        @media(max-width:768px){
+            .nav-links { display:none; }
+            .mobile-toggle { display:block; }
+            .hero h1 { font-size:2rem; }
+            .features-grid,.portals-grid,.steps-container { grid-template-columns:1fr; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .steps-container::before { display:none; }
+            .footer-grid { grid-template-columns:1fr; }
+            .hero-actions { flex-direction:column; align-items:center; }
+            .hero-preview { display:none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-orb orb-1"></div>
+    <div class="bg-orb orb-2"></div>
+    <div class="bg-orb orb-3"></div>
+
+    <!-- ─── NAVBAR ──────────────────────────────────────────────────── -->
+    <nav class="navbar" id="navbar">
+        <div class="container">
+            <a href="#" class="nav-brand">
+                <div class="nav-brand-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                <span class="nav-brand-text">API Monitor</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#portals" class="nav-link">Portals</a>
+                <a href="login.html" class="nav-cta"><i class="fa-solid fa-rocket"></i> Get Started</a>
+            </div>
+            <button class="mobile-toggle" id="mobile-toggle"><i class="fa-solid fa-bars"></i></button>
+        </div>
+    </nav>
+
+    <!-- ─── HERO ────────────────────────────────────────────────────── -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge"><span class="pulse"></span> Monitoring in real-time</div>
+            <h1>Never Miss a<br><span class="gradient">Downtime Again</span></h1>
+            <p class="hero-desc">
+                Monitor every API endpoint in real-time. Get instant alerts, deep analytics, and automated
+                daily reports — so your team can focus on building, not firefighting.
+            </p>
+            <div class="hero-actions">
+                <a href="#portals" class="hero-btn primary"><i class="fa-solid fa-bolt"></i> Start Monitoring</a>
+                <a href="#features" class="hero-btn secondary"><i class="fa-solid fa-play"></i> See Features</a>
+            </div>
+
+            <!-- Dashboard Preview -->
+            <div class="hero-preview">
+                <div class="preview-wrapper" id="dashboard-preview">
+                    <div class="preview-topbar">
+                        <span class="preview-dot r"></span>
+                        <span class="preview-dot y"></span>
+                        <span class="preview-dot g"></span>
+                    </div>
+                    <div class="preview-content">
+                        <div class="preview-card">
+                            <div class="preview-label">Total APIs</div>
+                            <div class="preview-value" style="color:var(--accent-light);">24</div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-label">Uptime</div>
+                            <div class="preview-value" style="color:var(--green);">99.8%</div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-label">Avg Response</div>
+                            <div class="preview-value" style="color:var(--cyan-light);">142ms</div>
+                        </div>
+                        <div class="preview-card">
+                            <div class="preview-label">Incidents</div>
+                            <div class="preview-value" style="color:var(--red);">2</div>
+                        </div>
+                        <div class="preview-chart">
+                            <svg viewBox="0 0 900 130" preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stop-color="rgba(99,102,241,.3)"/>
+                                        <stop offset="100%" stop-color="rgba(99,102,241,0)"/>
+                                    </linearGradient>
+                                </defs>
+                                <path d="M0,80 C50,60 100,90 150,50 C200,10 250,70 300,45 C350,20 400,65 450,40 C500,15 550,55 600,30 C650,50 700,20 750,45 C800,70 850,25 900,35 L900,130 L0,130 Z" fill="url(#chartGrad)"/>
+                                <path d="M0,80 C50,60 100,90 150,50 C200,10 250,70 300,45 C350,20 400,65 450,40 C500,15 550,55 600,30 C650,50 700,20 750,45 C800,70 850,25 900,35" fill="none" stroke="#6366f1" stroke-width="2.5"/>
+                            </svg>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── TRUST BAR ───────────────────────────────────────────────── -->
+    <section class="trust-bar">
+        <div class="container">
+            <p>Trusted Technologies</p>
+            <div class="trust-logos">
+                <div class="trust-item"><i class="fa-brands fa-python"></i> Python</div>
+                <div class="trust-item"><i class="fa-solid fa-flask-vial"></i> Flask</div>
+                <div class="trust-item"><i class="fa-solid fa-database"></i> SQLite</div>
+                <div class="trust-item"><i class="fa-solid fa-lock"></i> JWT Auth</div>
+                <div class="trust-item"><i class="fa-solid fa-envelope"></i> SMTP Alerts</div>
+                <div class="trust-item"><i class="fa-solid fa-chart-line"></i> Chart.js</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── STATS ───────────────────────────────────────────────────── -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">99.9%</div>
+                    <div class="stat-label">Uptime Tracking Accuracy</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">&lt;1s</div>
+                    <div class="stat-label">Alert Response Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">30d</div>
+                    <div class="stat-label">Data Retention</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">24/7</div>
+                    <div class="stat-label">Continuous Monitoring</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── FEATURES ────────────────────────────────────────────────── -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-sparkles"></i> Features</div>
+                <h2 class="section-title">Everything You Need to<br>Monitor Your APIs</h2>
+                <p class="section-desc">From real-time checks to automated daily reports, we've got your entire API infrastructure covered.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
+                    <h3>Real-Time Monitoring</h3>
+                    <p>Continuous health checks on all your API endpoints with instant status updates and response time tracking.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-bell"></i></div>
+                    <h3>Instant Email Alerts</h3>
+                    <p>Get notified the moment an API goes down or exceeds response time thresholds via beautifully formatted emails.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-chart-area"></i></div>
+                    <h3>Advanced Analytics</h3>
+                    <p>Hourly response time charts, uptime percentages, error breakdowns, and incident timelines at a glance.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
+                    <h3>Daily Summary Reports</h3>
+                    <p>Automated daily reports sent to HR/IT with comprehensive stats on the day's API monitoring data.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-user-shield"></i></div>
+                    <h3>Role-Based Access</h3>
+                    <p>Separate Company and Employee portals. Admins manage everything; employees see only what they need.</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-user-plus"></i></div>
+                    <h3>Employee Invitations</h3>
+                    <p>Invite team members by email. Secure credentials are auto-generated and sent directly — no manual setup.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── HOW IT WORKS ────────────────────────────────────────────── -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-route"></i> How It Works</div>
+                <h2 class="section-title">Up and Running in Minutes</h2>
+                <p class="section-desc">Three simple steps to full API monitoring coverage for your team.</p>
+            </div>
+            <div class="steps-container">
+                <div class="step-card">
+                    <div class="step-number">1</div>
+                    <h3>Register Your Company</h3>
+                    <p>Create a company account with OTP-verified email. Set up your admin credentials in under a minute.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">2</div>
+                    <h3>Add API Endpoints</h3>
+                    <p>Enter your API URLs, set monitoring intervals, and configure alert thresholds. We start checking immediately.</p>
+                </div>
+                <div class="step-card">
+                    <div class="step-number">3</div>
+                    <h3>Invite Your Team</h3>
+                    <p>Add employees by email. They receive secure credentials instantly and can start monitoring right away.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── PORTALS ─────────────────────────────────────────────────── -->
+    <section class="portals-section" id="portals">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-door-open"></i> Access Portals</div>
+                <h2 class="section-title">Choose Your Portal</h2>
+                <p class="section-desc">Select your role to access the right dashboard for you.</p>
+            </div>
+            <div class="portals-grid">
+                <a href="login.html" class="portal-card company" id="company-portal">
+                    <div class="portal-icon-wrap"><i class="fa-solid fa-building"></i></div>
+                    <h2>Company / Admin</h2>
+                    <p class="portal-desc">For IT teams and HR administrators. Manage APIs, view analytics, and invite employees.</p>
+                    <ul class="portal-features">
+                        <li><i class="fa-solid fa-check-circle"></i> Real-time API analytics dashboard</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Employee invitation & management</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Daily email reports to HR</li>
+                        <li><i class="fa-solid fa-check-circle"></i> API endpoint monitoring setup</li>
+                        <li><i class="fa-solid fa-check-circle"></i> OTP-verified company registration</li>
+                    </ul>
+                    <div class="portal-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Enter Admin Portal</div>
+                </a>
+
+                <a href="employee-login.html" class="portal-card employee" id="employee-portal">
+                    <div class="portal-icon-wrap"><i class="fa-solid fa-user-tie"></i></div>
+                    <h2>Employee</h2>
+                    <p class="portal-desc">For team members. View your assigned API monitoring data and check endpoint status.</p>
+                    <ul class="portal-features">
+                        <li><i class="fa-solid fa-check-circle"></i> View API monitoring dashboard</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Check endpoint status & logs</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Response time analytics</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Real-time alerts & notifications</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Secure credential-based login</li>
+                    </ul>
+                    <div class="portal-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Login</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="nav-brand" style="margin-bottom:.5rem;">
+                        <div class="nav-brand-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                        <span class="nav-brand-text">API Monitor</span>
+                    </a>
+                    <p>Real-time API monitoring and analytics platform. Built for teams that demand reliability and visibility.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#portals">Portals</a>
+                    <a href="login.html">Admin Login</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Portals</h4>
+                    <a href="login.html">Company Portal</a>
+                    <a href="employee-login.html">Employee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Tech Stack</h4>
+                    <a href="#">Python & Flask</a>
+                    <a href="#">SQLite Database</a>
+                    <a href="#">JWT Authentication</a>
+                    <a href="#">SMTP Integration</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 API Monitor SaaS. All rights reserved.</span>
+                <div class="footer-social">
+                    <a href="#"><i class="fa-brands fa-github"></i></a>
+                    <a href="#"><i class="fa-brands fa-linkedin"></i></a>
+                    <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-container">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div class="modal-header">
+                <div class="modal-icon" id="modal-icon"></div>
+                <h2 class="modal-title" id="modal-title"></h2>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <button class="btn primary" onclick="closeModal()">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ── Details Content Mapping ──
+        const detailsData = {
+            'features': {
+                'Real-Time Monitoring': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(124,58,237,.12)', textColor: '#a78bfa', desc: 'Our system executes concurrent API checks every 60 seconds with sub-millisecond precision. Data is stored in an optimized local database with indexing for rapid retrieval.' },
+                'Instant Email Alerts': { icon: '<i class="fa-solid fa-bell"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', desc: 'Leveraging SMTP priority queues, alerts are dispatched within 3 seconds of failure detection. Templates are HTML5-optimized for all modern mail clients.' },
+                'Advanced Analytics': { icon: '<i class="fa-solid fa-chart-area"></i>', color: 'rgba(34,197,94,.12)', textColor: '#22c55e', desc: 'We provide rolling 24-hour response time windows with weighted averages. Incident timelines capture precise down/up timestamps with error code logging.' },
+                'Daily Summary Reports': { icon: '<i class="fa-solid fa-envelope-open-text"></i>', color: 'rgba(245,158,11,.12)', textColor: '#f59e0b', desc: 'Aggregated background jobs compile cross-API data at 00:00 UTC. Reports include uptime percentages, total incident counts, and performance deltas.' },
+                'Role-Based Access': { icon: '<i class="fa-solid fa-user-shield"></i>', color: 'rgba(239,68,68,.12)', textColor: '#ef4444', desc: 'Secure JWT-based session management separates Company (Admin) and Employee views. Permission layers ensure data isolation and secure portal entry.' },
+                'Employee Invitations': { icon: '<i class="fa-solid fa-user-plus"></i>', color: 'rgba(236,72,153,.12)', textColor: '#f472b6', desc: 'One-click onboarding with secure password derivation. Credentials are sent via TLS-encrypted email directly to the employee\'s inbox.' }
+            },
+            'stats': {
+                '99.9%': { icon: '<i class="fa-solid fa-chart-line"></i>', color: 'rgba(124,58,237,.12)', textColor: '#a78bfa', title: 'Uptime Precision', desc: 'Measured over a 30-day rolling window. We track uptime based on successful HTTP 2xx/3xx responses from global monitoring nodes.' },
+                '<1s': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', title: 'Alert Latency', desc: 'Average latency from detection to SMTP dispatch. Our alert engine uses asynchronous task queues to minimize notification delays.' },
+                '30d': { icon: '<i class="fa-solid fa-database"></i>', color: 'rgba(34,197,94,.12)', textColor: '#22c55e', title: 'Data Retention', desc: 'Automatic cleanup jobs purge data older than 30 days to maintain dashboard performance and database efficiency.' },
+                '24/7': { icon: '<i class="fa-solid fa-clock"></i>', color: 'rgba(245,158,11,.12)', textColor: '#f59e0b', title: 'Always-On Coverage', desc: 'Redundant monitoring cycles ensure zero-gap coverage. If one monitoring cycle fails, our watchdog process immediately resumes the loop.' }
+            },
+            'steps': {
+                '1': { icon: '1', color: 'rgba(124,58,237,.15)', textColor: '#a78bfa', title: 'Register Your Company', desc: 'Verification is handled via a 6-digit OTP sent to your provided company email. Once verified, you gain full ownership of your monitoring workspace.' },
+                '2': { icon: '2', color: 'rgba(6,182,212,.15)', textColor: '#22d3ee', title: 'Add API Endpoints', desc: 'Support for REST, GraphQL, and SOAP endpoints. Configure custom headers, body payloads, and timeout thresholds for each individual API.' },
+                '3': { icon: '3', color: 'rgba(34,197,94,.15)', textColor: '#22c55e', title: 'Invite Your Team', desc: 'Admins can scale their team instantly. Invited employees get immediate access to the dashboard with restricted monitoring-only permissions.' }
+            }
+        };
+
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
+
+        function openModal(type, key) {
+            const data = detailsData[type][key];
+            if (!data) return;
+
+            modalIcon.innerHTML = data.icon;
+            modalIcon.style.background = data.color;
+            modalIcon.style.color = data.textColor;
+            modalTitle.textContent = data.title || key;
+            modalBody.textContent = data.desc;
+            modalOverlay.classList.add('active');
+        }
+
+        function closeModal() {
+            modalOverlay.classList.remove('active');
+        }
+
+        document.getElementById('modal-close').onclick = closeModal;
+        modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };
+
+        // ── Card Click Listeners ──
+        document.querySelectorAll('.feature-card').forEach(card => {
+            const title = card.querySelector('h3').textContent;
+            card.onclick = () => openModal('features', title);
+        });
+        document.querySelectorAll('.stat-card').forEach(card => {
+            const number = card.querySelector('.stat-number').textContent;
+            card.onclick = () => openModal('stats', number);
+        });
+        document.querySelectorAll('.step-card').forEach(card => {
+            const num = card.querySelector('.step-number').textContent;
+            card.onclick = () => openModal('steps', num);
+        });
+
+        // ── Smooth scroll for anchor links ──
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const t = document.querySelector(a.getAttribute('href'));
+                if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+            });
+        });
+
+        // ── Navbar background on scroll ──
+        window.addEventListener('scroll', () => {
+            document.getElementById('navbar').style.background =
+                window.scrollY > 40 ? 'rgba(6,9,24,0.92)' : 'rgba(6,9,24,0.75)';
+        });
+
+        // ── Intersection Observer for fade-in ──
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.feature-card, .stat-card, .step-card, .portal-card').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(24px)';
+            el.style.transition = 'opacity .6s ease, transform .6s ease';
+            observer.observe(el);
+        });
+
+        // ── Auth redirect ──
+        (function() {
+            try {
+                const token = localStorage.getItem('auth_token');
+                const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+                if (token && user) {
+                    window.location.href = user.role === 'employee' ? 'index.html' : 'company-dashboard.html';
+                }
+            } catch(e) {}
+        })();
+    </script>
+</body>
+</html>

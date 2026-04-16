@@ -122,6 +122,50 @@ def get_user_email(user_id: str) -> str:
             db.close()
 
 
+# Global variable to track the last time logs were purged
+_LAST_PURGE_TIME = 0
+
+def purge_old_data(db, max_days=None):
+    """Delete old logs, expired email verifications, and old invitations."""
+    global _LAST_PURGE_TIME
+    
+    # Only run purge once every 24 hours to reduce load
+    current_time = time.time()
+    if current_time - _LAST_PURGE_TIME < 86400:
+        return
+
+    try:
+        if max_days is None:
+            max_days = Config.DATA_RETENTION_DAYS
+
+        # 1. Purge Monitoring Logs
+        since_logs = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=max_days)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+        cursor_logs = db.execute("DELETE FROM monitoring_logs WHERE checked_at < ?", (since_logs,))
+        logs_deleted = cursor_logs.rowcount
+        
+        # 2. Purge Expired Email Verifications
+        now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        cursor_verif = db.execute("DELETE FROM email_verifications WHERE expires_at < ?", (now_str,))
+        verif_deleted = cursor_verif.rowcount
+
+        # 3. Purge Old Employee Invitations (e.g., older than 30 days)
+        cursor_inv = db.execute("DELETE FROM employee_invitations WHERE created_at < ?", (since_logs,))
+        inv_deleted = cursor_inv.rowcount
+
+        db.commit()
+        _LAST_PURGE_TIME = current_time
+        
+        if logs_deleted > 0 or verif_deleted > 0 or inv_deleted > 0:
+            logger.info(
+                f"Maintenance Purge: Deleted {logs_deleted} logs, "
+                f"{verif_deleted} expired verifications, and {inv_deleted} old invitations."
+            )
+    except Exception as e:
+        logger.error(f"Failed to purge old data: {e}")
+
+
 def run_monitoring_cycle():
     """
     Main monitoring cycle: check all active endpoints, log results,
@@ -129,6 +173,10 @@ def run_monitoring_cycle():
     """
     try:
         db = get_db()
+        
+        # Monthly/Daily Cleanup
+        purge_old_data(db)
+
         endpoints = rows_to_list(
             db.execute("SELECT * FROM api_endpoints WHERE is_active = 1").fetchall()
         )

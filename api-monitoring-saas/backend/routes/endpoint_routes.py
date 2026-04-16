@@ -60,19 +60,88 @@ def create_endpoint():
 @endpoint_bp.route("", methods=["GET"])
 @token_required
 def list_endpoints():
-    """List all API endpoints for the current user."""
+    """List all API endpoints for the current user with stats."""
     db = get_db()
     try:
+        # 1. Get all endpoints for user
         rows = db.execute(
             "SELECT * FROM api_endpoints WHERE user_id = ? ORDER BY created_at DESC",
             (g.current_user_id,),
         ).fetchall()
-
         endpoints = rows_to_list(rows)
+
+        if not endpoints:
+            return jsonify({"endpoints": []}), 200
+
+        # 2. Get range from query (default 1d)
+        time_range = request.args.get("range", "1d")
+        days = {"1d": 1, "7d": 7, "30d": 30}.get(time_range, 1)
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+
+        # 3. Fetch aggregate stats for the range
+        endpoint_ids = [e["id"] for e in endpoints]
+        placeholders = ",".join(["?"] * len(endpoint_ids))
+        
+        stats_rows = db.execute(
+            f"""
+            SELECT 
+                endpoint_id,
+                COUNT(*) as total,
+                SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END) as successes,
+                AVG(response_time) as avg_rt
+            FROM monitoring_logs 
+            WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?
+            GROUP BY endpoint_id
+            """,
+            (*endpoint_ids, since)
+        ).fetchall()
+        stats_dict = {row["endpoint_id"]: row for row in stats_rows}
+
+        # 4. Fetch LATEST log for current status
+        latest_rows = db.execute(
+            f"""
+            SELECT l1.*
+            FROM monitoring_logs l1
+            JOIN (
+                SELECT endpoint_id, MAX(checked_at) as max_at
+                FROM monitoring_logs
+                WHERE endpoint_id IN ({placeholders})
+                GROUP BY endpoint_id
+            ) l2 ON l1.endpoint_id = l2.endpoint_id AND l1.checked_at = l2.max_at
+            """,
+            (*endpoint_ids,)
+        ).fetchall()
+        latest_dict = {row["endpoint_id"]: row for row in latest_rows}
+
+        # 5. Combine data
         for ep in endpoints:
             ep["is_active"] = bool(ep["is_active"])
+            
+            # Aggregate stats
+            s = stats_dict.get(ep["id"])
+            if s and s["total"] > 0:
+                ep["uptime_percentage"] = round((s["successes"] / s["total"]) * 100, 2)
+            else:
+                ep["uptime_percentage"] = 100.0
+
+            # Latest status
+            l = latest_dict.get(ep["id"])
+            if l:
+                ep["is_down"] = not bool(l["is_success"])
+                ep["last_check"] = l["checked_at"]
+                ep["last_response_time"] = l["response_time"]
+                ep["last_status_code"] = l["status_code"]
+            else:
+                ep["is_down"] = False
+                ep["last_check"] = None
+                ep["last_response_time"] = None
+                ep["last_status_code"] = None
 
         return jsonify({"endpoints": endpoints}), 200
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({"error": str(e)}), 500
     finally:
         db.close()
 
@@ -217,18 +286,26 @@ def get_endpoint_logs(endpoint_id):
     try:
         existing = db.execute(
             "SELECT id FROM api_endpoints WHERE id = ? AND user_id = ?",
-            (endpoint_id, g.current_user_id),
+            (endpoint_id, g.current_user_id, ),
         ).fetchone()
         if not existing:
             return jsonify({"error": "Endpoint not found"}), 404
 
+        time_range = request.args.get("range", "1d")
+        days_map = {"1d": 1, "7d": 7, "30d": 30}
+        days = days_map.get(time_range, 1)
+
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime(
+            "%Y-%m-%d %H:%M:%S"
+        )
+
         limit = request.args.get("limit", 100, type=int)
-        limit = min(limit, 500)
+        limit = min(limit, 1000)
 
         logs = rows_to_list(
             db.execute(
-                "SELECT * FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT ?",
-                (endpoint_id, limit),
+                "SELECT * FROM monitoring_logs WHERE endpoint_id = ? AND checked_at >= ? ORDER BY checked_at DESC LIMIT ?",
+                (endpoint_id, since, limit),
             ).fetchall()
         )
 

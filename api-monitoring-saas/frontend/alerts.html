@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Alerts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+                <a href="api-endpoints.html" class="menu-item"><i class="fa-solid fa-server"></i><span>API Endpoints</span></a>
+                <a href="logs.html" class="menu-item"><i class="fa-solid fa-list-check"></i><span>Monitoring Logs</span></a>
+                <a href="alerts.html" class="menu-item active"><i class="fa-solid fa-bell"></i><span>Alerts</span></a>
+            </div>
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
+                <a href="admin.html" class="menu-item"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">–</div>
+            <div class="user-info">
+                <span class="user-name">Guest</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
+                <h2>Alerts</h2>
+            </div>
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                <button class="topbar-action" title="Notifications"><i class="fa-solid fa-bell"></i></button>
+                <div class="user-avatar-small">–</div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Alerts &amp; Notifications</h1>
+                    <p>Configure rule-based alerts for your monitored APIs</p>
+                </div>
+                <button class="btn" id="btn-new-alert">
+                    <i class="fa-solid fa-plus"></i> New Alert Rule
+                </button>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="alert-stats-row">
+                <div class="card stat-card" style="padding:1.25rem;">
+                    <div class="stat-icon-wrapper stat-icon-danger">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="alert-active-count">0</div>
+                        <div class="stat-label">Active Alerts</div>
+                    </div>
+                </div>
+                <div class="card stat-card" style="padding:1.25rem;">
+                    <div class="stat-icon-wrapper" style="background:rgba(239,68,68,0.1);color:#ef4444;box-shadow:0 0 15px rgba(239,68,68,0.2);">
+                        <i class="fa-solid fa-circle-xmark"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="alert-critical-count">0</div>
+                        <div class="stat-label">Critical</div>
+                    </div>
+                </div>
+                <div class="card stat-card" style="padding:1.25rem;">
+                    <div class="stat-icon-wrapper" style="background:rgba(245,158,11,0.1);color:#f59e0b;box-shadow:0 0 15px rgba(245,158,11,0.2);">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="alert-warning-count">0</div>
+                        <div class="stat-label">Warnings</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Alert Rules -->
+            <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.5rem;">
+                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-sliders text-muted"></i> Alert Rules
+                    </div>
+                    <span class="badge badge-gray" id="rules-count">0 rules</span>
+                </div>
+                <div class="filter-bar">
+                    <div class="filter-pills" id="alert-filter-pills">
+                        <button class="filter-pill active" data-filter="all">All</button>
+                        <button class="filter-pill" data-filter="critical">Critical</button>
+                        <button class="filter-pill" data-filter="warning">Warning</button>
+                        <button class="filter-pill" data-filter="info">Info</button>
+                    </div>
+                    <div class="filter-search">
+                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                        <input type="text" id="alert-search" placeholder="Search rules...">
+                    </div>
+                </div>
+                <div class="alert-rule-list" id="alert-rule-list">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-bell-slash"></i>
+                        <p>No alert rules configured yet.<br>Click <strong>+ New Alert Rule</strong> to get started.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Triggers -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-clock-rotate-left text-muted"></i> Recent Triggers
+                    </div>
+                    <span class="badge badge-gray">Last 24 hours</span>
+                </div>
+                <div class="table-responsive">
+                    <table id="recent-triggers-table">
+                        <thead>
+                            <tr>
+                                <th>Time</th>
+                                <th>Endpoint</th>
+                                <th>Rule</th>
+                                <th>Severity</th>
+                                <th>Message</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="triggers-tbody">
+                            <tr>
+                                <td colspan="6" style="padding:3rem; text-align:center;">
+                                    <div class="empty-state" style="padding:1.5rem 1rem;">
+                                        <i class="fa-solid fa-inbox"></i>
+                                        <p>No alerts triggered yet. Add endpoints and configure rules to start receiving alerts.</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        // Filter pills
+        document.querySelectorAll('#alert-filter-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#alert-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                const f = pill.dataset.filter;
+                document.querySelectorAll('#alert-rule-list .alert-rule-row').forEach(row => {
+                    row.style.display = (f === 'all' || row.dataset.severity === f) ? '' : 'none';
+                });
+            });
+        });
+        document.getElementById('alert-search').addEventListener('input', function () {
+            const q = this.value.toLowerCase();
+            document.querySelectorAll('#alert-rule-list .alert-rule-row').forEach(row => {
+                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+            });
+        });
+    </script>
+</body>
+</html>

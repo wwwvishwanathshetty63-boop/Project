@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Monitoring Logs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
+                <a href="api-endpoints.html" class="menu-item"><i class="fa-solid fa-server"></i><span>API Endpoints</span></a>
+                <a href="logs.html" class="menu-item active"><i class="fa-solid fa-list-check"></i><span>Monitoring Logs</span></a>
+                <a href="alerts.html" class="menu-item"><i class="fa-solid fa-bell"></i><span>Alerts</span></a>
+            </div>
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
+                <a href="admin.html" class="menu-item"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">–</div>
+            <div class="user-info">
+                <span class="user-name">Guest</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
+                <h2>Monitoring Logs</h2>
+            </div>
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                <button class="topbar-action" title="Notifications"><i class="fa-solid fa-bell"></i></button>
+                <div class="user-avatar-small">–</div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Monitoring Logs</h1>
+                    <p>View detailed check histories for all monitored API endpoints</p>
+                </div>
+                <button class="btn btn-secondary" id="btn-export">
+                    <i class="fa-solid fa-download"></i> Export Logs
+                </button>
+            </div>
+
+            <!-- Log Timeline Card -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-timeline text-muted"></i> Incident Timeline
+                    </div>
+                    <span class="badge badge-gray" id="log-count">0 entries</span>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="filter-bar">
+                    <div class="filter-pills" id="log-filter-pills">
+                        <button class="filter-pill active" data-filter="all">All</button>
+                        <button class="filter-pill" data-filter="ok">Success</button>
+                        <button class="filter-pill" data-filter="fail">Failures</button>
+                    </div>
+                    <select class="form-control" id="log-range-filter" style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
+                        <option value="1d">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                    <select class="form-control" id="log-endpoint-filter"
+                        style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
+                        <option value="all">All Endpoints</option>
+                    </select>
+                    <div class="filter-search" style="margin-left: auto;">
+                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                        <input type="text" id="log-search" placeholder="Search logs...">
+                    </div>
+                </div>
+
+                <!-- Timeline entries — populated by JS -->
+                <div class="incident-list" id="incident-list">
+                    <div class="empty-state">
+                        <i class="fa-solid fa-spinner fa-spin"></i>
+                        <p>Loading monitoring logs...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+        let allEndpoints = [];
+
+        async function loadLogs() {
+            const list = document.getElementById('incident-list');
+            const countEl = document.getElementById('log-count');
+            const range = document.getElementById('log-range-filter').value;
+            const endpointId = document.getElementById('log-endpoint-filter').value;
+
+            try {
+                // Initial load of endpoints if not already done
+                if (allEndpoints.length === 0) {
+                    const data = await apiRequest('/api/endpoints');
+                    allEndpoints = data.endpoints || [];
+                    
+                    const sel = document.getElementById('log-endpoint-filter');
+                    allEndpoints.forEach(ep => {
+                        const opt = document.createElement('option');
+                        opt.value = ep.id;
+                        opt.textContent = ep.name;
+                        sel.appendChild(opt);
+                    });
+                }
+
+                list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-spinner fa-spin"></i><p>Loading logs...</p></div>`;
+
+                let combinedLogs = [];
+                
+                // If "all" endpoints, we need to fetch for each or have an aggregate endpoint
+                // Since we only have /<id>/logs, we loop for simplicity unless there are too many
+                const targets = endpointId === 'all' ? allEndpoints : allEndpoints.filter(e => e.id === endpointId);
+
+                for (const ep of targets) {
+                    try {
+                        const logData = await apiRequest(`/api/endpoints/${ep.id}/logs?range=${range}&limit=100`);
+                        if (logData.logs) {
+                            // Add endpoint name to each log for display
+                            logData.logs.forEach(l => l.endpoint_name = ep.name);
+                            combinedLogs = combinedLogs.concat(logData.logs);
+                        }
+                    } catch (e) {
+                        console.error(`Failed to load logs for ${ep.name}`, e);
+                    }
+                }
+
+                // Sort combined logs by time descending
+                combinedLogs.sort((a, b) => new Date(b.checked_at) - new Date(a.checked_at));
+
+                if (!combinedLogs.length) {
+                    list.innerHTML = `<div class="empty-state">
+                        <i class="fa-solid fa-list-check"></i>
+                        <p>No monitoring logs found for this period.<br>Try selecting a longer time range.</p>
+                    </div>`;
+                    countEl.textContent = '0 entries';
+                    return;
+                }
+
+                list.innerHTML = '';
+                combinedLogs.forEach(log => {
+                    const type = !log.is_success ? 'fail' : (log.response_time > 1000 ? 'warn' : 'ok');
+                    const codeClass = !log.is_success ? 'http-5xx' : 'http-2xx';
+                    // Find endpoint info
+                    const ep = allEndpoints.find(e => e.id === log.endpoint_id) || {};
+                    const method = (ep.method || 'GET').toUpperCase();
+                    const methodCls = { GET: 'm-get', POST: 'm-post', PUT: 'm-put', DELETE: 'm-delete' }[method] || 'm-get';
+                    const icon = type === 'ok' ? 'fa-circle-check' : type === 'fail' ? 'fa-circle-xmark' : 'fa-triangle-exclamation';
+
+                    const row = document.createElement('div');
+                    row.className = `incident-row ${type}`;
+                    row.dataset.type = type;
+                    row.dataset.search = (log.endpoint_name + ' ' + ep.url).toLowerCase();
+                    row.innerHTML = `
+                        <div class="incident-icon ${type}"><i class="fa-solid ${icon}"></i></div>
+                        <div class="incident-body">
+                            <div class="incident-title">
+                                ${escapeHtml(log.endpoint_name)}
+                                <span class="monitor-card-method ${methodCls}">${method}</span>
+                                <span class="http-code ${codeClass}">${log.status_code}</span>
+                            </div>
+                            <div class="incident-detail">
+                                <span><i class="fa-solid fa-bolt"></i> ${log.response_time}ms</span>
+                                <span><i class="fa-solid fa-link"></i> ${escapeHtml(ep.url || '')}</span>
+                            </div>
+                        </div>
+                        <div class="incident-time">${new Date(log.checked_at).toLocaleString()}</div>
+                    `;
+                    list.appendChild(row);
+                });
+
+                applyLogFilters();
+
+            } catch (e) {
+                console.error('loadLogs failed:', e);
+                list.innerHTML = `<div class="empty-state"><i class="fa-solid fa-circle-exclamation"></i><p>Failed to load logs. Please try again.</p></div>`;
+            }
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', loadLogs);
+
+        // Filter pills
+        document.querySelectorAll('#log-filter-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#log-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                applyLogFilters();
+            });
+        });
+
+        // Trigger reload on range or endpoint change
+        document.getElementById('log-range-filter').addEventListener('change', loadLogs);
+        document.getElementById('log-endpoint-filter').addEventListener('change', loadLogs);
+        document.getElementById('log-search').addEventListener('input', applyLogFilters);
+
+        function applyLogFilters() {
+            const activeType = document.querySelector('#log-filter-pills .filter-pill.active').dataset.filter;
+            const q = document.getElementById('log-search').value.toLowerCase();
+            let count = 0;
+            
+            document.querySelectorAll('#incident-list .incident-row').forEach(row => {
+                const typeMatch = activeType === 'all' || row.dataset.type === activeType;
+                const textMatch = row.dataset.search.includes(q);
+                const show = typeMatch && textMatch;
+                row.style.display = show ? '' : 'none';
+                if (show) count++;
+            });
+            document.getElementById('log-count').textContent = `${count} entries`;
+        }
+
+        // Export Logs
+        document.getElementById('btn-export').addEventListener('click', () => {
+            if (typeof showToast === 'function') showToast('Logs exported to CSV.', 'success');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor — Employee Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background-color:var(--bg-color); margin:0; padding:1rem; }
+        .auth-container { width:100%; max-width:440px; animation:fadeIn 0.5s ease-out; }
+        .auth-header { text-align:center; margin-bottom:2rem; }
+        .auth-logo { font-size:3rem; margin-bottom:1rem; }
+        .auth-logo i { background: linear-gradient(135deg, #06b6d4, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(6,182,212,0.4)); }
+        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-size: 0.85rem; margin-bottom: 1.5rem; transition: color 0.2s; }
+        .back-link:hover { color: var(--accent-color); }
+        .employee-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(34,211,238,0.1)); border: 1px solid rgba(6,182,212,0.25); padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; color: #22d3ee; margin-bottom: 1rem; }
+        .info-note { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; display: flex; align-items: flex-start; gap: 0.6rem; }
+        .info-note i { color: #818cf8; margin-top: 2px; flex-shrink: 0; }
+    </style>
+</head>
+<body>
+<div class="auth-container">
+    <a href="landing.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+
+    <div class="auth-header">
+        <div class="auth-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+        <div class="employee-badge"><i class="fa-solid fa-user-tie"></i> Employee Portal</div>
+        <h1 id="auth-title">Employee Login</h1>
+        <p id="auth-subtitle" style="color: var(--text-muted); font-size: 0.95rem;">Sign in with your credentials received via email</p>
+    </div>
+
+    <div class="card" style="padding:2.5rem;">
+        <div class="info-note">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>Use the <strong>Name</strong>, <strong>Email</strong>, and <strong>Password</strong> provided to you by your company administrator via email.</span>
+        </div>
+
+        <form id="employee-login-form">
+            <div class="form-group">
+                <label class="form-label">Full Name</label>
+                <div style="position:relative;">
+                    <i class="fa-solid fa-user" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="text" id="emp-name" class="form-control" style="padding-left:2.5rem;" placeholder="John Doe" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email Address</label>
+                <div style="position:relative;">
+                    <i class="fa-solid fa-envelope" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="email" id="emp-email" class="form-control" style="padding-left:2.5rem;" placeholder="john@company.com" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <div style="position:relative;">
+                    <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
+                    <input type="password" id="emp-password" class="form-control" style="padding-left:2.5rem;" placeholder="••••••••" required>
+                </div>
+            </div>
+            <button type="submit" class="btn" style="width:100%;justify-content:center;padding:0.75rem;background:linear-gradient(135deg,#06b6d4,#22d3ee);color:#0f172a;font-weight:600;">
+                <i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Sign In
+            </button>
+        </form>
+
+        <p style="text-align:center;margin-top:1.25rem;font-size:0.82rem;color:var(--text-muted);">
+            Don't have credentials? Contact your company administrator to receive an invite.
+        </p>
+    </div>
+</div>
+
+<script src="js/app.js"></script>
+<script>
+document.getElementById('employee-login-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const btn = this.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    btn.innerHTML = '<div class="spinner"></div> Signing in...';
+    try {
+        const d = await apiRequest('/api/auth/login', {
+            method: 'POST',
+            body: {
+                name: document.getElementById('emp-name').value.trim(),
+                email: document.getElementById('emp-email').value.trim(),
+                password: document.getElementById('emp-password').value,
+                login_type: 'employee'
+            }
+        });
+        saveAuth(d.token, d.user);
+        showToast('Login successful! Redirecting...');
+        setTimeout(() => window.location.href = 'index.html', 800);
+    } catch(err) {
+        showToast(err.message, 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Sign In';
+    }
+});
+
+if (typeof isAuthenticated === 'function' && isAuthenticated()) window.location.href = 'index.html';
+</script>
+</body>
+</html>

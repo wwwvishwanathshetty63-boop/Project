@@ -50,16 +50,52 @@ def create_app() -> Flask:
 
     # Serve frontend pages
     @app.route("/")
-    def serve_index():
-        return send_from_directory(app.static_folder, "index.html")
+    def serve_landing():
+        return send_from_directory(app.static_folder, "landing.html")
+
+    @app.route("/login")
+    @app.route("/login.html")
+    def serve_login():
+        return send_from_directory(app.static_folder, "login.html")
+
+    @app.route("/employee-login")
+    @app.route("/employee-login.html")
+    def serve_employee_login():
+        return send_from_directory(app.static_folder, "employee-login.html")
 
     @app.route("/dashboard")
+    @app.route("/index.html")
+    @app.route("/dashboard.html")
     def serve_dashboard():
-        return send_from_directory(app.static_folder, "dashboard.html")
+        return send_from_directory(app.static_folder, "index.html")
 
-    @app.route("/verify-employee")
-    def serve_verify_employee():
-        return send_from_directory(app.static_folder, "verify-employee.html")
+    @app.route("/company-dashboard")
+    @app.route("/company-dashboard.html")
+    def serve_company_dashboard():
+        return send_from_directory(app.static_folder, "company-dashboard.html")
+
+    @app.route("/endpoints")
+    @app.route("/api-endpoints")
+    @app.route("/api-endpoints.html")
+    def serve_endpoints():
+        return send_from_directory(app.static_folder, "api-endpoints.html")
+
+    @app.route("/logs")
+    @app.route("/logs.html")
+    def serve_logs():
+        return send_from_directory(app.static_folder, "logs.html")
+        
+    @app.route("/alerts")
+    def serve_alerts():
+        return send_from_directory(app.static_folder, "alerts.html")
+        
+    @app.route("/admin")
+    def serve_admin():
+        return send_from_directory(app.static_folder, "admin.html")
+        
+    @app.route("/profile")
+    def serve_profile():
+        return send_from_directory(app.static_folder, "profile.html")
 
     # Health check
     @app.route("/api/health")

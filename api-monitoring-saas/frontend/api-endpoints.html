@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Endpoints</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item active">
+                    <i class="fa-solid fa-server"></i>
+                    <span>API Endpoints</span>
+                </a>
+                <a href="logs.html" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Monitoring Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alerts</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">PP</div>
+            <div class="user-info">
+                <span class="user-name">User</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2>API Endpoints</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh Data">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="topbar-action" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-avatar-small">PP</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Monitored APIs</h1>
+                    <p>Manage and view all your API endpoints</p>
+                </div>
+                <button class="btn" id="btn-add-endpoint">
+                    <i class="fa-solid fa-plus"></i> Add Endpoint
+                </button>
+            </div>
+
+            <!-- Full API Table -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-list text-muted"></i> All Endpoints
+                    </div>
+                    <span class="badge badge-gray" id="endpoints-count">Loading...</span>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="filter-bar">
+                    <div class="filter-pills" id="ep-filter-pills">
+                        <button class="filter-pill active" data-filter="all">All</button>
+                        <button class="filter-pill" data-filter="up">
+                            <span class="pulse-dot up" style="width:7px;height:7px;display:inline-block;margin-right:4px;"></span>Up
+                        </button>
+                        <button class="filter-pill" data-filter="down">
+                            <span class="pulse-dot down" style="width:7px;height:7px;display:inline-block;margin-right:4px;"></span>Down
+                        </button>
+                        <button class="filter-pill" data-filter="paused">Paused</button>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 1rem;">
+                        <span style="font-size:0.8rem; color:var(--text-muted);">Range:</span>
+                        <select class="form-control" id="ep-range-selector" style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
+                            <option value="1d">Last 24 Hours</option>
+                            <option value="7d">Last 7 Days</option>
+                            <option value="30d">Last 30 Days</option>
+                        </select>
+                    </div>
+                    <div class="filter-search" style="margin-left: auto;">
+                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                        <input type="text" id="ep-search" placeholder="Search APIs...">
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="all-endpoints-table">
+                        <thead>
+                            <tr>
+                                <th>API Name</th>
+                                <th>URL</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Response</th>
+                                <th id="uptime-header">Uptime (24h)</th>
+                                <th>Last Checked</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated via table.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Endpoint Modal -->
+        <div id="addEndpointModal" class="modal-overlay"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div class="modal-content"
+                style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <div class="modal-header"
+                    style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.25rem;">Add New Endpoint</h3>
+                    <button class="action-btn" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="add-endpoint-form">
+                        <div class="form-group">
+                            <label class="form-label" for="endpoint-name">API Name</label>
+                            <input type="text" id="endpoint-name" class="form-control"
+                                placeholder="e.g. Payment Gateway" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="endpoint-url">Endpoint URL</label>
+                            <input type="url" id="endpoint-url" class="form-control"
+                                placeholder="https://api.example.com/v1" required>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <label class="form-label" for="endpoint-method">Method</label>
+                                <select id="endpoint-method" class="form-control" required style="appearance: auto;">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="form-label" for="endpoint-interval">Check Interval</label>
+                                <select id="endpoint-interval" class="form-control" required style="appearance: auto;">
+                                    <option value="60">1 min</option>
+                                    <option value="300">5 min</option>
+                                    <option value="600">10 min</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="button" class="btn btn-secondary" id="cancel-endpoint-modal">Cancel</button>
+                            <button type="submit" class="btn">Add Endpoint</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/table.js"></script>
+    <script>
+        // Initial load
+        document.addEventListener('DOMContentLoaded', () => {
+            const tbody = document.querySelector('#all-endpoints-table tbody');
+            const rangeSelector = document.getElementById('ep-range-selector');
+            
+            if (tbody) {
+                loadEndpointsTable(tbody, rangeSelector.value);
+                
+                // Handle range change
+                rangeSelector.addEventListener('change', () => {
+                    loadEndpointsTable(tbody, rangeSelector.value);
+                });
+            }
+        });
+
+        // ── Filter pills ───────────────────────────────────────
+        document.querySelectorAll('#ep-filter-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#ep-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                applyEpFilters();
+            });
+        });
+
+        document.getElementById('ep-search').addEventListener('input', applyEpFilters);
+
+        function applyEpFilters() {
+            const f = document.querySelector('#ep-filter-pills .filter-pill.active').dataset.filter;
+            const q = document.getElementById('ep-search').value.toLowerCase();
+            const rows = document.querySelectorAll('#all-endpoints-table tbody tr');
+            let count = 0;
+            rows.forEach(row => {
+                const statusCell = row.querySelector('.status-pill');
+                const statusClass = statusCell ? [...statusCell.classList].find(c => ['up','down','paused'].includes(c)) : 'up';
+                const textMatch = row.textContent.toLowerCase().includes(q);
+                const filterMatch = f === 'all' || statusClass === f;
+                const show = textMatch && filterMatch;
+                row.style.display = show ? '' : 'none';
+                if (show) count++;
+            });
+            const el = document.getElementById('endpoints-count');
+            if (el) el.textContent = count + ' endpoints';
+        }
+    </script>
+</body>
+
+</html>

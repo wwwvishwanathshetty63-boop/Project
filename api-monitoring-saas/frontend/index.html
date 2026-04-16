@@ -4,127 +4,457 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description"
-        content="API Monitor SaaS — Real-time API monitoring, uptime tracking, and instant alerts for your endpoints.">
-    <title>API Monitor — Real-Time API Monitoring & Alerts</title>
+    <title>API Monitor - Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- App Styles -->
     <link rel="stylesheet" href="css/styles.css">
-    <link rel="icon"
-        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📡</text></svg>">
 </head>
 
 <body>
-    <div class="app-container">
-        <div class="landing-page">
-            <div class="auth-wrapper">
-                <!-- Hero Section -->
-                <div class="auth-hero">
-                    <h1>📡 API Monitor</h1>
-                    <p>Enterprise-grade API monitoring with real-time alerts, uptime tracking, and response time
-                        analytics.</p>
-                    <ul class="feature-list">
-                        <li>Real-time uptime monitoring</li>
-                        <li>Instant email alerts on failures</li>
-                        <li>Response time analytics & charts</li>
-                        <li>Multi-endpoint dashboard</li>
-                        <li>Employee onboarding & management</li>
-                    </ul>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="company-dashboard.html" class="menu-item" data-role="company">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Analytics</span>
+                </a>
+                <a href="index.html" class="menu-item active">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>API Endpoints</span>
+                </a>
+                <a href="logs.html" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Monitoring Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alerts</span>
+                </a>
+            </div>
+
+            <div class="menu-section" data-role="company">
+                <div class="menu-section-title">Management</div>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Invite Employees</span>
+                </a>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+
+            <div class="menu-section" data-role="employee">
+                <div class="menu-section-title">Account</div>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">U</div>
+            <div class="user-info">
+                <span class="user-name">User</span>
+                <span class="user-role">Role</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2>Dashboard</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh Data">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="topbar-action" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-avatar-small">PP</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Dashboard Overview</h1>
+                    <p>Real-time API monitoring summary</p>
+                </div>
+                <div class="header-actions">
+                    <select class="form-control" id="stats-range-selector" style="width: auto; height: 38px; padding: 0 10px; font-size: 0.9rem;">
+                        <option value="1d">Last 24 Hours</option>
+                        <option value="7d">Last 7 Days</option>
+                        <option value="30d">Last 30 Days</option>
+                    </select>
+                    <button class="btn" id="btn-add-endpoint">
+                        <i class="fa-solid fa-plus"></i> Add API
+                    </button>
+                </div>
+            </div>
+
+            <!-- Statistics Cards Grid -->
+            <div class="stats-grid">
+
+                <!-- Total APIs → api-endpoints -->
+                <a href="api-endpoints.html" class="card stat-card stat-card-link" title="View all API endpoints">
+                    <div class="stat-icon-wrapper stat-icon-primary">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-total">0</div>
+                        <div class="stat-label">Total APIs Monitored</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+                <!-- Active APIs → api-endpoints?filter=active -->
+                <a href="api-endpoints.html?filter=active" class="card stat-card stat-card-link" title="View active APIs">
+                    <div class="stat-icon-wrapper stat-icon-success">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-active">0</div>
+                        <div class="stat-label">Active APIs</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+                <!-- Down APIs → api-endpoints?filter=down -->
+                <a href="api-endpoints.html?filter=down" class="card stat-card stat-card-link" title="View down APIs">
+                    <div class="stat-icon-wrapper stat-icon-danger">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-down">0</div>
+                        <div class="stat-label">Down APIs</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+                <!-- Avg Response Time → logs -->
+                <a href="logs.html" class="card stat-card stat-card-link" title="View monitoring logs">
+                    <div class="stat-icon-wrapper stat-icon-info">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-response">—</div>
+                        <div class="stat-label">Average Response Time</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+                <!-- Uptime → logs -->
+                <a href="logs.html" class="card stat-card stat-card-link" title="View uptime logs">
+                    <div class="stat-icon-wrapper stat-icon-success">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-uptime">—</div>
+                        <div class="stat-label">Uptime Percentage</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+                <!-- Active Alerts → alerts -->
+                <a href="alerts.html" class="card stat-card stat-card-link" title="View alerts">
+                    <div class="stat-icon-wrapper stat-icon-warning"
+                        style="background-color:rgba(245,158,11,0.1);color:#F59E0B;box-shadow:0 0 15px rgba(245,158,11,0.2);">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value" id="stat-alerts">0</div>
+                        <div class="stat-label">Active Alerts</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right stat-card-arrow"></i>
+                </a>
+
+            </div>
+
+
+            <!-- Charts Section -->
+            <div class="charts-grid">
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-chart-line text-muted"></i> Response Time History
+                        </div>
+                        <div class="badge badge-gray">12M</div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
                 </div>
 
-                <!-- Auth Forms -->
-                <div class="auth-form-section">
-                    <h2 id="auth-title">Welcome back</h2>
-                    <p class="subtitle" id="auth-subtitle">Sign in to your monitoring dashboard</p>
-
-                    <!-- Top-level role tabs: Company vs Employee -->
-                    <div class="auth-tabs" id="role-tabs">
-                        <button class="auth-tab active" id="company-tab">🏢 Company</button>
-                        <button class="auth-tab" id="employee-tab">👤 Employee</button>
-                    </div>
-
-                    <!-- ===== Company Section ===== -->
-                    <div id="company-section">
-                        <div class="auth-tabs" id="company-auth-tabs">
-                            <button class="auth-tab active" id="login-tab">Sign In</button>
-                            <button class="auth-tab" id="register-tab">Sign Up</button>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title">
+                            <i class="fa-solid fa-chart-area text-muted"></i> Uptime Percentage
                         </div>
-
-                        <!-- Company Login Form -->
-                        <form id="login-form">
-                            <div class="form-group">
-                                <label for="login-email">Email</label>
-                                <input type="email" id="login-email" class="form-input" placeholder="you@company.com"
-                                    required autocomplete="email">
-                            </div>
-                            <div class="form-group">
-                                <label for="login-password">Password</label>
-                                <div class="input-with-toggle">
-                                    <input type="password" id="login-password" class="form-input" placeholder="••••••••"
-                                        required autocomplete="current-password">
-                                    <button type="button" class="password-toggle"
-                                        onclick="togglePasswordVisibility('login-password', this)"
-                                        title="Show password">👁️</button>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block">Sign In</button>
-                        </form>
-
-                        <!-- Company Register Form -->
-                        <form id="register-form" style="display:none">
-                            <div class="form-group">
-                                <label for="register-name">Company Name</label>
-                                <input type="text" id="register-name" class="form-input" placeholder="Acme Corp"
-                                    required minlength="2" autocomplete="organization">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-email">Email</label>
-                                <input type="email" id="register-email" class="form-input"
-                                    placeholder="admin@company.com" required autocomplete="email">
-                            </div>
-                            <div class="form-group">
-                                <label for="register-password">Password</label>
-                                <div class="input-with-toggle">
-                                    <input type="password" id="register-password" class="form-input"
-                                        placeholder="Min. 8 characters, 1 letter, 1 number" required minlength="8"
-                                        autocomplete="new-password">
-                                    <button type="button" class="password-toggle"
-                                        onclick="togglePasswordVisibility('register-password', this)"
-                                        title="Show password">👁️</button>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block">Create Company Account</button>
-                        </form>
+                        <div class="badge badge-gray">12M</div>
                     </div>
-
-                    <!-- ===== Employee Section ===== -->
-                    <div id="employee-section" style="display:none">
-                        <form id="employee-login-form">
-                            <div class="form-group">
-                                <label for="emp-id">Employee ID</label>
-                                <input type="text" id="emp-id" class="form-input" placeholder="EMP-123456" required
-                                    autocomplete="username">
-                            </div>
-                            <div class="form-group">
-                                <label for="emp-password">Password</label>
-                                <div class="input-with-toggle">
-                                    <input type="password" id="emp-password" class="form-input" placeholder="••••••••"
-                                        required autocomplete="current-password">
-                                    <button type="button" class="password-toggle"
-                                        onclick="togglePasswordVisibility('emp-password', this)"
-                                        title="Show password">👁️</button>
-                                </div>
-                            </div>
-                            <button type="submit" class="btn btn-primary btn-block">Employee Sign In</button>
-                        </form>
-                        <p class="emp-help-text">Your Employee ID and password were provided when you verified your
-                            invitation email.</p>
+                    <div class="chart-container">
+                        <canvas id="uptimeChart"></canvas>
                     </div>
+                </div>
+            </div>
 
+            <!-- Monitor List (UptimeRobot style) -->
+            <div class="card" style="margin-top: 2rem; padding: 0; overflow: hidden;">
+                <div class="card-header" style="padding: 1.25rem 1.5rem; margin-bottom:0;">
+                    <div class="card-title">
+                        <i class="fa-solid fa-satellite-dish text-muted"></i> Live Monitors
+                    </div>
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size:0.75rem; color:var(--text-muted);">
+                            <span class="pulse-dot up" style="display:inline-block; margin-right:4px;"></span>Live
+                        </span>
+                        <a href="api-endpoints.html" style="font-size: 0.875rem; color: var(--text-muted);">View All →</a>
+                    </div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="filter-bar" style="padding: 0.75rem 1.5rem;">
+                    <div class="filter-pills" id="monitor-filter-pills">
+                        <button class="filter-pill active" data-filter="all">All</button>
+                        <button class="filter-pill" data-filter="up">Up</button>
+                        <button class="filter-pill" data-filter="down">Down</button>
+                        <button class="filter-pill" data-filter="paused">Paused</button>
+                    </div>
+                    <div class="filter-search">
+                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
+                        <input type="text" id="monitor-search" placeholder="Search monitors...">
+                    </div>
+                </div>
+
+                <!-- Monitor cards list (populated by JS) -->
+                <div class="monitor-list" id="monitor-card-list">
+                    <div class="empty-state" id="monitor-loading">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <p>Loading monitors...</p>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+        </div>
+
+        <!-- Add Endpoint Modal -->
+        <div id="addEndpointModal" class="modal-overlay"
+            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+            <div class="modal-content"
+                style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
+                <div class="modal-header"
+                    style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+                    <h3 style="margin: 0; font-size: 1.25rem;">Add New Endpoint</h3>
+                    <button class="action-btn" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="modal-body" style="padding: 1.5rem;">
+                    <form id="add-endpoint-form">
+                        <div class="form-group">
+                            <label class="form-label" for="endpoint-name">API Name</label>
+                            <input type="text" id="endpoint-name" class="form-control"
+                                placeholder="e.g. Payment Gateway" required>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="endpoint-url">Endpoint URL</label>
+                            <input type="url" id="endpoint-url" class="form-control"
+                                placeholder="https://api.example.com/v1" required>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem;">
+                            <div style="flex: 1;">
+                                <label class="form-label" for="endpoint-method">Method</label>
+                                <select id="endpoint-method" class="form-control" required style="appearance: auto;">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label class="form-label" for="endpoint-interval">Check Interval</label>
+                                <select id="endpoint-interval" class="form-control" required style="appearance: auto;">
+                                    <option value="60">1 min</option>
+                                    <option value="300">5 min</option>
+                                    <option value="600">10 min</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="modal-footer"
+                            style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="button" class="btn btn-secondary" id="cancel-endpoint-modal">Cancel</button>
+                            <button type="submit" class="btn">Add Endpoint</button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
-    </div>
+
+    </main>
 
     <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/charts.js"></script>
+    <script>
+        // ── Monitor card filter pills ──────────────────────────
+        document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                filterMonitorCards();
+            });
+        });
+
+        document.getElementById('monitor-search').addEventListener('input', filterMonitorCards);
+
+        function filterMonitorCards() {
+            const f = document.querySelector('#monitor-filter-pills .filter-pill.active').dataset.filter;
+            const q = document.getElementById('monitor-search').value.toLowerCase();
+            document.querySelectorAll('#monitor-card-list .monitor-card').forEach(card => {
+                const status = card.dataset.status || 'up';
+                const textMatch = card.textContent.toLowerCase().includes(q);
+                const filterMatch = f === 'all' || status === f;
+                card.style.display = (textMatch && filterMatch) ? '' : 'none';
+            });
+        }
+
+        // ── Inject monitor cards when dashboard data loads ─────
+        // Wrap loadDashboardData to also render monitor cards
+        document.addEventListener('DOMContentLoaded', () => {
+            const origLoad = window.loadDashboardData;
+            window.loadDashboardData = async function () {
+                if (typeof origLoad === 'function') await origLoad();
+                await renderMonitorCards();
+            };
+            // Also trigger now
+            setTimeout(renderMonitorCards, 1200);
+        });
+
+        async function renderMonitorCards() {
+            const list = document.getElementById('monitor-card-list');
+            if (!list) return;
+
+            const range = document.getElementById('stats-range-selector')?.value || '1d';
+
+            let endpoints = [];
+            try {
+                const data = await apiRequest(`/api/endpoints?range=${range}`);
+                endpoints = data.endpoints || [];
+            } catch (e) {
+                list.innerHTML = `<div class="empty-state">
+                    <i class="fa-solid fa-plug-circle-exclamation"></i>
+                    <p>Could not connect to the monitoring server. Make sure you are logged in and the server is running.</p>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+
+            if (!endpoints.length) {
+                list.innerHTML = `<div class="empty-state">
+                    <i class="fa-solid fa-satellite-dish"></i>
+                    <p>No monitors yet. Click <strong>+ Add Endpoint</strong> to start monitoring your first API.</p>
+                </div>`;
+                return;
+            }
+
+            endpoints.forEach(ep => {
+                const statusClass = ep.is_down ? 'down' : (ep.is_active ? 'up' : 'paused');
+                const statusLabel = statusClass === 'up' ? 'UP' : statusClass === 'down' ? 'DOWN' : 'PAUSED';
+                const method = (ep.method || 'GET').toUpperCase();
+                const methodCls = { GET:'m-get', POST:'m-post', PUT:'m-put', DELETE:'m-delete' }[method] || 'm-get';
+                const rt = ep.last_response_time ? ep.last_response_time + 'ms' : '—';
+                const uptime = ep.uptime_percentage != null ? ep.uptime_percentage : 100;
+                const uptimeCls = uptime >= 99 ? 'uptime-high' : uptime >= 95 ? 'uptime-medium' : 'uptime-low';
+                const lastChecked = ep.last_check ? new Date(ep.last_check).toLocaleTimeString() : '—';
+                const rangeLabel = range === '1d' ? '24h' : (range === '7d' ? '7d' : '30d');
+
+                const card = document.createElement('div');
+                card.className = 'monitor-card';
+                card.dataset.status = statusClass;
+                card.innerHTML = `
+                    <div class="monitor-card-left">
+                        <span class="pulse-dot ${statusClass}"></span>
+                        <span class="monitor-card-method ${methodCls}">${method}</span>
+                        <div>
+                            <div class="monitor-card-name">${escapeHtml(ep.name || 'Unnamed')}</div>
+                            <div class="monitor-card-url">${escapeHtml(ep.url || '')}</div>
+                        </div>
+                    </div>
+                    <div class="monitor-card-meta">
+                        <div class="monitor-meta-item">
+                            <div class="monitor-meta-label">Status</div>
+                            <div><span class="status-pill ${statusClass}">${statusLabel}</span></div>
+                        </div>
+                        <div class="monitor-meta-item">
+                            <div class="monitor-meta-label">Response</div>
+                            <div class="monitor-meta-value">${rt}</div>
+                        </div>
+                        <div class="monitor-meta-item">
+                            <div class="monitor-meta-label">Uptime (${rangeLabel})</div>
+                            <div class="monitor-meta-value ${uptimeCls}">${uptime}%</div>
+                        </div>
+                        <div class="monitor-meta-item" style="align-items:flex-start; min-width:120px;">
+                            <div class="monitor-meta-label">History (${rangeLabel})</div>
+                            <div class="uptime-mini-bar" style="width:100%; height:4px; background:#E5E7EB; border-radius:2px; margin-top:4px; overflow:hidden;">
+                                <div style="width:${uptime}%; height:100%; background: ${uptime >= 99 ? '#10B981' : (uptime >= 95 ? '#F59E0B' : '#EF4444')};"></div>
+                            </div>
+                        </div>
+                        <div class="monitor-meta-item">
+                            <div class="monitor-meta-label">Last Check</div>
+                            <div class="monitor-meta-value" style="font-size:0.8rem;">${lastChecked}</div>
+                        </div>
+                    </div>
+                    <div class="monitor-card-actions">
+                        <button class="action-btn" onclick="openEditModal('${ep.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn delete" onclick="deleteEndpoint('${ep.id}', '${(ep.name||'').replace(/'/g,"\\'")}')"
+                            title="Delete"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+
+    </script>
 </body>
 
 </html>

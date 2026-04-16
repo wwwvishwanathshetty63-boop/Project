@@ -79,6 +79,22 @@ def init_db():
     add_column_if_missing("users", "company_id", "TEXT")
     add_column_if_missing("users", "employee_id", "TEXT")
 
+    # Create email_verifications table for OTP-based registration
+    cursor.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id      TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+            email   TEXT NOT NULL,
+            otp     TEXT NOT NULL,
+            is_used INTEGER DEFAULT 0,
+            expires_at DATETIME NOT NULL,
+            created_at DATETIME DEFAULT (datetime('now'))
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications(email);
+    """
+    )
+
     # 3. Create indices (now that columns definitely exist)
     cursor.executescript(
         """

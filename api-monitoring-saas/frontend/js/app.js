@@ -87,7 +87,7 @@ function logout() {
     AppState.user = null;
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    window.location.href = 'index.html';
+    window.location.href = 'landing.html';
 }
 
 function isAuthenticated() {
@@ -126,7 +126,7 @@ function showToast(message, type = 'success', duration = 4000) {
 // ---- Auth Form Handling ----
 function initAuthPage() {
     if (isAuthenticated()) {
-        window.location.href = 'dashboard.html';
+        window.location.href = 'index.html';
         return;
     }
 
@@ -201,7 +201,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Login successful! Redirecting...');
-            setTimeout(() => window.location.href = 'dashboard.html', 800);
+            setTimeout(() => window.location.href = 'index.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -229,7 +229,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Company account created! Redirecting...');
-            setTimeout(() => window.location.href = 'dashboard.html', 800);
+            setTimeout(() => window.location.href = 'index.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -256,7 +256,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Login successful! Redirecting...');
-            setTimeout(() => window.location.href = 'dashboard.html', 800);
+            setTimeout(() => window.location.href = 'index.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -287,3 +287,28 @@ document.addEventListener('DOMContentLoaded', () => {
         initAuthPage();
     }
 });
+
+// ---- Utility Functions ----
+async function fetchWithRetry(endpoint, maxRetries = 3) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await apiRequest(endpoint);
+        } catch (error) {
+            if (error.message.includes('Session expired')) throw error;
+            if (attempt === maxRetries) throw error;
+            if (error.isNetworkError || error.message.includes('Server error') || error.message.includes('500')) {
+                const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                continue;
+            }
+            throw error;
+        }
+    }
+}
+
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
