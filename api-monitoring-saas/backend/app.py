@@ -119,8 +119,10 @@ def create_app() -> Flask:
     # Start monitoring engine
     from backend.monitoring_engine import start_monitoring_engine
 
-    if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not Config.DEBUG:
-        start_monitoring_engine()
+    # Disallow background threading on Serverless Edge (Vercel)
+    if os.getenv("VERCEL") != "1":
+        if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not Config.DEBUG:
+            start_monitoring_engine()
 
     logger.info("API Monitor SaaS application initialized (SQLite).")
     return app

@@ -14,8 +14,13 @@ class Config:
 
     # Database (SQLite)
     _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-    _db_path = os.getenv("DATABASE_PATH", "database.db")
-    DATABASE_PATH = _db_path if os.path.isabs(_db_path) else os.path.join(_PROJECT_ROOT, _db_path)
+    
+    if os.getenv("VERCEL") == "1":
+        # Vercel's runtime is read-only, we MUST use /tmp for SQLite
+        DATABASE_PATH = "/tmp/database.db"
+    else:
+        _db_path = os.getenv("DATABASE_PATH", "database.db")
+        DATABASE_PATH = _db_path if os.path.isabs(_db_path) else os.path.join(_PROJECT_ROOT, _db_path)
 
     # JWT
     JWT_SECRET = os.getenv("JWT_SECRET", "jwt-secret-change-me")
