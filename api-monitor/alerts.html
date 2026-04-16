@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Alerts</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>API Endpoints</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Monitoring Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item active">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alerts</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">PP</div>
+            <div class="user-info">
+                <span class="user-name">User</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2>Alerts</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh Data">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="topbar-action" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-avatar-small">PP</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Alerts & Notifications</h1>
+                    <p>Manage alerting rules and view recent triggers</p>
+                </div>
+                <button class="btn">
+                    <i class="fa-solid fa-plus"></i> New Alert Rule
+                </button>
+            </div>
+
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-bell text-muted"></i> Add Placeholder UI
+                    </div>
+                </div>
+                <div style="padding: 2rem; text-align: center; color: var(--text-muted);">
+                    Alerts feature components go here.
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+</body>
+
+</html>

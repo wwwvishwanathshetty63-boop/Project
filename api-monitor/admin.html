@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Admin Panel</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
+        rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- App Styles -->
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main</div>
+                <a href="index.html" class="menu-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>API Endpoints</span>
+                </a>
+                <a href="#" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Monitoring Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Alerts</span>
+                </a>
+            </div>
+
+            <div class="menu-section">
+                <div class="menu-section-title">Settings</div>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+                <a href="admin.html" class="menu-item active">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Admin Panel</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">PP</div>
+            <div class="user-info">
+                <span class="user-name">User</span>
+                <span class="user-role">Admin</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2>Admin Panel</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" title="Notifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge"></span>
+                </button>
+                <div class="user-avatar-small">PP</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Employee Management</h1>
+                    <p style="font-size: 0.875rem; color: var(--text-muted);"><a href="index.html"
+                            style="color: var(--text-muted);">Dashboard</a> / Admin</p>
+                </div>
+            </div>
+
+            <!-- User Stats Grid -->
+            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <!-- Total Users -->
+                <div class="card stat-card">
+                    <div class="stat-icon-wrapper stat-icon-primary">
+                        <i class="fa-solid fa-users"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">5</div>
+                        <div class="stat-label">Total Users</div>
+                    </div>
+                </div>
+
+                <!-- Active Users -->
+                <div class="card stat-card">
+                    <div class="stat-icon-wrapper stat-icon-success">
+                        <i class="fa-solid fa-user-check"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">4</div>
+                        <div class="stat-label">Active Users</div>
+                    </div>
+                </div>
+
+                <!-- Admins -->
+                <div class="card stat-card">
+                    <div class="stat-icon-wrapper"
+                        style="background-color: rgba(245, 158, 11, 0.1); color: #F59E0B; box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-value">2</div>
+                        <div class="stat-label">Admins</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- User Management Table -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <i class="fa-solid fa-users-gear text-muted"></i> User Management
+                    </div>
+                    <div style="display: flex; gap: 1rem;">
+                        <div class="search-box">
+                            <div style="position: relative;">
+                                <i class="fa-solid fa-magnifying-glass"
+                                    style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
+                                <input type="text" class="form-control" placeholder="Search users..."
+                                    style="width: 250px; padding: 0.375rem 0.75rem 0.375rem 2.2rem; border-radius: 20px;">
+                            </div>
+                        </div>
+                        <button class="btn" id="btn-invite">
+                            <i class="fa-solid fa-user-plus"></i> Invite Employee
+                        </button>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table id="users-table">
+                        <thead>
+                            <tr>
+                                <th>User</th>
+                                <th>Email</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th>Last Login</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <!-- Populated via table.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Invite Employee Modal -->
+        <div id="inviteModal" class="modal-overlay"
+            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
+            <div class="card modal-content" style="width: 100%; max-width: 400px;">
+                <div class="card-header">
+                    <div class="card-title">Invite Employee</div>
+                    <button class="action-btn" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <form id="invite-form">
+                    <div class="form-group">
+                        <label class="form-label">Employee Name</label>
+                        <input type="text" id="invite-name" class="form-control" required placeholder="John Doe">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" id="invite-email" class="form-control" required
+                            placeholder="john@company.com">
+                    </div>
+                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                        <button type="button" class="btn btn-secondary" id="cancel-modal">Cancel</button>
+                        <button type="submit" class="btn">Send Invite</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/table.js"></script>
+</body>
+
+</html>
