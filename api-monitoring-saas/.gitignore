@@ -1,0 +1,29 @@
+# Environment Secrets
+.env
+.env.development
+.env.production
+.env.local
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Python Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+
+# Temporary & Build files
+tmp/
+build/
+dist/
+*.egg-info/
+.coverage
+htmlcov/
