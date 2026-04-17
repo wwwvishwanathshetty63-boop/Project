@@ -5,7 +5,7 @@ import random
 import logging
 from datetime import datetime, timedelta
 from flask import Blueprint, request, jsonify, g
-from backend.models import get_db, row_to_dict, rows_to_list
+from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
 from backend.utils.auth import generate_token, token_required
 from backend.utils.validators import (
     validate_email,
@@ -56,7 +56,7 @@ def send_otp():
     db = get_db()
     try:
         # Block already-registered emails
-        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        existing = db.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
         if existing:
             return jsonify({"error": "This email is already registered. Please log in instead."}), 409
 
@@ -64,14 +64,14 @@ def send_otp():
         expires_at = datetime.utcnow() + timedelta(minutes=10)
 
         # Invalidate any prior unused OTPs for same email
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = ? AND is_used = 0", (email,))
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = %s AND is_used = 0", (email,))
         db.execute(
-            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (?, ?, ?)",
+            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (%s, %s, %s)",
             (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
         )
         db.commit()
     finally:
-        db.close()
+        release_db(db)
 
     from backend.services.alert_service import send_otp_email
     email_sent = send_otp_email(email, otp)
@@ -104,7 +104,7 @@ def verify_otp():
         record = row_to_dict(
             db.execute(
                 """SELECT * FROM email_verifications
-                   WHERE email = ? AND otp = ? AND is_used = 0
+                   WHERE email = %s AND otp = %s AND is_used = 0
                    ORDER BY created_at DESC LIMIT 1""",
                 (email, otp),
             ).fetchone()
@@ -114,15 +114,15 @@ def verify_otp():
             return jsonify({"error": "Invalid or expired OTP. Please request a new one."}), 400
 
         if datetime.utcnow() > datetime.strptime(record["expires_at"], "%Y-%m-%d %H:%M:%S"):
-            db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+            db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
             db.commit()
             return jsonify({"error": "OTP has expired. Please request a new one."}), 400
 
         # Mark OTP used
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
         db.commit()
     finally:
-        db.close()
+        release_db(db)
 
     # Store verified status in memory (15-min window to complete registration)
     _verified_emails[email] = datetime.utcnow() + timedelta(minutes=15)
@@ -144,7 +144,7 @@ def reset_password_request():
     db = get_db()
     try:
         # Check if user exists (only company users allowed here for this specific flow)
-        user = row_to_dict(db.execute("SELECT id FROM users WHERE email = ? AND role = 'company'", (email,)).fetchone())
+        user = row_to_dict(db.execute("SELECT id FROM users WHERE email = %s AND role = 'company'", (email,)).fetchone())
         if not user:
             return jsonify({"error": "No company account found with this email"}), 404
 
@@ -152,14 +152,14 @@ def reset_password_request():
         expires_at = datetime.utcnow() + timedelta(minutes=10)
 
         # Invalidate prior reset OTPs
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = ? AND is_used = 0", (email,))
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = %s AND is_used = 0", (email,))
         db.execute(
-            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (?, ?, ?)",
+            "INSERT INTO email_verifications (email, otp, expires_at) VALUES (%s, %s, %s)",
             (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
         )
         db.commit()
     finally:
-        db.close()
+        release_db(db)
 
     from backend.services.alert_service import send_otp_email
     email_sent = send_otp_email(email, otp)
@@ -199,7 +199,7 @@ def reset_password_verify():
         record = row_to_dict(
             db.execute(
                 """SELECT * FROM email_verifications
-                   WHERE email = ? AND otp = ? AND is_used = 0
+                   WHERE email = %s AND otp = %s AND is_used = 0
                    ORDER BY created_at DESC LIMIT 1""",
                 (email, otp),
             ).fetchone()
@@ -215,11 +215,11 @@ def reset_password_verify():
         password_hash = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         # Update password AND mark OTP used
-        db.execute("UPDATE users SET password_hash = ? WHERE email = ?", (password_hash, email))
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = ?", (record["id"],))
+        db.execute("UPDATE users SET password_hash = %s WHERE email = %s", (password_hash, email))
+        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
         db.commit()
     finally:
-        db.close()
+        release_db(db)
 
     return jsonify({"message": "Password updated successfully. You can now log in."}), 200
 
@@ -254,19 +254,19 @@ def register():
 
     db = get_db()
     try:
-        existing = db.execute("SELECT id FROM users WHERE email = ?", (email,)).fetchone()
+        existing = db.execute("SELECT id FROM users WHERE email = %s", (email,)).fetchone()
         if existing:
             return jsonify({"error": "Email already registered"}), 409
 
         password_hash = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
         db.execute(
-            "INSERT INTO users (name, email, password_hash, role) VALUES (?, ?, ?, ?)",
+            "INSERT INTO users (name, email, password_hash, role) VALUES (%s, %s, %s, %s)",
             (name, email, password_hash, "company"),
         )
         db.commit()
 
-        user = row_to_dict(db.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone())
+        user = row_to_dict(db.execute("SELECT * FROM users WHERE email = %s", (email,)).fetchone())
         token = generate_token(user["id"], user["role"])
 
         return (
@@ -285,7 +285,7 @@ def register():
             201,
         )
     finally:
-        db.close()
+        release_db(db)
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -315,7 +315,7 @@ def login():
                 return jsonify({"error": "Name is required for employee login"}), 400
             user = row_to_dict(
                 db.execute(
-                    "SELECT * FROM users WHERE email = ? AND LOWER(name) = LOWER(?) AND role = 'employee'",
+                    "SELECT * FROM users WHERE email = %s AND LOWER(name) = LOWER(%s) AND role = 'employee'",
                     (email, name),
                 ).fetchone()
             )
@@ -323,7 +323,7 @@ def login():
             # Company login via email
             user = row_to_dict(
                 db.execute(
-                    "SELECT * FROM users WHERE email = ? AND role = 'company'",
+                    "SELECT * FROM users WHERE email = %s AND role = 'company'",
                     (email,),
                 ).fetchone()
             )
@@ -353,7 +353,7 @@ def login():
             200,
         )
     finally:
-        db.close()
+        release_db(db)
 
 
 @auth_bp.route("/invite-employee", methods=["POST"])
@@ -381,13 +381,13 @@ def invite_employee():
     db = get_db()
     try:
         # Check if employee already exists with this email
-        existing = db.execute("SELECT id FROM users WHERE email = ? AND role = 'employee'", (email,)).fetchone()
+        existing = db.execute("SELECT id FROM users WHERE email = %s AND role = 'employee'", (email,)).fetchone()
         if existing:
             return jsonify({"error": "An employee with this email already exists"}), 409
 
         # Generate employee credentials
         employee_id = _generate_employee_id()
-        while db.execute("SELECT id FROM users WHERE employee_id = ?", (employee_id,)).fetchone():
+        while db.execute("SELECT id FROM users WHERE employee_id = %s", (employee_id,)).fetchone():
             employee_id = _generate_employee_id()
 
         raw_password = _generate_employee_password(name)
@@ -396,14 +396,14 @@ def invite_employee():
         # Create the employee user immediately
         db.execute(
             """INSERT INTO users (name, email, password_hash, role, company_id, employee_id)
-               VALUES (?, ?, ?, 'employee', ?, ?)""",
+               VALUES (%s, %s, %s, 'employee', %s, %s)""",
             (name, email, password_hash, g.current_user_id, employee_id),
         )
 
         # Record the invitation
         token = secrets.token_urlsafe(48)
         db.execute(
-            "INSERT INTO employee_invitations (company_id, name, email, token, is_used) VALUES (?, ?, ?, ?, 1)",
+            "INSERT INTO employee_invitations (company_id, name, email, token, is_used) VALUES (%s, %s, %s, %s, 1)",
             (g.current_user_id, name, email, token),
         )
         db.commit()
@@ -427,7 +427,7 @@ def invite_employee():
             201,
         )
     finally:
-        db.close()
+        release_db(db)
 
 
 @auth_bp.route("/employees", methods=["GET"])
@@ -441,21 +441,21 @@ def list_employees():
     try:
         employees = rows_to_list(
             db.execute(
-                "SELECT id, name, email, employee_id, created_at FROM users WHERE company_id = ? AND role = 'employee'",
+                "SELECT id, name, email, employee_id, created_at FROM users WHERE company_id = %s AND role = 'employee'",
                 (g.current_user_id,),
             ).fetchall()
         )
 
         pending_invites = rows_to_list(
             db.execute(
-                "SELECT id, name, email, created_at FROM employee_invitations WHERE company_id = ? AND is_used = 0",
+                "SELECT id, name, email, created_at FROM employee_invitations WHERE company_id = %s AND is_used = 0",
                 (g.current_user_id,),
             ).fetchall()
         )
 
         return jsonify({"employees": employees, "pending_invites": pending_invites}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @auth_bp.route("/profile", methods=["GET"])
@@ -466,7 +466,7 @@ def get_profile():
     try:
         user = row_to_dict(
             db.execute(
-                "SELECT id, name, email, role, employee_id, company_id, created_at FROM users WHERE id = ?",
+                "SELECT id, name, email, role, employee_id, company_id, created_at FROM users WHERE id = %s",
                 (g.current_user_id,),
             ).fetchone()
         )
@@ -474,7 +474,7 @@ def get_profile():
             return jsonify({"error": "User not found"}), 404
         return jsonify({"user": user}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @auth_bp.route("/profile", methods=["PUT"])
@@ -492,7 +492,7 @@ def update_profile():
         name = sanitize_string(data["name"])
         if not validate_name(name):
             return jsonify({"error": "Name must be between 2 and 100 characters"}), 400
-        updates.append("name = ?")
+        updates.append("name = %s")
         params.append(name)
 
     if "password" in data:
@@ -500,7 +500,7 @@ def update_profile():
         if not valid_pw:
             return jsonify({"error": pw_error}), 400
         password_hash = bcrypt.hashpw(data["password"].encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-        updates.append("password_hash = ?")
+        updates.append("password_hash = %s")
         params.append(password_hash)
 
     if not updates:
@@ -510,16 +510,16 @@ def update_profile():
 
     db = get_db()
     try:
-        db.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = ?", params)
+        db.execute(f"UPDATE users SET {', '.join(updates)} WHERE id = %s", params)
         db.commit()
 
         user = row_to_dict(
             db.execute(
-                "SELECT id, name, email, role FROM users WHERE id = ?",
+                "SELECT id, name, email, role FROM users WHERE id = %s",
                 (g.current_user_id,),
             ).fetchone()
         )
 
         return jsonify({"message": "Profile updated", "user": user}), 200
     finally:
-        db.close()
+        release_db(db)

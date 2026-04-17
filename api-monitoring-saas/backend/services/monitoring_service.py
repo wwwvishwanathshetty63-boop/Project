@@ -3,7 +3,7 @@ import logging
 import datetime
 import requests as http_requests
 from backend.config import Config
-from backend.models import get_db, row_to_dict, rows_to_list
+from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
 from backend.services.alert_service import send_alert_email, build_alert_html
 
 logger = logging.getLogger(__name__)
@@ -60,13 +60,13 @@ def save_log(log_entry: dict) -> dict:
     try:
         db = get_db()
         db.execute(
-            "INSERT INTO monitoring_logs (endpoint_id, status_code, response_time, is_success) VALUES (?, ?, ?, ?)",
+            "INSERT INTO monitoring_logs (endpoint_id, status_code, response_time, is_success) VALUES (%s, %s, %s, %s)",
             (log_entry["endpoint_id"], log_entry["status_code"], log_entry["response_time"], log_entry["is_success"]),
         )
         db.commit()
 
         row = db.execute(
-            "SELECT * FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+            "SELECT * FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT 1",
             (log_entry["endpoint_id"],),
         ).fetchone()
         return row_to_dict(row)
@@ -75,7 +75,7 @@ def save_log(log_entry: dict) -> dict:
         return None
     finally:
         if db:
-            db.close()
+            release_db(db)
 
 
 def check_consecutive_failures(endpoint_id: str) -> int:
@@ -84,7 +84,7 @@ def check_consecutive_failures(endpoint_id: str) -> int:
     try:
         db = get_db()
         rows = db.execute(
-            "SELECT is_success FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT ?",
+            "SELECT is_success FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT %s",
             (endpoint_id, Config.CONSECUTIVE_FAILURES_THRESHOLD),
         ).fetchall()
 
@@ -104,7 +104,7 @@ def check_consecutive_failures(endpoint_id: str) -> int:
         return 0
     finally:
         if db:
-            db.close()
+            release_db(db)
 
 
 def get_user_email(user_id: str) -> str:
@@ -112,14 +112,14 @@ def get_user_email(user_id: str) -> str:
     db = None
     try:
         db = get_db()
-        row = db.execute("SELECT email FROM users WHERE id = ?", (user_id,)).fetchone()
+        row = db.execute("SELECT email FROM users WHERE id = %s", (user_id,)).fetchone()
         return row["email"] if row else None
     except Exception as e:
         logger.error(f"Failed to get user email: {e}")
         return None
     finally:
         if db:
-            db.close()
+            release_db(db)
 
 
 # Global variable to track the last time logs were purged
@@ -142,16 +142,16 @@ def purge_old_data(db, max_days=None):
         since_logs = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=max_days)).strftime(
             "%Y-%m-%d %H:%M:%S"
         )
-        cursor_logs = db.execute("DELETE FROM monitoring_logs WHERE checked_at < ?", (since_logs,))
+        cursor_logs = db.execute("DELETE FROM monitoring_logs WHERE checked_at < %s", (since_logs,))
         logs_deleted = cursor_logs.rowcount
         
         # 2. Purge Expired Email Verifications
         now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
-        cursor_verif = db.execute("DELETE FROM email_verifications WHERE expires_at < ?", (now_str,))
+        cursor_verif = db.execute("DELETE FROM email_verifications WHERE expires_at < %s", (now_str,))
         verif_deleted = cursor_verif.rowcount
 
         # 3. Purge Old Employee Invitations (e.g., older than 30 days)
-        cursor_inv = db.execute("DELETE FROM employee_invitations WHERE created_at < ?", (since_logs,))
+        cursor_inv = db.execute("DELETE FROM employee_invitations WHERE created_at < %s", (since_logs,))
         inv_deleted = cursor_inv.rowcount
 
         db.commit()
@@ -180,7 +180,7 @@ def run_monitoring_cycle():
         endpoints = rows_to_list(
             db.execute("SELECT * FROM api_endpoints WHERE is_active = 1").fetchall()
         )
-        db.close()
+        release_db(db)
 
         if not endpoints:
             logger.debug("No active endpoints to monitor.")

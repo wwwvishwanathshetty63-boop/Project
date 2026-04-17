@@ -12,15 +12,14 @@ class Config:
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
     PORT = int(os.getenv("PORT", 5000))
 
-    # Database (SQLite)
-    _PROJECT_ROOT = os.path.dirname(os.path.dirname(__file__))
-    
-    if os.getenv("VERCEL") == "1":
-        # Vercel's runtime is read-only, we MUST use /tmp for SQLite
-        DATABASE_PATH = "/tmp/database.db"
-    else:
-        _db_path = os.getenv("DATABASE_PATH", "database.db")
-        DATABASE_PATH = _db_path if os.path.isabs(_db_path) else os.path.join(_PROJECT_ROOT, _db_path)
+    # Database (Supabase PostgreSQL)
+    DATABASE_URL = os.getenv(
+        "DATABASE_URL", 
+        "postgresql://postgres:password@localhost:5432/postgres"
+    )
+    # Connection Pool Settings
+    DB_POOL_MIN = int(os.getenv("DB_POOL_MIN", 1))
+    DB_POOL_MAX = int(os.getenv("DB_POOL_MAX", 10))
 
     # JWT
     JWT_SECRET = os.getenv("JWT_SECRET", "jwt-secret-change-me")

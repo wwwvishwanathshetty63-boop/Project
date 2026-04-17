@@ -35,9 +35,11 @@ def create_app() -> Flask:
         storage_uri="memory://",
     )
 
-    # Initialize SQLite database
-    from backend.models import init_db
+    import atexit
+    # Initialize PostgreSQL database
+    from backend.models import init_db, close_pool
     init_db()
+    atexit.register(close_pool)
 
     # Register blueprints
     from backend.routes.auth_routes import auth_bp
@@ -124,7 +126,7 @@ def create_app() -> Flask:
         if os.environ.get("WERKZEUG_RUN_MAIN") == "true" or not Config.DEBUG:
             start_monitoring_engine()
 
-    logger.info("API Monitor SaaS application initialized (SQLite).")
+    logger.info("API Monitor SaaS application initialized (PostgreSQL).")
     return app
 
 

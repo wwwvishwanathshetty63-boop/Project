@@ -1,124 +1,146 @@
-import sqlite3
 import os
 import logging
+import psycopg2
+from psycopg2 import pool
+from psycopg2.extras import RealDictCursor
 from backend.config import Config
 
 logger = logging.getLogger(__name__)
 
+# Global connection pool
+db_pool = None
 
-def get_db() -> sqlite3.Connection:
-    """Create a new SQLite connection with row factory."""
-    conn = sqlite3.connect(Config.DATABASE_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA journal_mode=WAL")
-    conn.execute("PRAGMA foreign_keys=ON")
-    return conn
+def get_db():
+    """Get a connection from the PostgreSQL pool."""
+    global db_pool
+    if db_pool is None:
+        init_pool()
+    return db_pool.getconn()
 
+def release_db(conn):
+    """Release a connection back to the PostgreSQL pool."""
+    global db_pool
+    if db_pool and conn:
+        db_pool.putconn(conn)
+
+def init_pool():
+    """Initialize the PostgreSQL connection pool."""
+    global db_pool
+    if db_pool is None:
+        try:
+            db_pool = psycopg2.pool.ThreadedConnectionPool(
+                minconn=Config.DB_POOL_MIN,
+                maxconn=Config.DB_POOL_MAX,
+                dsn=Config.DATABASE_URL,
+                cursor_factory=RealDictCursor
+            )
+            logger.info("PostgreSQL connection pool created")
+        except Exception as e:
+            logger.error(f"Failed to create PostgreSQL pool: {e}")
+            raise
+
+def close_pool():
+    """Close all connections in the pool."""
+    global db_pool
+    if db_pool is not None:
+        db_pool.closeall()
+        logger.info("PostgreSQL connection pool closed")
 
 def init_db():
-    """Initialize the database schema."""
+    """Initialize the PostgreSQL database schema."""
+    init_pool()
     conn = get_db()
     cursor = conn.cursor()
 
-    # 1. Create tables with IF NOT EXISTS (base schema)
-    cursor.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-            name TEXT NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            role TEXT DEFAULT 'company',
-            created_at DATETIME DEFAULT (datetime('now'))
-        );
+    try:
+        # PostgreSQL syntax for tables and defaults
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                name TEXT NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                role TEXT DEFAULT 'company',
+                company_id TEXT,
+                employee_id TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
 
-        CREATE TABLE IF NOT EXISTS employee_invitations (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-            company_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            email TEXT NOT NULL,
-            token TEXT UNIQUE NOT NULL,
-            is_used INTEGER DEFAULT 0,
-            created_at DATETIME DEFAULT (datetime('now')),
-            FOREIGN KEY (company_id) REFERENCES users(id) ON DELETE CASCADE
-        );
+            CREATE TABLE IF NOT EXISTS employee_invitations (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                company_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                email TEXT NOT NULL,
+                token TEXT UNIQUE NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                FOREIGN KEY (company_id) REFERENCES users(id) ON DELETE CASCADE
+            );
 
-        CREATE TABLE IF NOT EXISTS api_endpoints (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-            user_id TEXT NOT NULL,
-            name TEXT NOT NULL,
-            url TEXT NOT NULL,
-            method TEXT DEFAULT 'GET',
-            interval INTEGER DEFAULT 60,
-            is_active INTEGER DEFAULT 1,
-            created_at DATETIME DEFAULT (datetime('now')),
-            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-        );
+            CREATE TABLE IF NOT EXISTS api_endpoints (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                user_id TEXT NOT NULL,
+                name TEXT NOT NULL,
+                url TEXT NOT NULL,
+                method TEXT DEFAULT 'GET',
+                interval INTEGER DEFAULT 60,
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+            );
 
-        CREATE TABLE IF NOT EXISTS monitoring_logs (
-            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-            endpoint_id TEXT NOT NULL,
-            status_code INTEGER DEFAULT 0,
-            response_time REAL,
-            is_success INTEGER DEFAULT 0,
-            checked_at DATETIME DEFAULT (datetime('now')),
-            FOREIGN KEY (endpoint_id) REFERENCES api_endpoints(id) ON DELETE CASCADE
-        );
-    """
-    )
+            CREATE TABLE IF NOT EXISTS monitoring_logs (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                endpoint_id TEXT NOT NULL,
+                status_code INTEGER DEFAULT 0,
+                response_time REAL,
+                is_success BOOLEAN DEFAULT FALSE,
+                checked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+                FOREIGN KEY (endpoint_id) REFERENCES api_endpoints(id) ON DELETE CASCADE
+            );
+            
+            CREATE TABLE IF NOT EXISTS email_verifications (
+                id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+                email TEXT NOT NULL,
+                otp TEXT NOT NULL,
+                is_used BOOLEAN DEFAULT FALSE,
+                expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+            );
+            """
+        )
 
-    # 2. Safe migrations: add new columns to existing users table if they don't exist
-    def add_column_if_missing(table, column, definition):
-        try:
-            cursor.execute(f"SELECT {column} FROM {table} LIMIT 1")
-        except Exception:
-            logger.info(f"Adding column {column} to table {table}")
-            cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+        cursor.execute(
+            """
+            CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+            CREATE INDEX IF NOT EXISTS idx_users_employee_id ON users(employee_id);
+            CREATE INDEX IF NOT EXISTS idx_invitations_token ON employee_invitations(token);
+            CREATE INDEX IF NOT EXISTS idx_endpoints_user_id ON api_endpoints(user_id);
+            CREATE INDEX IF NOT EXISTS idx_logs_endpoint_id ON monitoring_logs(endpoint_id);
+            CREATE INDEX IF NOT EXISTS idx_logs_checked_at ON monitoring_logs(checked_at);
+            CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications(email);
+            """
+        )
 
-    add_column_if_missing("users", "role", "TEXT DEFAULT 'company'")
-    add_column_if_missing("users", "company_id", "TEXT")
-    add_column_if_missing("users", "employee_id", "TEXT")
-
-    # Create email_verifications table for OTP-based registration
-    cursor.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS email_verifications (
-            id      TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-            email   TEXT NOT NULL,
-            otp     TEXT NOT NULL,
-            is_used INTEGER DEFAULT 0,
-            expires_at DATETIME NOT NULL,
-            created_at DATETIME DEFAULT (datetime('now'))
-        );
-
-        CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications(email);
-    """
-    )
-
-    # 3. Create indices (now that columns definitely exist)
-    cursor.executescript(
-        """
-        CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
-        CREATE INDEX IF NOT EXISTS idx_users_employee_id ON users(employee_id);
-        CREATE INDEX IF NOT EXISTS idx_invitations_token ON employee_invitations(token);
-        CREATE INDEX IF NOT EXISTS idx_endpoints_user_id ON api_endpoints(user_id);
-        CREATE INDEX IF NOT EXISTS idx_logs_endpoint_id ON monitoring_logs(endpoint_id);
-        CREATE INDEX IF NOT EXISTS idx_logs_checked_at ON monitoring_logs(checked_at);
-    """
-    )
-
-    conn.commit()
-    conn.close()
-    logger.info(f"Database initialized at {Config.DATABASE_PATH}")
-
+        conn.commit()
+        logger.info(f"PostgreSQL database initialized")
+    except Exception as e:
+        conn.rollback()
+        logger.error(f"Failed to initialize database: {e}")
+        raise
+    finally:
+        cursor.close()
+        release_db(conn)
 
 def row_to_dict(row) -> dict:
-    """Convert a sqlite3.Row to a regular dict."""
+    """Convert a psycopg2 RealDictRow to a regular dict."""
     if row is None:
         return None
     return dict(row)
 
-
 def rows_to_list(rows) -> list:
-    """Convert a list of sqlite3.Row to a list of dicts."""
+    """Convert a list of psycopg2 RealDictRow to a list of dicts."""
+    if rows is None:
+        return []
     return [dict(r) for r in rows]

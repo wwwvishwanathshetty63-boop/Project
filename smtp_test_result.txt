@@ -1,0 +1,8 @@
+--- SMTP Configuration Check ---
+Host: smtp.gmail.com
+Port: 587
+User: www.vishwanathshetty63@gmail.com
+
+Attempting to connect to SMTP server...
+
+[+] SUCCESS: SMTP connection and login successful!

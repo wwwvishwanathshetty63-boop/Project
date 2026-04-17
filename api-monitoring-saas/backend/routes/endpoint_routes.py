@@ -1,6 +1,6 @@
 import uuid
 from flask import Blueprint, request, jsonify, g
-from backend.models import get_db, row_to_dict, rows_to_list
+from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
 from backend.utils.auth import token_required
 from backend.utils.validators import (
     validate_url,
@@ -39,14 +39,14 @@ def create_endpoint():
     db = get_db()
     try:
         db.execute(
-            "INSERT INTO api_endpoints (id, user_id, name, url, method, interval, is_active) VALUES (?, ?, ?, ?, ?, ?, 1)",
+            "INSERT INTO api_endpoints (id, user_id, name, url, method, interval, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1)",
             (endpoint_id, g.current_user_id, name, url, method, int(interval)),
         )
         db.commit()
 
         endpoint = row_to_dict(
             db.execute(
-                "SELECT * FROM api_endpoints WHERE id = ?",
+                "SELECT * FROM api_endpoints WHERE id = %s",
                 (endpoint_id,),
             ).fetchone()
         )
@@ -54,7 +54,7 @@ def create_endpoint():
 
         return jsonify({"message": "Endpoint created", "endpoint": endpoint}), 201
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("", methods=["GET"])
@@ -65,7 +65,7 @@ def list_endpoints():
     try:
         # 1. Get all endpoints for user
         rows = db.execute(
-            "SELECT * FROM api_endpoints WHERE user_id = ? ORDER BY created_at DESC",
+            "SELECT * FROM api_endpoints WHERE user_id = %s ORDER BY created_at DESC",
             (g.current_user_id,),
         ).fetchall()
         endpoints = rows_to_list(rows)
@@ -80,7 +80,7 @@ def list_endpoints():
 
         # 3. Fetch aggregate stats for the range
         endpoint_ids = [e["id"] for e in endpoints]
-        placeholders = ",".join(["?"] * len(endpoint_ids))
+        placeholders = ",".join(["%s"] * len(endpoint_ids))
         
         stats_rows = db.execute(
             f"""
@@ -90,7 +90,7 @@ def list_endpoints():
                 SUM(CASE WHEN is_success = 1 THEN 1 ELSE 0 END) as successes,
                 AVG(response_time) as avg_rt
             FROM monitoring_logs 
-            WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?
+            WHERE endpoint_id IN ({placeholders}) AND checked_at >= %s
             GROUP BY endpoint_id
             """,
             (*endpoint_ids, since)
@@ -143,7 +143,7 @@ def list_endpoints():
         print(traceback.format_exc())
         return jsonify({"error": str(e)}), 500
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("/<endpoint_id>", methods=["GET"])
@@ -153,7 +153,7 @@ def get_endpoint(endpoint_id):
     db = get_db()
     try:
         row = db.execute(
-            "SELECT * FROM api_endpoints WHERE id = ? AND user_id = ?",
+            "SELECT * FROM api_endpoints WHERE id = %s AND user_id = %s",
             (endpoint_id, g.current_user_id),
         ).fetchone()
 
@@ -164,7 +164,7 @@ def get_endpoint(endpoint_id):
         endpoint["is_active"] = bool(endpoint["is_active"])
         return jsonify({"endpoint": endpoint}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("/<endpoint_id>", methods=["PUT"])
@@ -178,7 +178,7 @@ def update_endpoint(endpoint_id):
     db = get_db()
     try:
         existing = db.execute(
-            "SELECT id FROM api_endpoints WHERE id = ? AND user_id = ?",
+            "SELECT id FROM api_endpoints WHERE id = %s AND user_id = %s",
             (endpoint_id, g.current_user_id),
         ).fetchone()
         if not existing:
@@ -191,41 +191,41 @@ def update_endpoint(endpoint_id):
             name = sanitize_string(data["name"])
             if not validate_name(name):
                 return jsonify({"error": "Invalid name"}), 400
-            updates.append("name = ?")
+            updates.append("name = %s")
             params.append(name)
         if "url" in data:
             url = sanitize_string(data["url"])
             if not validate_url(url):
                 return jsonify({"error": "Invalid URL"}), 400
-            updates.append("url = ?")
+            updates.append("url = %s")
             params.append(url)
         if "method" in data:
             method = sanitize_string(data["method"]).upper()
             if not validate_http_method(method):
                 return jsonify({"error": "Invalid HTTP method"}), 400
-            updates.append("method = ?")
+            updates.append("method = %s")
             params.append(method)
         if "interval" in data:
             if not validate_interval(data["interval"]):
                 return jsonify({"error": "Invalid interval"}), 400
-            updates.append("interval = ?")
+            updates.append("interval = %s")
             params.append(int(data["interval"]))
 
         if not updates:
             return jsonify({"error": "No valid fields to update"}), 400
 
         params.append(endpoint_id)
-        db.execute(f"UPDATE api_endpoints SET {', '.join(updates)} WHERE id = ?", params)
+        db.execute(f"UPDATE api_endpoints SET {', '.join(updates)} WHERE id = %s", params)
         db.commit()
 
         endpoint = row_to_dict(
-            db.execute("SELECT * FROM api_endpoints WHERE id = ?", (endpoint_id,)).fetchone()
+            db.execute("SELECT * FROM api_endpoints WHERE id = %s", (endpoint_id,)).fetchone()
         )
         endpoint["is_active"] = bool(endpoint["is_active"])
 
         return jsonify({"message": "Endpoint updated", "endpoint": endpoint}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("/<endpoint_id>", methods=["DELETE"])
@@ -235,19 +235,19 @@ def delete_endpoint(endpoint_id):
     db = get_db()
     try:
         existing = db.execute(
-            "SELECT id FROM api_endpoints WHERE id = ? AND user_id = ?",
+            "SELECT id FROM api_endpoints WHERE id = %s AND user_id = %s",
             (endpoint_id, g.current_user_id),
         ).fetchone()
         if not existing:
             return jsonify({"error": "Endpoint not found"}), 404
 
-        db.execute("DELETE FROM monitoring_logs WHERE endpoint_id = ?", (endpoint_id,))
-        db.execute("DELETE FROM api_endpoints WHERE id = ?", (endpoint_id,))
+        db.execute("DELETE FROM monitoring_logs WHERE endpoint_id = %s", (endpoint_id,))
+        db.execute("DELETE FROM api_endpoints WHERE id = %s", (endpoint_id,))
         db.commit()
 
         return jsonify({"message": "Endpoint deleted"}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("/<endpoint_id>/toggle", methods=["PATCH"])
@@ -257,25 +257,25 @@ def toggle_endpoint(endpoint_id):
     db = get_db()
     try:
         existing = db.execute(
-            "SELECT id, is_active FROM api_endpoints WHERE id = ? AND user_id = ?",
+            "SELECT id, is_active FROM api_endpoints WHERE id = %s AND user_id = %s",
             (endpoint_id, g.current_user_id),
         ).fetchone()
         if not existing:
             return jsonify({"error": "Endpoint not found"}), 404
 
         new_status = 0 if existing["is_active"] else 1
-        db.execute("UPDATE api_endpoints SET is_active = ? WHERE id = ?", (new_status, endpoint_id))
+        db.execute("UPDATE api_endpoints SET is_active = %s WHERE id = %s", (new_status, endpoint_id))
         db.commit()
 
         endpoint = row_to_dict(
-            db.execute("SELECT * FROM api_endpoints WHERE id = ?", (endpoint_id,)).fetchone()
+            db.execute("SELECT * FROM api_endpoints WHERE id = %s", (endpoint_id,)).fetchone()
         )
         endpoint["is_active"] = bool(endpoint["is_active"])
         status_text = "enabled" if new_status else "disabled"
 
         return jsonify({"message": f"Monitoring {status_text}", "endpoint": endpoint}), 200
     finally:
-        db.close()
+        release_db(db)
 
 
 @endpoint_bp.route("/<endpoint_id>/logs", methods=["GET"])
@@ -285,7 +285,7 @@ def get_endpoint_logs(endpoint_id):
     db = get_db()
     try:
         existing = db.execute(
-            "SELECT id FROM api_endpoints WHERE id = ? AND user_id = ?",
+            "SELECT id FROM api_endpoints WHERE id = %s AND user_id = %s",
             (endpoint_id, g.current_user_id, ),
         ).fetchone()
         if not existing:
@@ -304,7 +304,7 @@ def get_endpoint_logs(endpoint_id):
 
         logs = rows_to_list(
             db.execute(
-                "SELECT * FROM monitoring_logs WHERE endpoint_id = ? AND checked_at >= ? ORDER BY checked_at DESC LIMIT ?",
+                "SELECT * FROM monitoring_logs WHERE endpoint_id = %s AND checked_at >= %s ORDER BY checked_at DESC LIMIT %s",
                 (endpoint_id, since, limit),
             ).fetchall()
         )
@@ -314,4 +314,4 @@ def get_endpoint_logs(endpoint_id):
 
         return jsonify({"logs": logs}), 200
     finally:
-        db.close()
+        release_db(db)

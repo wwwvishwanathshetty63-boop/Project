@@ -1,7 +1,7 @@
 import datetime
 import logging
 from flask import Blueprint, jsonify, request, g
-from backend.models import get_db, row_to_dict, rows_to_list
+from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
 from backend.utils.auth import token_required
 
 logger = logging.getLogger(__name__)
@@ -24,12 +24,12 @@ def get_stats():
 
         # For employees, show endpoints from their company
         if user_role == "employee":
-            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = ?", (user_id,)).fetchone())
+            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = %s", (user_id,)).fetchone())
             if user_row and user_row.get("company_id"):
                 user_id = user_row["company_id"]
 
         endpoints = rows_to_list(
-            db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+            db.execute("SELECT * FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
         )
         total_apis = len(endpoints)
         active_apis = sum(1 for e in endpoints if e.get("is_active"))
@@ -57,11 +57,11 @@ def get_stats():
         )
 
         endpoint_ids = [e["id"] for e in endpoints]
-        placeholders = ",".join(["?"] * len(endpoint_ids))
+        placeholders = ",".join(["%s"] * len(endpoint_ids))
 
         all_logs = rows_to_list(
             db.execute(
-                f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?",
+                f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= %s",
                 (*endpoint_ids, since),
             ).fetchall()
         )
@@ -81,7 +81,7 @@ def get_stats():
         for ep in endpoints:
             latest_log = row_to_dict(
                 db.execute(
-                    "SELECT * FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+                    "SELECT * FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT 1",
                     (ep["id"],),
                 ).fetchone()
             )
@@ -134,7 +134,7 @@ def get_stats():
         logger.error(f"Error fetching dashboard stats: {e}")
         return jsonify({"error": "Failed to load stats. Please try again."}), 500
     finally:
-        db.close()
+        release_db(db)
 
 
 @dashboard_bp.route("/response-times", methods=["GET"])
@@ -152,12 +152,12 @@ def get_response_times():
 
         # For employees, show endpoints from their company
         if user_role == "employee":
-            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = ?", (user_id,)).fetchone())
+            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = %s", (user_id,)).fetchone())
             if user_row and user_row.get("company_id"):
                 user_id = user_row["company_id"]
 
         endpoints = rows_to_list(
-            db.execute("SELECT id, name FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+            db.execute("SELECT id, name FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
         )
 
         if not endpoints:
@@ -171,7 +171,7 @@ def get_response_times():
         for ep in endpoints:
             logs = rows_to_list(
                 db.execute(
-                    "SELECT response_time, checked_at, is_success, status_code FROM monitoring_logs WHERE endpoint_id = ? AND checked_at >= ? ORDER BY checked_at ASC",
+                    "SELECT response_time, checked_at, is_success, status_code FROM monitoring_logs WHERE endpoint_id = %s AND checked_at >= %s ORDER BY checked_at ASC",
                     (ep["id"], since),
                 ).fetchall()
             )
@@ -193,7 +193,7 @@ def get_response_times():
         logger.error(f"Error fetching response times: {e}")
         return jsonify({"error": "Failed to load response times. Please try again."}), 500
     finally:
-        db.close()
+        release_db(db)
 
 
 @dashboard_bp.route("/analytics", methods=["GET"])
@@ -209,7 +209,7 @@ def get_analytics():
 
         # Get all endpoints for company
         endpoints = rows_to_list(
-            db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+            db.execute("SELECT * FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
         )
 
         total_apis = len(endpoints)
@@ -234,12 +234,12 @@ def get_analytics():
         ).strftime("%Y-%m-%d %H:%M:%S")
 
         endpoint_ids = [e["id"] for e in endpoints]
-        placeholders = ",".join(["?"] * len(endpoint_ids))
+        placeholders = ",".join(["%s"] * len(endpoint_ids))
 
         # Today's logs
         today_logs = rows_to_list(
             db.execute(
-                f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?",
+                f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= %s",
                 (*endpoint_ids, today_start),
             ).fetchall()
         )
@@ -259,7 +259,7 @@ def get_analytics():
         for ep in endpoints:
             latest = row_to_dict(
                 db.execute(
-                    "SELECT is_success FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+                    "SELECT is_success FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT 1",
                     (ep["id"],),
                 ).fetchone()
             )
@@ -300,7 +300,7 @@ def get_analytics():
         # Employees under this company
         employees = rows_to_list(
             db.execute(
-                "SELECT id, name, email, employee_id, created_at FROM users WHERE company_id = ? AND role = 'employee'",
+                "SELECT id, name, email, employee_id, created_at FROM users WHERE company_id = %s AND role = 'employee'",
                 (user_id,),
             ).fetchall()
         )
@@ -323,7 +323,7 @@ def get_analytics():
         logger.error(f"Error fetching analytics: {e}")
         return jsonify({"error": "Failed to load analytics"}), 500
     finally:
-        db.close()
+        release_db(db)
 
 
 @dashboard_bp.route("/send-daily-report", methods=["POST"])
@@ -336,13 +336,13 @@ def send_daily_report():
     db = get_db()
     try:
         user_id = g.current_user_id
-        user = row_to_dict(db.execute("SELECT email, name FROM users WHERE id = ?", (user_id,)).fetchone())
+        user = row_to_dict(db.execute("SELECT email, name FROM users WHERE id = %s", (user_id,)).fetchone())
         if not user:
             return jsonify({"error": "User not found"}), 404
 
         # Get today's data
         endpoints = rows_to_list(
-            db.execute("SELECT * FROM api_endpoints WHERE user_id = ?", (user_id,)).fetchall()
+            db.execute("SELECT * FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
         )
 
         today_start = datetime.datetime.now(datetime.timezone.utc).replace(
@@ -358,10 +358,10 @@ def send_daily_report():
         down_count = 0
 
         if endpoint_ids:
-            placeholders = ",".join(["?"] * len(endpoint_ids))
+            placeholders = ",".join(["%s"] * len(endpoint_ids))
             logs = rows_to_list(
                 db.execute(
-                    f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= ?",
+                    f"SELECT * FROM monitoring_logs WHERE endpoint_id IN ({placeholders}) AND checked_at >= %s",
                     (*endpoint_ids, today_start),
                 ).fetchall()
             )
@@ -383,7 +383,7 @@ def send_daily_report():
             for ep in endpoints:
                 latest = row_to_dict(
                     db.execute(
-                        "SELECT is_success FROM monitoring_logs WHERE endpoint_id = ? ORDER BY checked_at DESC LIMIT 1",
+                        "SELECT is_success FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT 1",
                         (ep["id"],),
                     ).fetchone()
                 )
@@ -418,4 +418,4 @@ def send_daily_report():
         logger.error(f"Error sending daily report: {e}")
         return jsonify({"error": "Failed to send daily report"}), 500
     finally:
-        db.close()
+        release_db(db)
