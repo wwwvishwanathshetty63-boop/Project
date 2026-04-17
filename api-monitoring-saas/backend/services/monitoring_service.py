@@ -2,13 +2,21 @@ import time
 import logging
 import datetime
 import requests as http_requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 from backend.config import Config
-from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
+from backend.models import get_db, row_to_dict, rows_to_list, release_db
 from backend.services.alert_service import send_alert_email, build_alert_html
 
 logger = logging.getLogger(__name__)
 
-
+def mask_api_key(key: str) -> str:
+    """Masks an API key for safe logging."""
+    if not key:
+        return ""
+    if len(key) <= 8:
+        return "********"
+    return f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}"
 def check_endpoint(endpoint: dict) -> tuple:
     """
     Send an HTTP request to the endpoint and measure response.
@@ -16,31 +24,63 @@ def check_endpoint(endpoint: dict) -> tuple:
     """
     url = endpoint["url"]
     method = endpoint.get("method", "GET").upper()
-    start_time = time.time()
-    status_code = 0
-    is_success = False
-    error_detail = None
+    api_key = endpoint.get("api_key")
+    api_key_header = endpoint.get("api_key_header", "Authorization")
+    headers = {"User-Agent": "API-Monitor-SaaS/1.0"}
+    
+    if api_key:
+        headers[api_key_header] = api_key
+        logger.debug(f"Attached API Key ({mask_api_key(api_key)}) in header '{api_key_header}'")
+
+    # Set up session with retries for temporary failures
+    session = http_requests.Session()
+    retries = Retry(total=3, backoff_factor=1, status_forcelist=[ 500, 502, 503, 504 ])
+    session.mount('http://', HTTPAdapter(max_retries=retries))
+    session.mount('https://', HTTPAdapter(max_retries=retries))
+
+    api_key_status = "Valid" if api_key else None
 
     try:
-        response = http_requests.request(
+        response = session.request(
             method=method,
             url=url,
             timeout=Config.REQUEST_TIMEOUT_SECONDS,
             allow_redirects=True,
-            headers={"User-Agent": "API-Monitor-SaaS/1.0"},
+            headers=headers,
         )
         status_code = response.status_code
         is_success = 200 <= status_code < 300
 
+        # Determine API Key Status dynamically based on HTTP response
+        if api_key:
+            if status_code == 401:
+                api_key_status = "Invalid/Dummy"
+                is_success = False
+            elif status_code == 403:
+                api_key_status = "Forbidden (Insufficient Perms)"
+                is_success = False
+            elif status_code == 429:
+                api_key_status = "Rate Limited"
+                is_success = False
+            elif is_success:
+                api_key_status = "Valid"
+
         if not is_success:
             error_detail = f"HTTP {status_code}"
+            if api_key and api_key_status != "Valid":
+                 error_detail += f" - API Key Failed ({api_key_status})"
 
     except http_requests.exceptions.Timeout:
         error_detail = "Request timed out"
+        if api_key: api_key_status = "Error"
     except http_requests.exceptions.ConnectionError:
         error_detail = "Connection failed"
+        if api_key: api_key_status = "Error"
     except http_requests.exceptions.RequestException as e:
         error_detail = str(e)[:200]
+        if api_key: api_key_status = "Error"
+    finally:
+        session.close()
 
     response_time = round((time.time() - start_time) * 1000, 2)
 
@@ -49,6 +89,7 @@ def check_endpoint(endpoint: dict) -> tuple:
         "status_code": status_code,
         "response_time": response_time,
         "is_success": 1 if is_success else 0,
+        "api_key_status": api_key_status
     }
 
     return log_entry, error_detail
@@ -60,8 +101,8 @@ def save_log(log_entry: dict) -> dict:
     try:
         db = get_db()
         db.execute(
-            "INSERT INTO monitoring_logs (endpoint_id, status_code, response_time, is_success) VALUES (%s, %s, %s, %s)",
-            (log_entry["endpoint_id"], log_entry["status_code"], log_entry["response_time"], log_entry["is_success"]),
+            "INSERT INTO monitoring_logs (endpoint_id, status_code, response_time, is_success, api_key_status) VALUES (%s, %s, %s, %s, %s)",
+            (log_entry["endpoint_id"], log_entry["status_code"], log_entry["response_time"], log_entry["is_success"], log_entry["api_key_status"]),
         )
         db.commit()
 
@@ -200,7 +241,11 @@ def run_monitoring_cycle():
                     if user_email:
                         timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-                        if consecutive >= Config.CONSECUTIVE_FAILURES_THRESHOLD:
+                        if log_entry.get("api_key_status") in ["Invalid/Dummy", "Forbidden (Insufficient Perms)", "Rate Limited"]:
+                            alert_type = "failure"
+                            subject = f"🔑 API KEY ALERT: {endpoint['name']} is failing due to keys"
+                            error_msg = f"Your API Key seems to be {log_entry['api_key_status']}. ({error_detail})"
+                        elif consecutive >= Config.CONSECUTIVE_FAILURES_THRESHOLD:
                             alert_type = "consecutive_failures"
                             subject = f"🚨 CRITICAL: {endpoint['name']} — {consecutive} Consecutive Failures"
                             error_msg = f"{error_detail or 'Unknown error'} ({consecutive} consecutive failures)"

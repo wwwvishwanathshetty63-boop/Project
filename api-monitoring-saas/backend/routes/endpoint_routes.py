@@ -25,6 +25,8 @@ def create_endpoint():
     url = sanitize_string(data.get("url", ""))
     method = sanitize_string(data.get("method", "GET")).upper()
     interval = data.get("interval", 60)
+    api_key = data.get("api_key", None)
+    api_key_header = sanitize_string(data.get("api_key_header", "Authorization"))
 
     if not validate_name(name):
         return jsonify({"error": "Name must be between 2 and 100 characters"}), 400
@@ -39,8 +41,8 @@ def create_endpoint():
     db = get_db()
     try:
         db.execute(
-            "INSERT INTO api_endpoints (id, user_id, name, url, method, interval, is_active) VALUES (%s, %s, %s, %s, %s, %s, 1)",
-            (endpoint_id, g.current_user_id, name, url, method, int(interval)),
+            "INSERT INTO api_endpoints (id, user_id, name, url, method, interval, is_active, api_key, api_key_header) VALUES (%s, %s, %s, %s, %s, %s, 1, %s, %s)",
+            (endpoint_id, g.current_user_id, name, url, method, int(interval), api_key, api_key_header),
         )
         db.commit()
 
@@ -210,6 +212,13 @@ def update_endpoint(endpoint_id):
                 return jsonify({"error": "Invalid interval"}), 400
             updates.append("interval = %s")
             params.append(int(data["interval"]))
+        if "api_key" in data:
+            # We can allow clearing the api_key if they send ''
+            updates.append("api_key = %s")
+            params.append(data["api_key"] if data["api_key"] else None)
+        if "api_key_header" in data:
+            updates.append("api_key_header = %s")
+            params.append(sanitize_string(data["api_key_header"]))
 
         if not updates:
             return jsonify({"error": "No valid fields to update"}), 400

@@ -86,6 +86,8 @@ def init_db():
                 method TEXT DEFAULT 'GET',
                 interval INTEGER DEFAULT 60,
                 is_active BOOLEAN DEFAULT TRUE,
+                api_key TEXT,
+                api_key_header TEXT DEFAULT 'Authorization',
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
@@ -96,6 +98,7 @@ def init_db():
                 status_code INTEGER DEFAULT 0,
                 response_time REAL,
                 is_success BOOLEAN DEFAULT FALSE,
+                api_key_status TEXT,
                 checked_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 FOREIGN KEY (endpoint_id) REFERENCES api_endpoints(id) ON DELETE CASCADE
             );

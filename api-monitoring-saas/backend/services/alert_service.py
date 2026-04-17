@@ -32,10 +32,15 @@ def send_alert_email(to_email: str, subject: str, body_html: str) -> bool:
         msg.attach(MIMEText(plain_text, "plain"))
         msg.attach(MIMEText(body_html, "html"))
 
-        with smtplib.SMTP(Config.SMTP_HOST, Config.SMTP_PORT) as server:
-            server.starttls()
-            server.login(Config.SMTP_USERNAME, Config.SMTP_PASSWORD)
-            server.send_message(msg)
+        if int(Config.SMTP_PORT) == 465:
+            with smtplib.SMTP_SSL(Config.SMTP_HOST, Config.SMTP_PORT) as server:
+                server.login(Config.SMTP_USERNAME, Config.SMTP_PASSWORD)
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(Config.SMTP_HOST, Config.SMTP_PORT) as server:
+                server.starttls()
+                server.login(Config.SMTP_USERNAME, Config.SMTP_PASSWORD)
+                server.send_message(msg)
 
         logger.info(f"Alert email sent to {to_email}: {subject}")
         return True
