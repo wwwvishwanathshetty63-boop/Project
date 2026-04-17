@@ -10,18 +10,34 @@ logger = logging.getLogger(__name__)
 # Global connection pool
 db_pool = None
 
+class DBWrapper:
+    """Wrapper to make psycopg2 connection behave like sqlite3 (db.execute)."""
+    def __init__(self, conn):
+        self.conn = conn
+
+    def execute(self, query, vars=None):
+        cursor = self.conn.cursor()
+        cursor.execute(query, vars)
+        return cursor
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
 def get_db():
-    """Get a connection from the PostgreSQL pool."""
+    """Get a wrapped connection from the PostgreSQL pool."""
     global db_pool
     if db_pool is None:
         init_pool()
-    return db_pool.getconn()
+    return DBWrapper(db_pool.getconn())
 
-def release_db(conn):
-    """Release a connection back to the PostgreSQL pool."""
+def release_db(db_wrapper):
+    """Release a wrapped connection back to the PostgreSQL pool."""
     global db_pool
-    if db_pool and conn:
-        db_pool.putconn(conn)
+    if db_pool and db_wrapper and hasattr(db_wrapper, "conn"):
+        db_pool.putconn(db_wrapper.conn)
 
 def init_pool():
     """Initialize the PostgreSQL connection pool."""
