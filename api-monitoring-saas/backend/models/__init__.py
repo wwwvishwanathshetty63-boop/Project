@@ -33,7 +33,7 @@ def init_pool():
 
         is_vercel = os.getenv("VERCEL") == "1"
         # On Vercel, we want essentially 1 connection per lambda to avoid exhausting Supabase limits
-        min_conn = 0 if is_vercel else Config.DB_POOL_MIN
+        min_conn = 1 if is_vercel else Config.DB_POOL_MIN
         max_conn = 1 if is_vercel else Config.DB_POOL_MAX
 
         try:
