@@ -35,11 +35,14 @@ def create_app() -> Flask:
         storage_uri="memory://",
     )
 
-    import atexit
-    # Initialize PostgreSQL database
-    from backend.models import init_db, close_pool
-    init_db()
-    atexit.register(close_pool)
+    if os.getenv("VERCEL") != "1":
+        import atexit
+        # Initialize PostgreSQL database
+        from backend.models import init_db, close_pool
+        init_db()
+        atexit.register(close_pool)
+    else:
+        logger.info("Running on Vercel: Skipping auto-migrations and atexit registration.")
 
     # Register blueprints
     from backend.routes.auth_routes import auth_bp

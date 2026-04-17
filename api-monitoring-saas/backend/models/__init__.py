@@ -27,14 +27,23 @@ def init_pool():
     """Initialize the PostgreSQL connection pool."""
     global db_pool
     if db_pool is None:
+        if not Config.DATABASE_URL:
+            logger.error("DATABASE_URL environment variable is not set. Database operations will fail.")
+            raise RuntimeError("DATABASE_URL is not set.")
+
+        is_vercel = os.getenv("VERCEL") == "1"
+        # On Vercel, we want essentially 1 connection per lambda to avoid exhausting Supabase limits
+        min_conn = 0 if is_vercel else Config.DB_POOL_MIN
+        max_conn = 1 if is_vercel else Config.DB_POOL_MAX
+
         try:
             db_pool = psycopg2.pool.ThreadedConnectionPool(
-                minconn=Config.DB_POOL_MIN,
-                maxconn=Config.DB_POOL_MAX,
+                minconn=min_conn,
+                maxconn=max_conn,
                 dsn=Config.DATABASE_URL,
                 cursor_factory=RealDictCursor
             )
-            logger.info("PostgreSQL connection pool created")
+            logger.info(f"PostgreSQL connection pool created (Vercel={is_vercel}, Min={min_conn}, Max={max_conn})")
         except Exception as e:
             logger.error(f"Failed to create PostgreSQL pool: {e}")
             raise
