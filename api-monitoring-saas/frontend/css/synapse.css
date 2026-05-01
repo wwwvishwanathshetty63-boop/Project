@@ -24,16 +24,7 @@
 html { scroll-behavior: smooth; }
 body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; line-height:1.6; }
 
-/* ── CURSOR EFFECTS ── */
-@media (pointer: fine) {
-    /* Hide system cursor only on non-interactive body areas */
-    body { cursor: none; }
-    /* Restore normal cursor on interactive elements so clicks always work */
-    a, button, input, select, textarea, label,
-    [role="button"], .nav-item, .menu-item, .filter-pill,
-    .btn-shiny, .btn-secondary, .btn-glass, .topbar-action,
-    .icon-btn, .action-btn, .modal-close { cursor: pointer !important; }
-}
+/* ── CURSOR EFFECTS (landing page only — activated by synapse.js) ── */
 #cursor-spotlight {
     position: fixed; pointer-events: none; z-index: 9999;
     width: 600px; height: 600px; border-radius: 50%; transform: translate(-50%, -50%);

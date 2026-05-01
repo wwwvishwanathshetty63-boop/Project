@@ -1,19 +1,29 @@
 // ── SYNAPSE GLOBAL INTERACTIONS ──
 
 document.addEventListener('DOMContentLoaded', () => {
-    initCursor();
-    // Only apply scroll animations on the landing page — on dashboard pages
-    // cards load dynamically via API and setting opacity:0 breaks them.
-    if (document.body.dataset.page === 'landing' || document.querySelector('.hero-section')) {
+    const isLanding = document.body.dataset.page === 'landing';
+
+    if (isLanding) {
+        initCursor();       // Custom cursor: landing page only
         initScrollAnimations();
+        initPillNav();
     }
-    initPillNav();
+
     populateSidebarUser();
 });
 
-// ── CURSOR ANIMATION ──
+// ── CURSOR ANIMATION (landing page only) ──
 function initCursor() {
     if (!window.matchMedia('(pointer: fine)').matches) return;
+
+    // Hide system cursor on the landing page
+    document.body.style.cursor = 'none';
+
+    // Restore pointer on interactive elements so clicks always fire
+    const cursorStyle = document.createElement('style');
+    cursorStyle.id = 'synapse-cursor-style';
+    cursorStyle.textContent = 'a,button,input,select,textarea,label,[role="button"],.nav-item,.menu-item,.filter-pill,.btn-shiny,.btn-secondary,.btn-glass,.topbar-action,.icon-btn,.action-btn,.modal-close{cursor:pointer!important}';
+    document.head.appendChild(cursorStyle);
 
     // Create cursor elements if they don't exist
     if (!document.getElementById('cursor-dot')) {
