@@ -418,6 +418,9 @@ def invite_employee():
         # Send official credentials email
         from backend.services.alert_service import send_employee_credentials_email
         email_sent = send_employee_credentials_email(email, name, raw_password)
+        
+        from flask import current_app
+        is_testing = current_app.config.get("TESTING", False)
 
         return (
             jsonify(
@@ -427,8 +430,8 @@ def invite_employee():
                     "email_sent": email_sent,
                     "name": name,
                     "email": email,
-                    # In dev mode expose password if SMTP not configured
-                    "dev_password": raw_password if not email_sent else None,
+                    # In dev mode expose password if SMTP not configured or if testing
+                    "dev_password": raw_password if (not email_sent or is_testing) else None,
                 }
             ),
             201,

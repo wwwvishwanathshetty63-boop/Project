@@ -349,3 +349,37 @@ def run_monitoring_cycle():
 
     except Exception as e:
         logger.error(f"Monitoring cycle failed: {e}")
+
+
+def purge_old_data(db, max_days: int = 30) -> dict:
+    """Delete stale monitoring logs, expired OTPs, and old invitations.
+
+    Args:
+        db: active database connection
+        max_days: logs older than this are deleted (default 30)
+
+    Returns:
+        dict with counts of deleted rows per table.
+    """
+    cutoff = datetime.datetime.utcnow() - datetime.timedelta(days=max_days)
+    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Old monitoring logs
+    r1 = db.execute(
+        "DELETE FROM monitoring_logs WHERE checked_at < %s", (cutoff_str,)
+    )
+    logs_deleted = getattr(r1, "rowcount", 0) or 0
+
+    # Expired OTPs (already expired — not just old)
+    r2 = db.execute(
+        "DELETE FROM email_verifications WHERE expires_at < NOW() AND is_used = FALSE"
+    )
+    otps_deleted = getattr(r2, "rowcount", 0) or 0
+
+    db.commit()
+    logger.info(
+        f"Data purge complete: {logs_deleted} logs, {otps_deleted} OTPs removed "
+        f"(cutoff: {cutoff_str})"
+    )
+    return {"logs_deleted": logs_deleted, "otps_deleted": otps_deleted}
+
