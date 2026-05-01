@@ -1,171 +1,66 @@
-# SYSTEM REQUIREMENT SPECIFICATION (SRS)
+# Software Requirements Specification (SRS)
+## API Monitoring SaaS Platform
 
-## 2.1 Introduction
+### 1. Introduction
+**1.1 Purpose**
+The purpose of this document is to outline the software requirements for the API Monitoring Software as a Service (SaaS) platform. This platform enables companies to register their APIs, assign them to employee accounts, monitor real-time uptime, response times, and key health statuses, and receive instant alerts when anomalies occur.
 
-### 2.1.1 Purpose
-The purpose of this document is to provide a comprehensive description of the **API Monitor SaaS** system. It outlines the functional and non-functional requirements, design constraints, and system interfaces. This document serves as a guide for developers, administrators, and stakeholders (including project guides and evaluators) to understand the system's architecture and capabilities.
+**1.2 Scope**
+The SaaS application consists of a full-stack web interface with role-based access control, real-time background monitoring engines, and an analytics dashboard. It monitors APIs via HTTP checks, validates third-party API keys (e.g., OpenAI, Stripe), tracks slow load degradation, caches analytics, and sends email alerts upon failures.
 
-### 2.1.2 Scope
-The **API Monitor SaaS** is a specialized platform designed to provide real-time health monitoring for web APIs. It allows users to register, manage their API endpoints, visualize performance metrics (uptime, response times), and receive instant notifications via email when an endpoint fails. The system includes a multi-layer security engine that uses DNS resolution and VirusTotal integration to reject dummy or fake API endpoints, ensuring only legitimate services are monitored. The system aims to minimize downtime for developers and businesses by providing an automated monitoring engine.
+---
 
-### 2.1.3 Acronyms and Abbreviations
-| Acronym | Definition |
-|---------|------------|
-| SRS     | Software Requirement Specification |
-| API     | Application Programming Interface |
-| SaaS    | Software as a Service |
-| JWT     | JSON Web Token |
-| SMTP    | Simple Mail Transfer Protocol |
-| RLS     | Row Level Security |
-| SQL     | Structured Query Language |
-| CRUD    | Create, Read, Update, Delete |
-| UI      | User Interface |
-| OTP     | One-Time Password |
-| DNS     | Domain Name System |
-| VT      | VirusTotal |
+### 2. Overall Description
+**2.1 Product Features**
+1. **Multi-tenant Role-Based Access Control (RBAC):** Company Admins can invite employees, manage subscriptions, and view all system endpoints. Employees can manage and view only their assigned endpoints.
+2. **API Endpoint Monitoring:** Real-time polling to verify status codes, response times, and API key validities.
+3. **Third-Party API Key Validation:** Integrations specifically detecting `INVALID`, `LIMITED`, and `RATE_LIMITED` HTTP signatures for external providers.
+4. **Performance Degradation Detection:** Algorithmic identification of progressively slowing response times under load before a total timeout occurs.
+5. **Real-time Analytics Dashboard:** Data visualization charts for Uptime, Average Response Times, and Error Rates.
+6. **Alert Notification System:** SMTP email alerts dispatched to API owners when APIs go down or keys become invalid.
+7. **Background Cron Execution:** Scheduled tasks running at specific intervals (e.g., every 60s) to perform the endpoint checks without blocking the main web server.
+8. **Automated Data Purging:** Regular garbage collection of expired email verification OTPs and old endpoint monitoring logs to preserve database efficiency.
 
-### 2.1.4 Overview
-The document is organized into several sections:
-- **Section 2.1** introduces the project and its scope.
-- **Section 2.2** describes the overall system, product functions, and operating environment.
-- **Section 2.3** details the functional requirements and external interfaces.
-- **Non-Functional Requirements** covers performance, security, and quality attributes.
-- **Section 2.4** summarizes the system's advantages.
-- **Section 2.5** outlines future scope.
+**2.2 Operating Environment**
+- **Backend:** Python (Flask/Gunicorn)
+- **Database:** PostgreSQL (Supabase/Neon)
+- **Frontend:** HTML, CSS, JavaScript (Vanilla/Chart.js)
+- **Deployment:** Vercel (Web Server), Independent Cron/Worker Threads for monitoring tasks.
 
-## 2.2 Overall Description
+---
 
-### 2.2.1 Product Functions
-The main functions of the system include:
-- **User Authentication**: Secure registration and login using JWT.
-- **Endpoint Management**: CRUD operations for API endpoints to be monitored.
-- **Automated Monitoring**: Background engine performing health checks every 60 seconds.
-- **Alerting System**: Automated SMTP email notifications on status changes (down/up).
-- **Data Visualization**: Interactive charts for response time and uptime analysis.
-- **Profile Management**: User profile updates and security settings.
-- **Dummy API Detection**: A 3-layer validation engine (Static Blacklist, DNS Resolution, VirusTotal Reputation) that rejects fake, mock, or non-existent API endpoints during the addition phase.
-- **API Key Validation**: Pre-flight validation of user-supplied API keys before storing them, with pattern matching for known test key formats.
+### 3. Functional Requirements
+**3.1 Authentication & Authorization**
+- **REQ-1:** The system shall support secure registration via email OTP.
+- **REQ-2:** The system shall authenticate users via JWT tokens.
+- **REQ-3:** Company Admins must be able to invite Employee users.
+- **REQ-4:** Employees shall only access and modify their own endpoints.
+- **REQ-5:** Company Admins shall have read-only access to their employees' endpoints and aggregated statistical data.
 
-### 2.2.2 Typical Data Flow
-1. **User Input**: User adds an API URL and configuration via the frontend.
-2. **Endpoint Validation**: The backend runs a 3-layer check on the URL:
-   - Layer 1: Static blacklist of known dummy hosts (e.g., mockapi.io, dummyjson.com).
-   - Layer 2: DNS resolution check -- if the domain does not resolve, it is immediately rejected.
-   - Layer 3: VirusTotal API domain reputation check -- unknown, malicious, or suspicious domains are rejected.
-3. **Database Storage**: If the URL passes all checks, the Flask backend stores the endpoint details in Supabase (Postgres).
-4. **Monitoring Cycle**: The APScheduler-based engine fetches active endpoints and pings them.
-5. **Logging**: Results (status code, latency) are logged into the monitoring_logs table.
-6. **Notification**: If failure criteria are met, the Alert Service triggers an SMTP email to the user.
-7. **Visualization**: The dashboard fetches logs via the REST API to render Chart.js graphs.
+**3.2 API Endpoint Management**
+- **REQ-6:** Users shall be able to Create, Read, Update, and Delete (CRUD) API configurations (URL, Method, API Key Header, API Key).
+- **REQ-7:** All stored API keys must be encrypted or masked during transmission and retrieval to prevent unauthorized exposure.
 
-### 2.2.3 User Classes and Characteristics
-- **Standard Users**: Developers or system administrators who want to monitor their APIs. They have access to their own dashboard and endpoints.
-- **Administrators**: Users with elevated permissions to manage the global system settings and user base (Future Scope).
+**3.3 Monitoring Engine**
+- **REQ-8:** A background worker thread shall continuously execute HTTP calls based on each endpoint's defined `interval`.
+- **REQ-9:** The engine shall log HTTP status codes, latency, and success booleans into a historical database table.
+- **REQ-10:** Consecutive failures shall be tracked up to a customizable threshold before an alert is escalated.
 
-### 2.2.4 Operating Environment
-- **Server Side**: Python 3.10+, Flask, Supabase (Cloud Database).
-- **Client Side**: Any modern web browser (Chrome, Firefox, Safari, Edge).
-- **Hosting**: Render, Vercel, or Heroku.
+**3.4 Analytics & Reporting**
+- **REQ-11:** The system shall aggregate data from `monitoring_logs` to output a total Uptime Percentage per endpoint.
+- **REQ-12:** The analytics engine shall use Redis/in-memory caching to optimize heavy aggregate queries (e.g., P50/P95 latencies).
 
-### 2.2.5 Design and Implementation Constraints / Assumptions
-- The system depends on the availability of the Supabase API.
-- Monitoring frequency is fixed at 60 seconds unless configured otherwise.
-- SMTP delivery depends on the provider (e.g., Gmail) and correct App Password configuration.
-- The VirusTotal API has a rate limit of 4 requests per minute on the free tier.
+---
 
-### 2.2.6 How Dynamic Website Works
-The system uses a **Full-Stack Decoupled Architecture**:
-- The **Frontend** (HTML/CSS/JS) is a Single Page Application (SPA) style setup that communicates with the backend via fetch requests.
-- The **Backend** (Flask) acts as a REST API server, handling authentication, database logic, and URL reputation checks.
-- The **Background Engine** runs asynchronously to ensure monitoring continues even without active user sessions.
-- The **URL Reputation Service** integrates with VirusTotal API v3 and local DNS checks to validate endpoint legitimacy before adding them to the database.
+### 4. Non-Functional Requirements
+**4.1 Performance & Scalability**
+- **NFR-1:** Dashboard statistics must return within 200ms using caching mechanisms.
+- **NFR-2:** The monitoring engine must parallelize HTTP checks using thread pools to ensure large endpoint numbers don't cause drift in polling intervals.
 
-### 2.2.7 Assumptions and Dependencies
-- **Assumed Browser**: HTML5 and ES6 compatibility.
-- **Internet Discovery**: Users must have a stable internet connection to access the dashboard.
-- **Email Service**: Assumes the user provides a valid email address for alerts.
-- **VirusTotal API**: Requires a valid API key for domain reputation analysis.
+**4.2 Security**
+- **NFR-3:** Passwords must be hashed using `bcrypt` algorithms.
+- **NFR-4:** API requests shall utilize standard HTTPS.
 
-## 2.3 Functional Requirements
-
-### 2.3.1 Core Functionality Description
-The system provides a seamless experience for monitoring APIs. Users can define endpoints (URL, Method, Interval), and the system ensures they are reachable. The dashboard provides a "NOC-style" view of all monitored services. Before any endpoint is added, a multi-layer validation engine checks the URL against a static blacklist, performs DNS resolution, and queries VirusTotal for domain reputation to prevent dummy or mock APIs from being monitored.
-
-### 2.3.2 External Interface Requirements
-
-#### 2.3.2.1 User Interface
-- **Landing Page**: Modern centered glassmorphic login/registration card.
-- **Dashboard**: Sidebar navigation with dynamic content area, health status cards, and responsive charts.
-- **Modals**: For adding/editing endpoints with animated error messages (shake animation) for invalid or dummy APIs.
-- **Error Alerts**: In-modal animated alerts with slide-in and shake effects for immediate user feedback on validation failures.
-
-#### 2.3.2.2 Hardware Interfaces
-- No specialized hardware required. Standard Server/PC with NIC.
-
-#### 2.3.2.3 Software Interfaces
-- **Web Browser**: Chrome 90+, Firefox 88+.
-- **Database**: Supabase (PostgreSQL).
-- **Backend Framework**: Flask (Python).
-- **Libraries**: Chart.js for visualization, APScheduler for tasks.
-- **External APIs**: VirusTotal API v3 for domain reputation analysis.
-
-#### 2.3.2.4 Communication Interfaces
-- **HTTP/HTTPS**: For client-server communication and API pings.
-- **SMTP**: For sending critical failure alerts.
-- **VirusTotal REST API**: For querying domain reputation data during endpoint validation.
-
-### 2.3.3 Detailed Functional Requirements
-
-#### 2.3.3.1 Web Pages Identified
-- landing.html: Entry point for guest users.
-- index.html: Login and Registration portal.
-- dashboard.html: The main control center showing global stats.
-- api-endpoints.html: Detailed list of monitored APIs with management controls and "Add Endpoint" modal.
-- profile.html: User account and notification settings.
-
-#### 2.3.3.2 Dummy API Detection Module
-The system implements a 3-layer security gate for URL validation:
-- **Layer 1 -- Static Blacklist**: A curated list of known mock API providers (mockapi.io, dummyjson.com, beeceptor.com, etc.) is maintained on the server. Any URL matching these hosts is instantly rejected.
-- **Layer 2 -- DNS Resolution**: The system attempts to resolve the domain via DNS. If the domain does not exist (e.g., data.nexoraapi.io), it is rejected immediately with the message "Domain does not exist (DNS resolution failed)."
-- **Layer 3 -- VirusTotal Reputation**: For domains that pass DNS, the system queries the VirusTotal API v3 (/api/v3/domains/{host}) to check:
-  - Reputation score (negative = blocked).
-  - Malicious/suspicious detection count.
-  - Analysis coverage (zero coverage = blocked as unknown).
-
-## Non-Functional Requirements
-
-- **Security**: 
-    - Password hashing using bcrypt.
-    - Authorization via JWT in headers.
-    - Row Level Security (RLS) on all database tables to prevent data leakage between users.
-    - API key masking in all responses (only first 4 and last 4 characters shown).
-    - Pre-flight API key pattern matching to reject known test key formats.
-    - VirusTotal-powered domain reputation checks to prevent fake endpoints.
-- **Performance**: 
-    - API health check responses logged in less than 500ms.
-    - Dashboard page load less than 2 seconds.
-    - Static blacklist and DNS checks complete in less than 100ms.
-    - VirusTotal check completes within 10 seconds (with timeout fallback).
-- **Scalability**: 
-    - Supabase handles concurrent database connections reliably.
-    - Flask backend is stateless for horizontal scaling.
-- **Availability**: 
-    - Background monitoring engine ensures 24/7 pings.
-- **Usability**: 
-    - Clean, premium design with intuitive navigation.
-    - Animated error messages (slide-in + shake) for failed validations.
-
-## 2.4 Advantages of the System
-- **Real-time Awareness**: Users know immediately when their API is down.
-- **Data-Driven Insights**: Uptime and latency charts help identify performance regressions.
-- **Low Barrier to Entry**: Easy to set up with existing endpoints.
-- **Secure by Design**: Implementation of RLS ensures user data privacy.
-- **Anti-Dummy Protection**: Industry-first 3-layer validation (Blacklist + DNS + VirusTotal) prevents users from monitoring fake or mock APIs.
-- **Animated UX Feedback**: Premium shake and slide-in animations for validation errors provide clear, immediate user feedback.
-
-## 2.5 Future Enhancements
-- **Multi-region Pings**: Monitor APIs from different global locations.
-- **Slack/Discord Webhooks**: Notification support for dev teams.
-- **AI Diagnostics**: Automatically analyze root causes of failures (e.g., DNS, Timeout, 500 Error).
-- **Mobile Application**: Native iOS/Android app for on-the-go alerts.
-- **Custom Blacklist Management**: Allow users to add their own blacklisted domains via the Admin Panel.
+**4.3 Reliability & Availability**
+- **NFR-5:** The core Web API must isolate its PostgreSQL connection pooling to ensure it does not starve connection slots during serverless scaling events (using a custom `DBWrapper`).
+- **NFR-6:** Multi-tenant degradation load test coverage must enforce SLA guarantees on response time spikes.
