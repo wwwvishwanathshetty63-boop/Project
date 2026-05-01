@@ -4,81 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Monitor — Employee Login</title>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Synapse Styles -->
+    <link rel="stylesheet" href="css/synapse.css">
     <style>
-        body { display:flex; align-items:center; justify-content:center; min-height:100vh; background-color:var(--bg-color); margin:0; padding:1rem; }
-        .auth-container { width:100%; max-width:440px; animation:fadeIn 0.5s ease-out; }
-        .auth-header { text-align:center; margin-bottom:2rem; }
-        .auth-logo { font-size:3rem; margin-bottom:1rem; }
-        .auth-logo i { background: linear-gradient(135deg, #06b6d4, #22d3ee); -webkit-background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 0 10px rgba(6,182,212,0.4)); }
-        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--text-muted); text-decoration: none; font-size: 0.85rem; margin-bottom: 1.5rem; transition: color 0.2s; }
-        .back-link:hover { color: var(--accent-color); }
-        .employee-badge { display: inline-flex; align-items: center; gap: 6px; background: linear-gradient(135deg, rgba(6,182,212,0.15), rgba(34,211,238,0.1)); border: 1px solid rgba(6,182,212,0.25); padding: 6px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; color: #22d3ee; margin-bottom: 1rem; }
-        .info-note { background: rgba(99,102,241,0.08); border: 1px solid rgba(99,102,241,0.2); border-radius: 10px; padding: 0.9rem 1rem; margin-bottom: 1.5rem; font-size: 0.82rem; color: var(--text-muted); line-height: 1.6; display: flex; align-items: flex-start; gap: 0.6rem; }
-        .info-note i { color: #818cf8; margin-top: 2px; flex-shrink: 0; }
+        body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:1.5rem; overflow-x: hidden; }
+        .auth-container { width:100%; max-width:480px; position: relative; z-index: 10; animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        
+        .glass-card-auth { padding: 3rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 24px; backdrop-filter: blur(20px); }
+        
+        .auth-logo { font-family: 'Instrument Serif', serif; font-size: 2.5rem; color: #fff; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+        .auth-logo-icon { width: 48px; height: 48px; background: var(--cyan); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 20px var(--cyan-glow); }
+        
+        .form-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 0.75rem; font-weight: 700; }
+        .form-group input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1rem 1rem 3rem; color: #fff; font-family: 'Inter', sans-serif; transition: all 0.3s; }
+        .form-group input:focus { border-color: var(--cyan); background: rgba(255,255,255,0.05); outline: none; }
+        .form-group .input-icon { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.9rem; }
+        
+        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 0.5rem; transition: color 0.3s; margin-bottom: 2rem; }
+        .back-link:hover { color: #fff; }
+        
+        .info-note { background: rgba(6, 182, 212, 0.03); border: 1px solid rgba(6, 182, 212, 0.1); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; display: flex; gap: 0.75rem; }
+        .info-note i { color: var(--cyan); margin-top: 2px; }
     </style>
 </head>
 <body>
-<div class="auth-container">
-    <a href="landing.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Back to Home</a>
+    <!-- Ambient Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
-    <div class="auth-header">
-        <div class="auth-logo"><i class="fa-solid fa-satellite-dish"></i></div>
-        <div class="employee-badge"><i class="fa-solid fa-user-tie"></i> Employee Portal</div>
-        <h1 id="auth-title">Employee Login</h1>
-        <p id="auth-subtitle" style="color: var(--text-muted); font-size: 0.95rem;">Sign in with your credentials received via email</p>
-    </div>
+    <div class="auth-container">
+        <a href="landing.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Home</a>
 
-    <div class="card" style="padding:2.5rem;">
-        <div class="info-note">
-            <i class="fa-solid fa-circle-info"></i>
-            <span>Use the <strong>Name</strong>, <strong>Email</strong>, and <strong>Password</strong> provided to you by your company administrator via email.</span>
+        <div class="auth-header" style="text-align: center; margin-bottom: 2rem;">
+            <div class="auth-logo">
+                <div class="auth-logo-icon" style="background: var(--cyan); box-shadow: 0 0 20px var(--cyan-glow);"><i class="fa-solid fa-satellite-dish"></i></div>
+                <span style="font-family: 'Instrument Serif', serif; letter-spacing: -0.02em;">Synapse Portal</span>
+            </div>
+            <h1 id="auth-title" style="font-family: 'Instrument Serif', serif; font-size: 2.5rem; letter-spacing: -0.02em; margin-bottom: 0.5rem;">Entity Access</h1>
+            <p id="auth-subtitle" style="color: var(--text-muted); font-weight: 300; font-size: 0.9rem;">Establish secure link with provided credentials</p>
         </div>
 
-        <form id="employee-login-form">
-            <div class="form-group">
-                <label class="form-label">Full Name</label>
-                <div style="position:relative;">
-                    <i class="fa-solid fa-user" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
-                    <input type="text" id="emp-name" class="form-control" style="padding-left:2.5rem;" placeholder="John Doe" required>
-                </div>
+        <div class="glass-card-auth">
+            <div class="info-note">
+                <i class="fa-solid fa-circle-info"></i>
+                <span>Use the <strong>Designation</strong>, <strong>Email</strong>, and <strong>Key</strong> provided to you by your administrator.</span>
             </div>
-            <div class="form-group">
-                <label class="form-label">Email Address</label>
-                <div style="position:relative;">
-                    <i class="fa-solid fa-envelope" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
-                    <input type="email" id="emp-email" class="form-control" style="padding-left:2.5rem;" placeholder="john@company.com" required>
-                </div>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Password</label>
-                <div style="position:relative;">
-                    <i class="fa-solid fa-lock" style="position:absolute;left:1rem;top:50%;transform:translateY(-50%);color:var(--text-muted);"></i>
-                    <input type="password" id="emp-password" class="form-control" style="padding-left:2.5rem;" placeholder="••••••••" required>
-                </div>
-            </div>
-            <button type="submit" class="btn" style="width:100%;justify-content:center;padding:0.75rem;background:linear-gradient(135deg,#06b6d4,#22d3ee);color:#0f172a;font-weight:600;">
-                <i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Sign In
-            </button>
-        </form>
 
-        <p style="text-align:center;margin-top:1.25rem;font-size:0.82rem;color:var(--text-muted);">
-            Don't have credentials? Contact your company administrator to receive an invite.
+
+            <form id="employee-login-form">
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label>Designation (Name)</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-user input-icon"></i>
+                        <input type="text" id="emp-name" placeholder="John Doe" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 1.25rem;">
+                    <label>Email Vector</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-envelope input-icon"></i>
+                        <input type="email" id="emp-email" placeholder="john@company.com" required>
+                    </div>
+                </div>
+                <div class="form-group" style="margin-bottom: 2rem;">
+                    <label>Access Key (Password)</label>
+                    <div style="position:relative;">
+                        <i class="fa-solid fa-lock input-icon"></i>
+                        <input type="password" id="emp-password" placeholder="••••••••" required>
+                    </div>
+                </div>
+                <div class="btn-shiny" style="width: 100%; padding: 0;">
+                    <button type="submit" class="btn-shiny-inner" style="width:100%; border:none; cursor:pointer; font-weight:700; background: var(--cyan);">
+                        Entity Login
+                    </button>
+                </div>
+            </form>
+
+        <p style="text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim); font-weight: 300;">
+            No credentials? Contact your administrator for entity invitation.
         </p>
     </div>
 </div>
 
 <script src="js/app.js"></script>
+<script src="js/synapse.js"></script>
 <script>
 document.getElementById('employee-login-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-    const btn = this.querySelector('button[type="submit"]');
-    btn.disabled = true;
-    btn.innerHTML = '<div class="spinner"></div> Signing in...';
+    const btnInner = this.querySelector('.btn-shiny-inner');
+    btnInner.disabled = true;
+    btnInner.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> SYNCING...';
     try {
         const d = await apiRequest('/api/auth/login', {
             method: 'POST',
@@ -90,13 +114,12 @@ document.getElementById('employee-login-form').addEventListener('submit', async 
             }
         });
         saveAuth(d.token, d.user);
-        showToast('Login successful! Redirecting...');
+        showToast('Entity Synchronized');
         setTimeout(() => window.location.href = 'index.html', 800);
     } catch(err) {
         showToast(err.message, 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Sign In';
+        btnInner.disabled = false;
+        btnInner.innerHTML = 'Entity Login';
     }
 });
 

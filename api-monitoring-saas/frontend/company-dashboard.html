@@ -4,146 +4,151 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Monitor — Company Dashboard</title>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
     <style>
-        .analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
-        .analytics-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.5rem; position: relative; overflow: hidden; }
-        .analytics-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
-        .analytics-card.primary::before { background: linear-gradient(90deg, #7c3aed, #6366f1); }
-        .analytics-card.success::before { background: linear-gradient(90deg, #10b981, #22c55e); }
-        .analytics-card.danger::before { background: linear-gradient(90deg, #ef4444, #f87171); }
-        .analytics-card.info::before { background: linear-gradient(90deg, #06b6d4, #22d3ee); }
-        .analytics-value { font-size: 2.2rem; font-weight: 800; color: var(--text-color); margin-bottom: 0.25rem; }
-        .analytics-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .analytics-icon { position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.5rem; opacity: 0.2; }
+        .analytics-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+        .analytics-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; position: relative; overflow: hidden; backdrop-filter: blur(10px); transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .analytics-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.15); background: rgba(255,255,255,0.04); }
+        .analytics-card::after { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; opacity: 0.8; }
+        
+        .analytics-card.primary::after { background: var(--violet); box-shadow: 0 0 15px var(--violet-glow); }
+        .analytics-card.success::after { background: var(--emerald); box-shadow: 0 0 15px var(--emerald-glow); }
+        .analytics-card.info::after { background: var(--cyan); box-shadow: 0 0 15px var(--cyan-glow); }
+        .analytics-card.danger::after { background: var(--rose); box-shadow: 0 0 15px var(--rose-glow); }
+        
+        .analytics-value { font-family: 'JetBrains Mono', monospace; font-size: 2.2rem; font-weight: 700; color: #fff; margin-bottom: 0.25rem; letter-spacing: -0.02em; }
+        .analytics-label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.15em; font-weight: 700; }
+        .analytics-icon { position: absolute; top: 1.25rem; right: 1.25rem; font-size: 1.25rem; color: var(--text-dim); opacity: 0.3; }
 
         .section-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
         .section-grid-equal { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
 
-        .incident-row { display: flex; align-items: center; gap: 1rem; padding: 0.75rem 0; border-bottom: 1px solid var(--border-color); }
+        .incident-row { display: flex; align-items: center; gap: 1rem; padding: 1rem 0; border-bottom: 1px solid var(--border); }
         .incident-row:last-child { border-bottom: none; }
-        .incident-dot { width: 8px; height: 8px; border-radius: 50%; background: #ef4444; flex-shrink: 0; }
-        .incident-name { font-weight: 600; font-size: 0.85rem; color: var(--text-color); }
-        .incident-error { font-size: 0.78rem; color: #ef4444; }
-        .incident-time { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
+        .incident-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--rose); box-shadow: 0 0 10px var(--rose-glow); flex-shrink: 0; }
+        .incident-name { font-weight: 600; font-size: 0.85rem; color: #fff; }
+        .incident-error { font-size: 0.72rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+        .incident-time { font-size: 0.7rem; color: var(--text-dim); margin-left: auto; white-space: nowrap; font-family: 'JetBrains Mono', monospace; }
 
         /* Employee Activity Cards */
-        .emp-activity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
-        .emp-activity-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s, box-shadow 0.2s; }
-        .emp-activity-card:hover { border-color: #6366f1; box-shadow: 0 0 0 1px rgba(99,102,241,0.2); }
-        .emp-activity-card.healthy { border-left: 3px solid #22c55e; }
+        .emp-activity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.5rem; }
+        .emp-activity-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); position: relative; }
+        .emp-activity-card:hover { border-color: rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); }
+        .emp-activity-card.healthy { border-left: 3px solid var(--emerald); }
         .emp-activity-card.warning { border-left: 3px solid #f59e0b; }
-        .emp-activity-card.critical { border-left: 3px solid #ef4444; }
-        .emp-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
-        .emp-avatar-lg { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; color: #fff; flex-shrink: 0; }
-        .emp-card-name { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
-        .emp-card-id { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-        .emp-card-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
-        .emp-stat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
-        .emp-stat-badge.total { background: rgba(99,102,241,0.12); color: #818cf8; }
-        .emp-stat-badge.down { background: rgba(239,68,68,0.12); color: #f87171; }
-        .emp-stat-badge.key { background: rgba(245,158,11,0.12); color: #fbbf24; }
-        .emp-stat-badge.incident { background: rgba(239,68,68,0.08); color: #ef4444; }
-        .emp-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
-        .emp-rt { font-size: 0.78rem; color: var(--text-muted); }
-        .btn-view-emp { font-size: 0.75rem; padding: 4px 12px; border-radius: 6px; background: rgba(99,102,241,0.12); color: #818cf8; border: none; cursor: pointer; font-weight: 600; transition: background 0.2s; }
-        .btn-view-emp:hover { background: rgba(99,102,241,0.25); }
+        .emp-activity-card.critical { border-left: 3px solid var(--rose); }
+        
+        .emp-card-header { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.25rem; }
+        .emp-avatar-lg { width: 44px; height: 44px; border-radius: 12px; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: #fff; border: 1px solid var(--border); }
+        .emp-card-name { font-weight: 700; font-size: 1rem; color: #fff; letter-spacing: -0.01em; }
+        .emp-card-id { font-size: 0.7rem; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
+        
+        .emp-card-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1rem; }
+        .emp-stat-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.65rem; font-weight: 700; padding: 4px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); background: rgba(255,255,255,0.02); text-transform: uppercase; letter-spacing: 0.05em; }
+        .emp-stat-badge.total { color: var(--cyan); }
+        .emp-stat-badge.down { color: var(--rose); }
+        .emp-stat-badge.key { color: #f59e0b; }
+        
+        .btn-view-emp { font-family: 'Inter', sans-serif; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: #fff; background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; cursor: pointer; transition: all 0.3s; }
+        .btn-view-emp:hover { background: #fff; color: #000; }
 
-        /* Slide-in employee endpoints panel */
-        .emp-panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1100; display: none; backdrop-filter: blur(4px); }
-        .emp-panel-overlay.open { display: block; }
-        .emp-panel { position: fixed; top: 0; right: -100%; width: min(640px, 95vw); height: 100vh; background: var(--card-bg); border-left: 1px solid var(--border-color); z-index: 1101; transition: right 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; display: flex; flex-direction: column; }
-        .emp-panel.open { right: 0; }
-        .emp-panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--card-bg); z-index: 10; }
-        .emp-panel-body { padding: 1.5rem; flex: 1; }
-        .ep-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 0.5rem; background: rgba(255,255,255,0.02); }
-        .ep-name { font-weight: 600; font-size: 0.85rem; color: var(--text-color); }
-        .ep-url { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
-
-        .live-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #22c55e; font-weight: 600; }
-        .live-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s ease-in-out infinite; }
-        @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-
-        @media (max-width: 1024px) { .analytics-grid { grid-template-columns: repeat(2, 1fr); } .section-grid,.section-grid-equal { grid-template-columns: 1fr; } }
-        @media (max-width: 640px) { .analytics-grid { grid-template-columns: 1fr; } .emp-activity-grid { grid-template-columns: 1fr; } }
+        .ep-row { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; display: grid; grid-template-columns: 1fr auto auto auto; gap: 1.5rem; align-items: center; margin-bottom: 0.75rem; transition: all 0.3s; }
+        .ep-row:hover { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.15); }
+    </style>
     </style>
 </head>
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Company</div>
-                <a href="company-dashboard.html" class="menu-item active">
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Nexus Command</div>
+                <a href="company-dashboard.html" class="nav-item active">
                     <i class="fa-solid fa-chart-line"></i>
-                    <span>Analytics</span>
+                    <span>Entity Analytics</span>
                 </a>
-                <a href="index.html" class="menu-item">
+                <a href="index.html" class="nav-item">
                     <i class="fa-solid fa-chart-pie"></i>
-                    <span>Monitoring</span>
+                    <span>Real-time Feed</span>
                 </a>
-                <a href="api-endpoints.html" class="menu-item">
+                <a href="api-endpoints.html" class="nav-item">
                     <i class="fa-solid fa-server"></i>
-                    <span>API Endpoints</span>
-                </a>
-                <a href="logs.html" class="menu-item">
-                    <i class="fa-solid fa-list-check"></i>
-                    <span>Logs</span>
-                </a>
-                <a href="alerts.html" class="menu-item">
-                    <i class="fa-solid fa-bell"></i>
-                    <span>Alerts</span>
+                    <span>Managed Nodes</span>
                 </a>
             </div>
-            <div class="menu-section">
-                <div class="menu-section-title">Management</div>
-                <a href="employee-monitor.html" class="menu-item">
+            <div class="nav-group">
+                <div class="nav-label">Personnel</div>
+                <a href="employee-monitor.html" class="nav-item">
                     <i class="fa-solid fa-users-viewfinder"></i>
-                    <span>Employee Monitor</span>
+                    <span>Entity Monitor</span>
                 </a>
-                <a href="admin.html" class="menu-item">
+                <a href="admin.html" class="nav-item">
                     <i class="fa-solid fa-user-plus"></i>
-                    <span>Invite Employees</span>
-                </a>
-                <a href="profile.html" class="menu-item">
-                    <i class="fa-solid fa-user-gear"></i>
-                    <span>Profile</span>
+                    <span>Invite Unit</span>
                 </a>
             </div>
         </nav>
-        <div class="sidebar-footer">
+        <div class="sidebar-user">
             <div class="user-avatar-small">A</div>
-            <div class="user-info">
-                <span class="user-name">Admin</span>
-                <span class="user-role">Company</span>
+            <div class="user-meta">
+                <span class="user-name">Administrator</span>
+                <span class="user-role">Master Access</span>
             </div>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
-                <h2>Company Analytics</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Entity Analytics</h2>
+                </div>
             </div>
-            <div class="topbar-right">
-                <button class="btn btn-secondary btn-sm" id="btn-send-report" title="Send Daily Report to Email">
-                    <i class="fa-solid fa-envelope"></i> Send Report
+            <div class="top-bar-right">
+                <button class="btn-glass" id="btn-send-report">
+                    <i class="fa-solid fa-envelope"></i> Report Sync
                 </button>
-                <button class="topbar-action" id="btn-refresh-analytics" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                <button class="icon-btn" id="btn-refresh-analytics"><i class="fa-solid fa-rotate-right"></i></button>
                 <div class="user-avatar-small">A</div>
             </div>
         </header>
+
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Performance Pulse</h1>
+                    <p class="view-subtitle">Operational intelligence across all monitored nodes <span class="status-indicator online">LIVE</span></p>
+                </div>
+                <div class="view-actions">
+                    <div class="btn-shiny">
+                        <button class="btn-shiny-inner" id="btn-invite-emp">
+                            <i class="fa-solid fa-user-plus"></i> Invite Entity
+                        </button>
+                    </div>
+                </div>
+            </div>
 
         <div class="content">
             <div class="page-header">
@@ -201,62 +206,62 @@
                 </div>
             </div>
 
-            <!-- Chart + Incidents -->
             <div class="section-grid">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="fa-solid fa-chart-area text-muted"></i> Hourly Response Time</div>
-                        <div class="badge badge-gray">Today</div>
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <div class="glass-card-title"><i class="fa-solid fa-chart-area"></i> LATENCY SPECTROGRAM</div>
+                        <span class="pill pill-cyan">REAL-TIME</span>
                     </div>
-                    <div class="chart-container" style="height: 280px;">
+                    <div class="chart-container" style="height: 320px; padding: 1rem;">
                         <canvas id="hourlyChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="fa-solid fa-triangle-exclamation text-muted"></i> Recent Incidents</div>
-                        <div class="badge badge-danger" id="incident-count">0</div>
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <div class="glass-card-title"><i class="fa-solid fa-triangle-exclamation"></i> CRITICAL INCIDENTS</div>
+                        <div class="badge-dot" id="incident-count">0</div>
                     </div>
-                    <div id="incidents-list" style="padding: 0.5rem 0; max-height: 300px; overflow-y: auto;">
-                        <div class="empty-state" style="padding: 2rem;"><p style="color:var(--text-muted); font-size: 0.85rem;">No incidents today 🎉</p></div>
+                    <div id="incidents-list" style="padding: 0 1.5rem 1.5rem; max-height: 320px; overflow-y: auto;">
+                        <div class="empty-state" style="padding: 3rem;"><p style="color:var(--text-dim); font-size: 0.8rem; font-weight: 300;">No anomalies detected.</p></div>
                     </div>
                 </div>
             </div>
 
             <!-- Employee Activity Monitor -->
-            <div class="card" style="margin-bottom: 2rem;">
-                <div class="card-header">
-                    <div class="card-title"><i class="fa-solid fa-users-viewfinder text-muted"></i> Employee Activity Monitor</div>
-                    <div style="display:flex;gap:0.5rem;">
-                        <span class="live-badge">LIVE</span>
-                        <button class="btn btn-sm" id="btn-invite-emp-2"><i class="fa-solid fa-user-plus"></i> Invite</button>
+            <div class="glass-card" style="margin-bottom: 2rem;">
+                <div class="glass-card-header">
+                    <div class="glass-card-title"><i class="fa-solid fa-users-viewfinder"></i> ENTITY ACTIVITY MONITOR</div>
+                    <div style="display:flex; gap:1rem; align-items:center;">
+                        <span class="status-indicator online">ACTIVE</span>
+                        <button class="btn-glass btn-sm" id="btn-invite-emp-2"><i class="fa-solid fa-user-plus"></i> INVITE</button>
                     </div>
                 </div>
-                <div style="padding: 1rem;">
+                <div style="padding: 1.5rem;">
                     <div id="emp-activity-grid" class="emp-activity-grid">
-                        <div class="empty-state" style="padding:2rem; grid-column:1/-1;"><p style="color:var(--text-muted);font-size:0.85rem;">Loading employee activity…</p></div>
+                        <div class="empty-state" style="padding:4rem; grid-column:1/-1;"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Synchronizing entity data...</p></div>
                     </div>
                 </div>
             </div>
 
             <!-- Failures Breakdown -->
             <div class="section-grid-equal" style="margin-bottom:2rem;">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="fa-solid fa-chart-pie text-muted"></i> Failures Breakdown</div>
-                        <div class="badge badge-gray">Today</div>
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <div class="glass-card-title"><i class="fa-solid fa-chart-pie"></i> NODE RELIABILITY</div>
+                        <span class="pill">24H CYCLE</span>
                     </div>
-                    <div class="chart-container" style="height: 280px;">
+                    <div class="chart-container" style="height: 300px; padding: 1.5rem;">
                         <canvas id="failuresChart"></canvas>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="fa-solid fa-triangle-exclamation text-muted"></i> Recent Incidents</div>
-                        <div class="badge badge-danger" id="incident-count">0</div>
+                <div class="glass-card">
+                    <div class="glass-card-header">
+                        <div class="glass-card-title"><i class="fa-solid fa-microchip"></i> SYSTEM HEALTH</div>
+                        <span class="pill pill-cyan">OPTIMAL</span>
                     </div>
-                    <div id="incidents-list" style="padding: 0.5rem 0; max-height: 300px; overflow-y: auto;">
-                        <div class="empty-state" style="padding: 2rem;"><p style="color:var(--text-muted); font-size: 0.85rem;">No incidents today 🎉</p></div>
+                    <div style="padding: 2rem; text-align: center;">
+                        <div style="font-family: 'Instrument Serif', serif; font-size: 4rem; color: var(--emerald); filter: drop-shadow(0 0 15px var(--emerald-glow));">99.9%</div>
+                        <div style="color: var(--text-dim); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700;">Global Uptime Index</div>
                     </div>
                 </div>
             </div>
@@ -264,42 +269,44 @@
 
         <!-- Employee Endpoints Slide-in Panel -->
         <div class="emp-panel-overlay" id="empPanelOverlay"></div>
-        <div class="emp-panel" id="empPanel">
-            <div class="emp-panel-header">
+        <div class="emp-panel" id="empPanel" style="background: var(--card-bg); border-left: 1px solid var(--border);">
+            <div class="emp-panel-header" style="border-bottom: 1px solid var(--border); background: var(--card-bg);">
                 <div>
-                    <div class="card-title" id="emp-panel-title"><i class="fa-solid fa-user"></i> Employee Endpoints</div>
-                    <div style="font-size:0.78rem; color:var(--text-muted);" id="emp-panel-subtitle"></div>
+                    <div class="glass-card-title" id="emp-panel-title" style="font-size: 1.25rem;"><i class="fa-solid fa-user"></i> Entity Nodes</div>
+                    <div style="font-size:0.75rem; color:var(--text-dim); font-weight:300;" id="emp-panel-subtitle"></div>
                 </div>
-                <button class="action-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
+                <button class="icon-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
             </div>
             <div class="emp-panel-body">
-                <div id="emp-panel-endpoints"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Loading endpoints...</p></div></div>
+                <div id="emp-panel-endpoints"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Synchronizing...</p></div></div>
             </div>
         </div>
 
         <!-- Invite Modal -->
-        <div id="inviteModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.7); z-index:1000; justify-content:center; align-items:center; backdrop-filter:blur(4px);">
-            <div class="card modal-content" style="width:100%; max-width:420px;">
-                <div class="card-header">
-                    <div class="card-title"><i class="fa-solid fa-user-plus"></i> Invite Employee</div>
-                    <button class="action-btn" id="close-invite"><i class="fa-solid fa-xmark"></i></button>
+        <div id="inviteModal" class="modal-overlay" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.85); z-index:2000; justify-content:center; align-items:center; backdrop-filter:blur(20px);">
+            <div class="glass-card modal-content" style="width:100%; max-width:480px; padding: 0;">
+                <div class="glass-card-header" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);">
+                    <div class="glass-card-title"><i class="fa-solid fa-user-plus"></i> INVITE ENTITY</div>
+                    <button class="icon-btn" id="close-invite"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <form id="invite-form" style="padding: 1.5rem;">
-                    <div class="form-group">
-                        <label class="form-label">Employee Name</label>
-                        <input type="text" id="invite-name" class="form-control" required placeholder="John Doe">
+                <form id="invite-form" style="padding: 2rem;">
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label>ENTITY DESIGNATION</label>
+                        <input type="text" id="invite-name" placeholder="Full Name" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%;">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" id="invite-email" class="form-control" required placeholder="john@company.com">
+                    <div class="form-group" style="margin-bottom: 1.5rem;">
+                        <label>DATA VECTOR (EMAIL)</label>
+                        <input type="email" id="invite-email" placeholder="email@company.com" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%;">
                     </div>
-                    <p style="font-size:0.78rem; color:var(--text-muted); margin-bottom:1rem; line-height:1.5;">
-                        <i class="fa-solid fa-circle-info" style="color:#818cf8;"></i>
-                        A password will be auto-generated and sent to the employee via email along with their login credentials.
-                    </p>
-                    <div style="display:flex; justify-content:flex-end; gap:0.5rem;">
-                        <button type="button" class="btn btn-secondary" id="cancel-invite">Cancel</button>
-                        <button type="submit" class="btn"><i class="fa-solid fa-paper-plane"></i> Send Invite</button>
+                    <div class="info-note" style="margin-bottom: 2rem;">
+                        <i class="fa-solid fa-shield-halved"></i>
+                        <span>System will generate secure access keys and transmit via encrypted channel.</span>
+                    </div>
+                    <div style="display:flex; justify-content:flex-end; gap:1rem;">
+                        <button type="button" class="btn-glass" id="cancel-invite">ABORT</button>
+                        <div class="btn-shiny">
+                            <button type="submit" class="btn-shiny-inner" style="background: var(--cyan); border: none; padding: 0.75rem 2rem; font-weight: 700; cursor: pointer;">TRANSMIT INVITE</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -307,7 +314,13 @@
     </main>
 
     <script src="js/app.js"></script>
-    <script src="js/main.js"></script>
+    <script src="js/synapse.js"></script>
+    <script>
+        // Set Chart.js defaults for Synapse theme
+        Chart.defaults.color = 'rgba(255,255,255,0.4)';
+        Chart.defaults.font.family = "'Inter', sans-serif";
+        Chart.defaults.borderColor = 'rgba(255,255,255,0.05)';
+    </script>
     <script>
     // ── Auth check ─────────────────────────────────────────────────────────
     if (!isAuthenticated()) { window.location.href = 'login.html'; }
@@ -447,17 +460,17 @@
                     data: {
                         labels,
                         datasets: [
-                            { label: 'Avg Response (ms)', data: rts, borderColor: '#6366f1', backgroundColor: 'rgba(99,102,241,0.1)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 2 },
-                            { label: 'Failures', data: fails, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.05)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 2, yAxisID: 'y1' }
+                            { label: 'Latency (ms)', data: rts, borderColor: '#8B5CF6', backgroundColor: 'rgba(139, 92, 246, 0.1)', fill: true, tension: 0.4, borderWidth: 3, pointRadius: 0, pointHoverRadius: 4 },
+                            { label: 'Failures', data: fails, borderColor: '#F43F5E', backgroundColor: 'rgba(244, 63, 94, 0.05)', fill: true, tension: 0.4, borderWidth: 2, pointRadius: 0, yAxisID: 'y1' }
                         ]
                     },
                     options: {
                         responsive: true, maintainAspectRatio: false,
-                        plugins: { legend: { labels: { color: '#94a3b8', font: { size: 11 } } } },
+                        plugins: { legend: { position: 'top', align: 'end', labels: { boxWidth: 8, boxHeight: 8, usePointStyle: true, padding: 20, font: { size: 10, weight: 600 } } } },
                         scales: {
-                            x: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.08)' } },
-                            y: { ticks: { color: '#64748b' }, grid: { color: 'rgba(148,163,184,0.08)' }, title: { display: true, text: 'Response (ms)', color: '#64748b' } },
-                            y1: { position: 'right', ticks: { color: '#ef4444' }, grid: { display: false }, title: { display: true, text: 'Failures', color: '#ef4444' } }
+                            x: { grid: { display: false }, ticks: { font: { size: 9 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, border: { dash: [4,4] }, ticks: { font: { size: 9 } } },
+                            y1: { position: 'right', grid: { display: false }, ticks: { color: '#F43F5E', font: { size: 9 } } }
                         }
                     }
                 });
@@ -473,14 +486,14 @@
             failuresChart = new Chart(fCtx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['Successful', 'Failed'],
-                    datasets: [{ data: [succ, fail], backgroundColor: ['#22c55e', '#ef4444'], borderWidth: 0, hoverOffset: 8 }]
+                    labels: ['Optimal', 'Anomalous'],
+                    datasets: [{ data: [succ, fail], backgroundColor: ['#10B981', '#F43F5E'], borderWidth: 0, hoverOffset: 12 }]
                 },
                 options: {
-                    responsive: true, maintainAspectRatio: false, cutout: '70%',
+                    responsive: true, maintainAspectRatio: false, cutout: '80%',
                     plugins: {
-                        legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 16 } },
-                        tooltip: { callbacks: { label: (ctx) => ` ${ctx.label}: ${ctx.parsed} checks` } }
+                        legend: { position: 'bottom', labels: { boxWidth: 6, boxHeight: 6, usePointStyle: true, padding: 20, font: { size: 10, weight: 600 } } },
+                        tooltip: { backgroundColor: '#000', titleFont: { size: 11 }, bodyFont: { size: 11 }, padding: 12, cornerRadius: 8 }
                     }
                 }
             });

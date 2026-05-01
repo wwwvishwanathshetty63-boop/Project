@@ -7,66 +7,84 @@
     <title>API Monitor - Admin Panel</title>
 
     <!-- Google Fonts -->
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- App Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        .admin-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .glass-stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 2rem; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 1.5rem; }
+        
+        .stat-icon-monolith { width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,0.03); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--cyan); }
+        
+        .management-monolith { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; backdrop-filter: blur(20px); }
+        .management-header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); }
+        
+        .admin-table { width: 100%; border-collapse: collapse; }
+        .admin-table th { text-align: left; padding: 1.25rem 1.5rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border); }
+        .admin-table td { padding: 1.25rem 1.5rem; font-size: 0.85rem; color: #fff; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        
+        .user-pill { display: flex; align-items: center; gap: 1rem; }
+        .user-avatar-hex { width: 32px; height: 32px; border-radius: 8px; background: var(--violet); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; }
+    </style>
 </head>
 
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Main</div>
-                <a href="index.html" class="menu-item">
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Core Systems</div>
+                <a href="index.html" class="nav-item">
                     <i class="fa-solid fa-chart-pie"></i>
-                    <span>Dashboard</span>
+                    <span>Command Center</span>
                 </a>
-                <a href="api-endpoints.html" class="menu-item">
+                <a href="api-endpoints.html" class="nav-item">
                     <i class="fa-solid fa-server"></i>
-                    <span>API Endpoints</span>
+                    <span>Data Nodes</span>
                 </a>
-                <a href="logs.html" class="menu-item">
+                <a href="logs.html" class="nav-item">
                     <i class="fa-solid fa-list-check"></i>
-                    <span>Monitoring Logs</span>
+                    <span>Sequence Logs</span>
                 </a>
-                <a href="alerts.html" class="menu-item">
+                <a href="alerts.html" class="nav-item">
                     <i class="fa-solid fa-bell"></i>
-                    <span>Alerts</span>
+                    <span>Anomaly Feed</span>
                 </a>
             </div>
-
-            <div class="menu-section">
-                <div class="menu-section-title">Settings</div>
-                <a href="profile.html" class="menu-item">
+            <div class="nav-group">
+                <div class="nav-label">Config</div>
+                <a href="profile.html" class="nav-item">
                     <i class="fa-solid fa-user-gear"></i>
-                    <span>Profile</span>
+                    <span>Identity</span>
                 </a>
-                <a href="admin.html" class="menu-item active">
+                <a href="admin.html" class="nav-item active">
                     <i class="fa-solid fa-shield-halved"></i>
-                    <span>Admin Panel</span>
+                    <span>Security Hub</span>
                 </a>
             </div>
         </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-avatar-small">PP</div>
-            <div class="user-info">
-                <span class="user-name">User</span>
-                <span class="user-role">Admin</span>
+        <div class="sidebar-user">
+            <div class="user-avatar-small">U</div>
+            <div class="user-meta">
+                <span class="user-name">Operator</span>
+                <span class="user-role">System Admin</span>
             </div>
         </div>
     </aside>
@@ -74,101 +92,83 @@
     <!-- Main Content -->
     <main class="main-content">
         <!-- Top Navbar -->
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h2>Admin Panel</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Security Hub</h2>
+                </div>
             </div>
-
-            <div class="topbar-right">
-                <button class="topbar-action" title="Notifications">
-                    <i class="fa-solid fa-bell"></i>
-                    <span class="notification-badge"></span>
-                </button>
-                <div class="user-avatar-small">PP</div>
+            <div class="top-bar-right">
+                <div class="user-avatar-small">U</div>
             </div>
         </header>
 
-        <!-- Page Content -->
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h1>Employee Management</h1>
-                    <p style="font-size: 0.875rem; color: var(--text-muted);"><a href="index.html"
-                            style="color: var(--text-muted);">Dashboard</a> / Admin</p>
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Employee Management</h1>
+                    <p class="view-subtitle">Provision access protocols for system entities</p>
                 </div>
             </div>
 
             <!-- User Stats Grid -->
-            <div class="stats-grid" style="grid-template-columns: repeat(3, 1fr);">
-                <!-- Total Users -->
-                <div class="card stat-card">
-                    <div class="stat-icon-wrapper stat-icon-primary">
+            <div class="admin-stats-grid">
+                <div class="glass-stat-card">
+                    <div class="stat-icon-monolith" style="color: var(--violet);">
                         <i class="fa-solid fa-users"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value">5</div>
-                        <div class="stat-label">Total Users</div>
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: 800; line-height: 1;" id="stat-total-users">5</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Total Entities</div>
                     </div>
                 </div>
-
-                <!-- Active Users -->
-                <div class="card stat-card">
-                    <div class="stat-icon-wrapper stat-icon-success">
+                <div class="glass-stat-card">
+                    <div class="stat-icon-monolith" style="color: var(--emerald);">
                         <i class="fa-solid fa-user-check"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value">4</div>
-                        <div class="stat-label">Active Users</div>
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: 800; line-height: 1;" id="stat-active-users">4</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Active Syncs</div>
                     </div>
                 </div>
-
-                <!-- Admins -->
-                <div class="card stat-card">
-                    <div class="stat-icon-wrapper"
-                        style="background-color: rgba(245, 158, 11, 0.1); color: #F59E0B; box-shadow: 0 0 15px rgba(245, 158, 11, 0.2);">
+                <div class="glass-stat-card">
+                    <div class="stat-icon-monolith" style="color: var(--cyan);">
                         <i class="fa-solid fa-user-shield"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value">2</div>
-                        <div class="stat-label">Admins</div>
+                    <div>
+                        <div style="font-size: 2.5rem; font-weight: 800; line-height: 1;" id="stat-admins">2</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Commanders</div>
                     </div>
                 </div>
             </div>
 
             <!-- User Management Table -->
-            <div class="card">
-                <div class="card-header">
-                    <div class="card-title">
-                        <i class="fa-solid fa-users-gear text-muted"></i> User Management
-                    </div>
-                    <div style="display: flex; gap: 1rem;">
-                        <div class="search-box">
-                            <div style="position: relative;">
-                                <i class="fa-solid fa-magnifying-glass"
-                                    style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-muted);"></i>
-                                <input type="text" class="form-control" placeholder="Search users..."
-                                    style="width: 250px; padding: 0.375rem 0.75rem 0.375rem 2.2rem; border-radius: 20px;">
-                            </div>
+            <div class="management-monolith">
+                <div class="management-header">
+                    <div style="display: flex; gap: 2rem; align-items: center;">
+                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase;">Entity Access Registry</div>
+                        <div class="search-input-group" style="width: 300px;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" placeholder="Filter entities...">
                         </div>
-                        <button class="btn" id="btn-invite">
-                            <i class="fa-solid fa-user-plus"></i> Invite Employee
+                    </div>
+                    <div class="btn-shiny">
+                        <button class="btn-shiny-inner" id="btn-invite">
+                            <i class="fa-solid fa-user-plus"></i> INVITE ENTITY
                         </button>
                     </div>
                 </div>
 
                 <div class="table-responsive">
-                    <table id="users-table">
+                    <table class="admin-table" id="users-table">
                         <thead>
                             <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Status</th>
-                                <th>Last Login</th>
-                                <th class="text-right">Actions</th>
+                                <th>ENTITY</th>
+                                <th>COMMUNICATION URI</th>
+                                <th>ACCESS LEVEL</th>
+                                <th>SIGNAL STATUS</th>
+                                <th>LAST SYNC</th>
+                                <th style="text-align: right;">PROTOCOLS</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -177,30 +177,31 @@
                     </table>
                 </div>
             </div>
+        </div>
 
         </div>
 
         <!-- Invite Employee Modal -->
-        <div id="inviteModal" class="modal-overlay"
-            style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 1000; justify-content: center; align-items: center;">
-            <div class="card modal-content" style="width: 100%; max-width: 400px;">
-                <div class="card-header">
-                    <div class="card-title">Invite Employee</div>
-                    <button class="action-btn" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
+        <div id="inviteModal" class="modal-overlay" style="display: none; background: rgba(0,0,0,0.8); backdrop-filter: blur(20px);">
+            <div class="glass-modal" style="width: 100%; max-width: 440px; padding: 0;">
+                <div class="glass-card-header" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);">
+                    <div class="glass-card-title">PROVISION NEW ENTITY</div>
+                    <button class="icon-btn" id="close-modal"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <form id="invite-form">
-                    <div class="form-group">
-                        <label class="form-label">Employee Name</label>
-                        <input type="text" id="invite-name" class="form-control" required placeholder="John Doe">
+                <form id="invite-form" style="padding: 2rem;">
+                    <div style="margin-bottom: 1.5rem;">
+                        <label class="label-syn">ENTITY DESIGNATION</label>
+                        <input type="text" id="invite-name" class="syn-input" required placeholder="e.g. John Doe">
                     </div>
-                    <div class="form-group">
-                        <label class="form-label">Email Address</label>
-                        <input type="email" id="invite-email" class="form-control" required
-                            placeholder="john@company.com">
+                    <div style="margin-bottom: 2rem;">
+                        <label class="label-syn">COMMUNICATION URI</label>
+                        <input type="email" id="invite-email" class="syn-input" required placeholder="e.g. john@obsidian.intel">
                     </div>
-                    <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-                        <button type="button" class="btn btn-secondary" id="cancel-modal">Cancel</button>
-                        <button type="submit" class="btn">Send Invite</button>
+                    <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                        <button type="button" class="btn-glass" id="cancel-modal">ABORT</button>
+                        <div class="btn-shiny">
+                            <button type="submit" class="btn-shiny-inner">INITIATE PROVISIONING</button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -208,6 +209,7 @@
     </main>
 
     <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script src="js/table.js"></script>
 </body>

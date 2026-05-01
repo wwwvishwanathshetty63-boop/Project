@@ -4,154 +4,194 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Monitor - Alerts</title>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        .alert-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .glass-stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; backdrop-filter: blur(10px); display: flex; align-items: center; gap: 1.25rem; }
+        
+        .severity-indicator { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
+        .severity-indicator.critical { color: var(--rose); background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.2); box-shadow: 0 0 20px rgba(244, 63, 94, 0.15); }
+        .severity-indicator.warning { color: #f59e0b; background: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .severity-indicator.info { color: var(--cyan); background: rgba(6, 182, 212, 0.1); border: 1px solid rgba(6, 182, 212, 0.2); }
+
+        .rule-container { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; backdrop-filter: blur(20px); }
+        .filter-bar-synapse { display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+        
+        .pill-toggle { display: flex; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+        .pill-toggle-btn { background: transparent; border: none; color: var(--text-dim); padding: 6px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .pill-toggle-btn.active { background: #fff; color: #000; }
+
+        .trigger-table { width: 100%; border-collapse: collapse; }
+        .trigger-table th { text-align: left; padding: 1.25rem 1.5rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border); }
+        .trigger-table td { padding: 1.25rem 1.5rem; font-size: 0.85rem; color: #fff; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+    </style>
 </head>
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Main</div>
-                <a href="index.html" class="menu-item"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-                <a href="api-endpoints.html" class="menu-item"><i class="fa-solid fa-server"></i><span>API Endpoints</span></a>
-                <a href="logs.html" class="menu-item"><i class="fa-solid fa-list-check"></i><span>Monitoring Logs</span></a>
-                <a href="alerts.html" class="menu-item active"><i class="fa-solid fa-bell"></i><span>Alerts</span></a>
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Core Systems</div>
+                <a href="index.html" class="nav-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Command Center</span>
+                </a>
+                <a href="api-endpoints.html" class="nav-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Data Nodes</span>
+                </a>
+                <a href="logs.html" class="nav-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Sequence Logs</span>
+                </a>
+                <a href="alerts.html" class="nav-item active">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Anomaly Feed</span>
+                </a>
             </div>
-            <div class="menu-section">
-                <div class="menu-section-title">Settings</div>
-                <a href="profile.html" class="menu-item"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
-                <a href="admin.html" class="menu-item"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+            <div class="nav-group">
+                <div class="nav-label">Config</div>
+                <a href="profile.html" class="nav-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Identity</span>
+                </a>
+                <a href="admin.html" class="nav-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Security Hub</span>
+                </a>
             </div>
         </nav>
-        <div class="sidebar-footer">
-            <div class="user-avatar-small">–</div>
-            <div class="user-info">
-                <span class="user-name">Guest</span>
-                <span class="user-role">Admin</span>
+        <div class="sidebar-user">
+            <div class="user-avatar-small">U</div>
+            <div class="user-meta">
+                <span class="user-name">Operator</span>
+                <span class="user-role">System Admin</span>
             </div>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
-                <h2>Alerts</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Anomaly Feed</h2>
+                </div>
             </div>
-            <div class="topbar-right">
-                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
-                <button class="topbar-action" title="Notifications"><i class="fa-solid fa-bell"></i></button>
-                <div class="user-avatar-small">–</div>
+            <div class="top-bar-right">
+                <button class="icon-btn" id="btn-refresh" title="Refresh Sync"><i class="fa-solid fa-rotate-right"></i></button>
+                <div class="user-avatar-small">U</div>
             </div>
         </header>
 
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h1>Alerts &amp; Notifications</h1>
-                    <p>Configure rule-based alerts for your monitored APIs</p>
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Alert Management</h1>
+                    <p class="view-subtitle">Define heuristic rules for autonomous data monitoring</p>
                 </div>
-                <button class="btn" id="btn-new-alert">
-                    <i class="fa-solid fa-plus"></i> New Alert Rule
-                </button>
+                <div class="view-actions">
+                    <div class="btn-shiny">
+                        <button class="btn-shiny-inner" id="btn-new-alert">
+                            <i class="fa-solid fa-plus"></i> NEW HEURISTIC
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Summary Stats -->
-            <div class="alert-stats-row">
-                <div class="card stat-card" style="padding:1.25rem;">
-                    <div class="stat-icon-wrapper stat-icon-danger">
+            <div class="alert-stats-grid">
+                <div class="glass-stat-card">
+                    <div class="severity-indicator critical">
                         <i class="fa-solid fa-triangle-exclamation"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="alert-active-count">0</div>
-                        <div class="stat-label">Active Alerts</div>
+                    <div>
+                        <div style="font-size: 2rem; font-weight: 800; line-height: 1;" id="alert-active-count">0</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Active Breaches</div>
                     </div>
                 </div>
-                <div class="card stat-card" style="padding:1.25rem;">
-                    <div class="stat-icon-wrapper" style="background:rgba(239,68,68,0.1);color:#ef4444;box-shadow:0 0 15px rgba(239,68,68,0.2);">
+                <div class="glass-stat-card">
+                    <div class="severity-indicator critical" style="background: rgba(244,63,94,0.05);">
                         <i class="fa-solid fa-circle-xmark"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="alert-critical-count">0</div>
-                        <div class="stat-label">Critical</div>
+                    <div>
+                        <div style="font-size: 2rem; font-weight: 800; line-height: 1;" id="alert-critical-count">0</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">Critical Rules</div>
                     </div>
                 </div>
-                <div class="card stat-card" style="padding:1.25rem;">
-                    <div class="stat-icon-wrapper" style="background:rgba(245,158,11,0.1);color:#f59e0b;box-shadow:0 0 15px rgba(245,158,11,0.2);">
+                <div class="glass-stat-card">
+                    <div class="severity-indicator warning">
                         <i class="fa-solid fa-circle-exclamation"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="alert-warning-count">0</div>
-                        <div class="stat-label">Warnings</div>
+                    <div>
+                        <div style="font-size: 2rem; font-weight: 800; line-height: 1;" id="alert-warning-count">0</div>
+                        <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem;">System Warnings</div>
                     </div>
                 </div>
             </div>
 
             <!-- Alert Rules -->
-            <div class="card" style="padding:0; overflow:hidden; margin-bottom:1.5rem;">
-                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
-                    <div class="card-title">
-                        <i class="fa-solid fa-sliders text-muted"></i> Alert Rules
+            <div class="rule-container" style="margin-bottom: 2.5rem;">
+                <div class="filter-bar-synapse">
+                    <div class="pill-toggle" id="alert-filter-pills">
+                        <button class="pill-toggle-btn active" data-filter="all">ALL RULES</button>
+                        <button class="pill-toggle-btn" data-filter="critical">CRITICAL</button>
+                        <button class="pill-toggle-btn" data-filter="warning">WARNING</button>
                     </div>
-                    <span class="badge badge-gray" id="rules-count">0 rules</span>
-                </div>
-                <div class="filter-bar">
-                    <div class="filter-pills" id="alert-filter-pills">
-                        <button class="filter-pill active" data-filter="all">All</button>
-                        <button class="filter-pill" data-filter="critical">Critical</button>
-                        <button class="filter-pill" data-filter="warning">Warning</button>
-                        <button class="filter-pill" data-filter="info">Info</button>
-                    </div>
-                    <div class="filter-search">
-                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
-                        <input type="text" id="alert-search" placeholder="Search rules...">
+                    <div class="search-input-group" style="max-width: 400px; margin-left: auto;">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="alert-search" placeholder="Search heuristics...">
                     </div>
                 </div>
-                <div class="alert-rule-list" id="alert-rule-list">
-                    <div class="empty-state">
+                <div class="alert-rule-list" id="alert-rule-list" style="padding: 1rem; min-height: 200px;">
+                    <div class="empty-state" style="padding: 4rem;">
                         <i class="fa-solid fa-bell-slash"></i>
-                        <p>No alert rules configured yet.<br>Click <strong>+ New Alert Rule</strong> to get started.</p>
+                        <p>No active heuristics detected.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Recent Triggers -->
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
-                    <div class="card-title">
-                        <i class="fa-solid fa-clock-rotate-left text-muted"></i> Recent Triggers
-                    </div>
-                    <span class="badge badge-gray">Last 24 hours</span>
+            <div class="rule-container">
+                <div class="glass-card-header" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);">
+                    <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase;">Sequence Violation History</div>
                 </div>
                 <div class="table-responsive">
-                    <table id="recent-triggers-table">
+                    <table class="trigger-table">
                         <thead>
                             <tr>
-                                <th>Time</th>
-                                <th>Endpoint</th>
-                                <th>Rule</th>
-                                <th>Severity</th>
-                                <th>Message</th>
-                                <th>Status</th>
+                                <th>TIMESTAMP</th>
+                                <th>TARGET NODE</th>
+                                <th>RULE DESIGNATION</th>
+                                <th>SEVERITY</th>
+                                <th>VIOLATION DATA</th>
+                                <th>STATUS</th>
                             </tr>
                         </thead>
                         <tbody id="triggers-tbody">
                             <tr>
-                                <td colspan="6" style="padding:3rem; text-align:center;">
-                                    <div class="empty-state" style="padding:1.5rem 1rem;">
-                                        <i class="fa-solid fa-inbox"></i>
-                                        <p>No alerts triggered yet. Add endpoints and configure rules to start receiving alerts.</p>
-                                    </div>
+                                <td colspan="6" style="padding: 5rem; text-align: center; opacity: 0.5;">
+                                    <i class="fa-solid fa-shield-check" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                    NO SEQUENCE VIOLATIONS DETECTED IN LAST 24H
                                 </td>
                             </tr>
                         </tbody>
@@ -160,14 +200,17 @@
             </div>
         </div>
     </main>
+        </div>
+    </main>
 
     <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script>
         // Filter pills
-        document.querySelectorAll('#alert-filter-pills .filter-pill').forEach(pill => {
+        document.querySelectorAll('#alert-filter-pills .pill-toggle-btn').forEach(pill => {
             pill.addEventListener('click', () => {
-                document.querySelectorAll('#alert-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('#alert-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
                 const f = pill.dataset.filter;
                 document.querySelectorAll('#alert-rule-list .alert-rule-row').forEach(row => {

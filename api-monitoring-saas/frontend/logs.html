@@ -4,111 +4,172 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>API Monitor - Monitoring Logs</title>
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        .timeline-container { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; backdrop-filter: blur(20px); }
+        .filter-bar-synapse { display: flex; flex-wrap: wrap; align-items: center; gap: 1.25rem; padding: 1.5rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+        
+        .pill-toggle { display: flex; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+        .pill-toggle-btn { background: transparent; border: none; color: var(--text-dim); padding: 6px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .pill-toggle-btn.active { background: #fff; color: #000; }
+
+        .search-input-group { position: relative; flex: 1; min-width: 280px; }
+        .search-input-group i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.8rem; }
+        .search-input-group input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem 0.75rem 2.5rem; color: #fff; font-size: 0.85rem; transition: all 0.3s; }
+        .search-input-group input:focus { border-color: var(--violet); background: rgba(255,255,255,0.06); outline: none; }
+
+        .incident-list { padding: 1rem; }
+        .log-entry { display: grid; grid-template-columns: auto 1fr auto; gap: 1.5rem; align-items: center; padding: 1.25rem; border-radius: 16px; border: 1px solid transparent; transition: all 0.3s; margin-bottom: 0.5rem; }
+        .log-entry:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+        
+        .log-icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); }
+        .log-icon.ok { color: var(--emerald); border-color: rgba(16, 185, 129, 0.2); box-shadow: 0 0 15px rgba(16, 185, 129, 0.1); }
+        .log-icon.fail { color: var(--rose); border-color: rgba(244, 63, 94, 0.2); box-shadow: 0 0 15px rgba(244, 63, 94, 0.1); }
+        .log-icon.warn { color: #f59e0b; border-color: rgba(245, 158, 11, 0.2); }
+
+        .log-title { font-weight: 700; font-size: 0.95rem; color: #fff; display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.25rem; }
+        .log-meta { font-size: 0.75rem; color: var(--text-dim); display: flex; gap: 1rem; }
+        .log-time { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+        
+        .http-code-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+        .http-2xx { color: var(--emerald); background: rgba(16, 185, 129, 0.1); }
+        .http-5xx { color: var(--rose); background: rgba(244, 63, 94, 0.1); }
+    </style>
 </head>
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Main</div>
-                <a href="index.html" class="menu-item"><i class="fa-solid fa-chart-pie"></i><span>Dashboard</span></a>
-                <a href="api-endpoints.html" class="menu-item"><i class="fa-solid fa-server"></i><span>API Endpoints</span></a>
-                <a href="logs.html" class="menu-item active"><i class="fa-solid fa-list-check"></i><span>Monitoring Logs</span></a>
-                <a href="alerts.html" class="menu-item"><i class="fa-solid fa-bell"></i><span>Alerts</span></a>
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Core Systems</div>
+                <a href="index.html" class="nav-item">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Command Center</span>
+                </a>
+                <a href="api-endpoints.html" class="nav-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Data Nodes</span>
+                </a>
+                <a href="logs.html" class="nav-item active">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Sequence Logs</span>
+                </a>
+                <a href="alerts.html" class="nav-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Anomaly Feed</span>
+                </a>
             </div>
-            <div class="menu-section">
-                <div class="menu-section-title">Settings</div>
-                <a href="profile.html" class="menu-item"><i class="fa-solid fa-user-gear"></i><span>Profile</span></a>
-                <a href="admin.html" class="menu-item"><i class="fa-solid fa-shield-halved"></i><span>Admin Panel</span></a>
+            <div class="nav-group">
+                <div class="nav-label">Config</div>
+                <a href="profile.html" class="nav-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Identity</span>
+                </a>
+                <a href="admin.html" class="nav-item">
+                    <i class="fa-solid fa-shield-halved"></i>
+                    <span>Security Hub</span>
+                </a>
             </div>
         </nav>
-        <div class="sidebar-footer">
-            <div class="user-avatar-small">–</div>
-            <div class="user-info">
-                <span class="user-name">Guest</span>
-                <span class="user-role">Admin</span>
+        <div class="sidebar-user">
+            <div class="user-avatar-small">U</div>
+            <div class="user-meta">
+                <span class="user-name">Operator</span>
+                <span class="user-role">System Admin</span>
             </div>
         </div>
     </aside>
 
     <!-- Main Content -->
     <main class="main-content">
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
-                <h2>Monitoring Logs</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Sequence Logs</h2>
+                </div>
             </div>
-            <div class="topbar-right">
-                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
-                <button class="topbar-action" title="Notifications"><i class="fa-solid fa-bell"></i></button>
-                <div class="user-avatar-small">–</div>
+            <div class="top-bar-right">
+                <button class="icon-btn" id="btn-refresh" title="Refresh Sync"><i class="fa-solid fa-rotate-right"></i></button>
+                <div class="user-avatar-small">U</div>
             </div>
         </header>
 
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h1>Monitoring Logs</h1>
-                    <p>View detailed check histories for all monitored API endpoints</p>
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Monitoring Timeline</h1>
+                    <p class="view-subtitle">Encrypted sequence history for all monitored nodes</p>
                 </div>
-                <button class="btn btn-secondary" id="btn-export">
-                    <i class="fa-solid fa-download"></i> Export Logs
-                </button>
+                <div class="view-actions">
+                    <button class="btn-glass" id="btn-export">
+                        <i class="fa-solid fa-download"></i> DATA EXPORT
+                    </button>
+                </div>
             </div>
 
             <!-- Log Timeline Card -->
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
-                    <div class="card-title">
-                        <i class="fa-solid fa-timeline text-muted"></i> Incident Timeline
+            <div class="timeline-container">
+                <div class="filter-bar-synapse">
+                    <div class="pill-toggle" id="log-filter-pills">
+                        <button class="pill-toggle-btn active" data-filter="all">ALL</button>
+                        <button class="pill-toggle-btn" data-filter="ok">OPTIMAL</button>
+                        <button class="pill-toggle-btn" data-filter="fail">CRITICAL</button>
                     </div>
-                    <span class="badge badge-gray" id="log-count">0 entries</span>
+
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Scope</span>
+                        <select class="btn-glass" id="log-range-filter" style="font-size: 0.75rem; border: 1px solid var(--border); padding: 0.5rem 1rem;">
+                            <option value="1d">24 HOURS</option>
+                            <option value="7d">7 DAYS</option>
+                            <option value="30d">30 DAYS</option>
+                        </select>
+                    </div>
+
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Node</span>
+                        <select class="btn-glass" id="log-endpoint-filter" style="font-size: 0.75rem; border: 1px solid var(--border); padding: 0.5rem 1rem;">
+                            <option value="all">ALL NODES</option>
+                        </select>
+                    </div>
+
+                    <div class="search-input-group">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="log-search" placeholder="Search sequence data...">
+                    </div>
                 </div>
 
-                <!-- Filter bar -->
-                <div class="filter-bar">
-                    <div class="filter-pills" id="log-filter-pills">
-                        <button class="filter-pill active" data-filter="all">All</button>
-                        <button class="filter-pill" data-filter="ok">Success</button>
-                        <button class="filter-pill" data-filter="fail">Failures</button>
-                    </div>
-                    <select class="form-control" id="log-range-filter" style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
-                        <option value="1d">Last 24 Hours</option>
-                        <option value="7d">Last 7 Days</option>
-                        <option value="30d">Last 30 Days</option>
-                    </select>
-                    <select class="form-control" id="log-endpoint-filter"
-                        style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
-                        <option value="all">All Endpoints</option>
-                    </select>
-                    <div class="filter-search" style="margin-left: auto;">
-                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
-                        <input type="text" id="log-search" placeholder="Search logs...">
-                    </div>
-                </div>
-
-                <!-- Timeline entries — populated by JS -->
-                <div class="incident-list" id="incident-list">
-                    <div class="empty-state">
-                        <i class="fa-solid fa-spinner fa-spin"></i>
-                        <p>Loading monitoring logs...</p>
+                <div class="incident-list" id="incident-list" style="min-height: 400px;">
+                    <div class="empty-state" style="padding: 5rem;">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                        <p>Initializing sequence feed...</p>
                     </div>
                 </div>
             </div>
         </div>
     </main>
+        </div>
+    </main>
 
     <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script>
         let allEndpoints = [];
@@ -178,23 +239,22 @@
                     const icon = type === 'ok' ? 'fa-circle-check' : type === 'fail' ? 'fa-circle-xmark' : 'fa-triangle-exclamation';
 
                     const row = document.createElement('div');
-                    row.className = `incident-row ${type}`;
+                    row.className = `log-entry ${type}`;
                     row.dataset.type = type;
                     row.dataset.search = (log.endpoint_name + ' ' + ep.url).toLowerCase();
                     row.innerHTML = `
-                        <div class="incident-icon ${type}"><i class="fa-solid ${icon}"></i></div>
-                        <div class="incident-body">
-                            <div class="incident-title">
+                        <div class="log-icon ${type}"><i class="fa-solid ${icon}"></i></div>
+                        <div class="log-body">
+                            <div class="log-title">
                                 ${escapeHtml(log.endpoint_name)}
-                                <span class="monitor-card-method ${methodCls}">${method}</span>
-                                <span class="http-code ${codeClass}">${log.status_code}</span>
+                                <span class="http-code-tag ${codeClass}">${log.status_code}</span>
                             </div>
-                            <div class="incident-detail">
-                                <span><i class="fa-solid fa-bolt"></i> ${log.response_time}ms</span>
-                                <span><i class="fa-solid fa-link"></i> ${escapeHtml(ep.url || '')}</span>
+                            <div class="log-meta">
+                                <span><i class="fa-solid fa-bolt" style="color:var(--violet);"></i> ${log.response_time}ms</span>
+                                <span style="font-family: 'JetBrains Mono', monospace; opacity: 0.6;">${escapeHtml(ep.url || '')}</span>
                             </div>
                         </div>
-                        <div class="incident-time">${new Date(log.checked_at).toLocaleString()}</div>
+                        <div class="log-time">${new Date(log.checked_at).toLocaleTimeString()}</div>
                     `;
                     list.appendChild(row);
                 });
@@ -211,9 +271,9 @@
         document.addEventListener('DOMContentLoaded', loadLogs);
 
         // Filter pills
-        document.querySelectorAll('#log-filter-pills .filter-pill').forEach(pill => {
+        document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(pill => {
             pill.addEventListener('click', () => {
-                document.querySelectorAll('#log-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
                 applyLogFilters();
             });
@@ -225,7 +285,8 @@
         document.getElementById('log-search').addEventListener('input', applyLogFilters);
 
         function applyLogFilters() {
-            const activeType = document.querySelector('#log-filter-pills .filter-pill.active').dataset.filter;
+            const pill = document.querySelector('#log-filter-pills .pill-toggle-btn.active');
+            const activeType = pill ? pill.dataset.filter : 'all';
             const q = document.getElementById('log-search').value.toLowerCase();
             let count = 0;
             

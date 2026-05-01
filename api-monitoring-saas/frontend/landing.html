@@ -7,356 +7,372 @@
     <meta name="description" content="Monitor your APIs in real-time with instant alerts, uptime tracking, and detailed analytics. Built for teams that demand reliability.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
-            --bg: #060918; --bg-card: #0f1629; --bg-elevated: #161d35;
-            --border: rgba(99,102,241,0.12); --border-hover: rgba(99,102,241,0.3);
-            --text: #e2e8f0; --text-muted: #64748b; --text-dim: #475569;
-            --accent: #7c3aed; --accent-light: #a78bfa;
-            --cyan: #06b6d4; --cyan-light: #22d3ee;
-            --green: #22c55e; --red: #ef4444; --amber: #f59e0b;
+            --bg: #030303;
+            --bg-card: rgba(10,10,10,0.7);
+            --bg-elevated: rgba(15,15,15,0.8);
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(139,92,246,0.4);
+            --text: #f8f8f8;
+            --text-muted: #94a3b8;
+            --text-dim: #475569;
+            --violet: #8B5CF6;
+            --violet-glow: rgba(139,92,246,0.4);
+            --cyan: #06B6D4;
+            --cyan-glow: rgba(6,182,212,0.4);
+            --emerald: #10B981;
+            --accent: #8B5CF6;
+            --accent-light: #a78bfa;
+            --cyan-light: #22d3ee;
+            --green: #10B981; --red: #ef4444; --amber: #f59e0b;
         }
         *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
         html { scroll-behavior: smooth; }
         body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; line-height:1.6; }
 
-        /* ── Noise texture overlay ── */
-        body::before {
-            content:''; position:fixed; inset:0; z-index:0; pointer-events:none;
-            opacity:.03; background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-        }
+        /* Ambient orbs */
+        .orb { position:fixed; border-radius:50%; pointer-events:none; z-index:0; }
+        .orb-1 { width:700px; height:700px; background:radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%); top:-200px; left:-150px; animation:orbFloat 12s ease-in-out infinite; }
+        .orb-2 { width:600px; height:600px; background:radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%); bottom:-150px; right:-100px; animation:orbFloat 18s ease-in-out infinite reverse; }
+        .orb-3 { width:400px; height:400px; background:radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%); top:40%; left:55%; animation:orbFloat 15s ease-in-out infinite 3s; }
+        @keyframes orbFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.05)} }
 
-        /* ── Animated background ── */
-        .bg-grid { position:fixed; inset:0; z-index:0; pointer-events:none;
-            background-image: linear-gradient(rgba(99,102,241,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(99,102,241,0.04) 1px, transparent 1px);
-            background-size: 60px 60px;
-        }
-        .bg-orb { position:fixed; border-radius:50%; filter:blur(140px); opacity:.12; pointer-events:none; z-index:0; }
-        .orb-1 { width:600px; height:600px; background:var(--accent); top:-250px; left:-150px; animation:orbFloat1 22s ease-in-out infinite; }
-        .orb-2 { width:500px; height:500px; background:var(--cyan); bottom:-200px; right:-100px; animation:orbFloat2 28s ease-in-out infinite; }
-        .orb-3 { width:350px; height:350px; background:#ec4899; top:40%; left:60%; animation:orbFloat3 20s ease-in-out infinite; }
-        @keyframes orbFloat1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(100px,80px)} }
-        @keyframes orbFloat2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-80px,-100px)} }
-        @keyframes orbFloat3 { 0%,100%{transform:translate(0,0) scale(1)} 50%{transform:translate(-60px,40px) scale(1.15)} }
-
-        /* ── Container ── */
         .container { max-width:1200px; margin:0 auto; padding:0 2rem; position:relative; z-index:1; }
 
-        /* ── Navbar ── */
-        .navbar { position:fixed; top:0; left:0; right:0; z-index:100;
-            background:rgba(6,9,24,0.75); backdrop-filter:blur(20px) saturate(1.4);
-            border-bottom:1px solid var(--border); transition:background .3s; }
-        .navbar .container { display:flex; align-items:center; justify-content:space-between; height:72px; }
-        .nav-brand { display:flex; align-items:center; gap:10px; text-decoration:none; }
-        .nav-brand-icon { width:40px; height:40px; border-radius:12px;
-            background:linear-gradient(135deg,var(--accent),var(--cyan)); display:flex; align-items:center; justify-content:center;
-            font-size:1.1rem; color:#fff; }
-        .nav-brand-text { font-size:1.2rem; font-weight:800; color:var(--text);
-            background:linear-gradient(135deg,#fff 30%,var(--accent-light));
-            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-        .nav-links { display:flex; align-items:center; gap:2rem; }
-        .nav-link { color:var(--text-muted); text-decoration:none; font-size:.88rem; font-weight:500; transition:color .2s; }
+        /* ── NAV PILL ── */
+        .navbar { position:fixed; top:1.5rem; left:50%; transform:translateX(-50%); z-index:100; width:95%; max-width:672px; }
+        .nav-inner { display:flex; align-items:center; justify-content:space-between; background:rgba(10,10,10,0.75); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); border-radius:9999px; padding:0.5rem 1.25rem; gap:1rem; }
+        .nav-brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; }
+        .nav-brand-dot { width:22px; height:22px; border-radius:50%; background:conic-gradient(from 180deg, var(--violet), var(--cyan), var(--violet)); flex-shrink:0; }
+        .nav-brand-text { font-family:'Instrument Serif',serif; font-size:1.1rem; color:var(--text); letter-spacing:-0.01em; }
+        .nav-links { display:flex; align-items:center; gap:1.5rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.12em; transition:color .2s cubic-bezier(0.23,1,0.32,1); }
         .nav-link:hover { color:var(--text); }
-        .nav-cta { display:inline-flex; align-items:center; gap:6px;
-            padding:9px 22px; border-radius:10px; font-weight:600; font-size:.88rem;
-            background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff;
-            text-decoration:none; border:none; cursor:pointer; transition:transform .2s,box-shadow .2s; }
-        .nav-cta:hover { transform:translateY(-1px); box-shadow:0 8px 25px rgba(124,58,237,.35); }
+        .nav-cta { padding:0.45rem 1.1rem; border-radius:9999px; background:#fff; color:#000; font-weight:600; font-size:.8rem; text-decoration:none; transition:all .3s cubic-bezier(0.23,1,0.32,1); white-space:nowrap; }
+        .nav-cta:hover { background:rgba(255,255,255,0.85); box-shadow:0 0 20px rgba(255,255,255,0.15); }
+        .mobile-toggle { display:none; background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; }
 
-        /* ── Hero ── */
-        .hero { padding:10rem 0 6rem; text-align:center; position:relative; }
-        .hero-badge { display:inline-flex; align-items:center; gap:8px;
-            background:rgba(124,58,237,0.1); border:1px solid rgba(124,58,237,0.25);
-            border-radius:50px; padding:7px 18px; font-size:.8rem; font-weight:600;
-            color:var(--accent-light); margin-bottom:1.5rem; animation:fadeUp .6s ease-out; }
-        .hero-badge .pulse { width:8px; height:8px; border-radius:50%; background:var(--green); animation:pulse 2s infinite; }
-        .hero h1 { font-size:clamp(2.5rem,5vw,4.2rem); font-weight:900; line-height:1.1;
-            letter-spacing:-1.5px; margin-bottom:1.5rem; animation:fadeUp .6s .1s ease-out both; }
-        .hero h1 .gradient { background:linear-gradient(135deg,var(--accent-light) 0%,var(--cyan-light) 50%,var(--accent-light) 100%);
-            background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
-            animation:shimmer 4s linear infinite; }
+        /* ── HERO ── */
+        .hero { min-height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; padding:8rem 0 4rem; position:relative; overflow:hidden; }
+        .hero::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:800px; height:400px; background:radial-gradient(ellipse, rgba(139,92,246,0.18) 0%, transparent 70%); pointer-events:none; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:9999px; padding:6px 16px; font-size:.72rem; font-weight:600; color:#a78bfa; letter-spacing:.1em; text-transform:uppercase; margin-bottom:2rem; animation:fadeUp .6s ease-out both; }
+        .hero-badge .pulse { width:6px; height:6px; border-radius:50%; background:var(--emerald); animation:pulse 2s infinite; }
+        .hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(3rem,7vw,6rem); font-weight:400; line-height:.95; letter-spacing:-0.03em; margin-bottom:1.5rem; animation:fadeUp .7s .1s ease-out both; }
+        .hero h1 .shimmer { background:linear-gradient(90deg,#a78bfa 0%,#fff 40%,#fff 60%,#22d3ee 100%); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 4s linear infinite; }
         @keyframes shimmer { to { background-position:200% center; } }
-        .hero-desc { font-size:1.15rem; color:var(--text-muted); max-width:580px; margin:0 auto 2.5rem;
-            line-height:1.7; animation:fadeUp .6s .2s ease-out both; }
-        .hero-actions { display:flex; gap:1rem; justify-content:center; animation:fadeUp .6s .3s ease-out both; }
-        .hero-btn { padding:14px 32px; border-radius:14px; font-size:1rem; font-weight:700;
-            text-decoration:none; display:inline-flex; align-items:center; gap:8px;
-            transition:all .3s; border:none; cursor:pointer; }
-        .hero-btn.primary { background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff;
-            box-shadow:0 4px 20px rgba(124,58,237,.3); }
-        .hero-btn.primary:hover { transform:translateY(-2px); box-shadow:0 8px 30px rgba(124,58,237,.5); }
-        .hero-btn.secondary { background:var(--bg-card); color:var(--text); border:1px solid var(--border); }
-        .hero-btn.secondary:hover { border-color:var(--border-hover); background:var(--bg-elevated); }
+        .hero-desc { font-size:1.1rem; color:var(--text-muted); max-width:520px; margin:0 auto 2.5rem; font-weight:300; line-height:1.75; animation:fadeUp .7s .2s ease-out both; }
+        .hero-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; animation:fadeUp .7s .3s ease-out both; }
 
-        /* ── Dashboard preview ── */
-        .hero-preview { margin-top:4rem; perspective:1000px; animation:fadeUp .8s .4s ease-out both; }
-        .preview-wrapper { position:relative; max-width:900px; margin:0 auto;
-            background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
-            overflow:hidden; box-shadow:0 25px 80px rgba(0,0,0,.5);
-            transform:rotateX(4deg); transition:transform .5s; }
-        .preview-wrapper:hover { transform:rotateX(0deg); }
-        .preview-topbar { height:38px; background:var(--bg-elevated); border-bottom:1px solid var(--border);
-            display:flex; align-items:center; gap:6px; padding:0 14px; }
-        .preview-dot { width:10px; height:10px; border-radius:50%; }
-        .preview-dot.r { background:#ef4444; } .preview-dot.y { background:#f59e0b; } .preview-dot.g { background:#22c55e; }
-        .preview-content { padding:1.5rem; display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:1rem; }
-        .preview-card { background:var(--bg-elevated); border:1px solid var(--border); border-radius:10px;
-            padding:1rem; position:relative; overflow:hidden; }
-        .preview-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
-        .preview-card:nth-child(1)::before { background:linear-gradient(90deg,var(--accent),#6366f1); }
-        .preview-card:nth-child(2)::before { background:linear-gradient(90deg,var(--green),#4ade80); }
-        .preview-card:nth-child(3)::before { background:linear-gradient(90deg,var(--cyan),var(--cyan-light)); }
-        .preview-card:nth-child(4)::before { background:linear-gradient(90deg,var(--red),#f87171); }
-        .preview-label { font-size:.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:.5px; font-weight:600; }
-        .preview-value { font-size:1.6rem; font-weight:800; margin-top:4px; font-family:'JetBrains Mono',monospace; }
-        .preview-chart { grid-column:1/-1; height:130px; background:var(--bg-elevated);
-            border:1px solid var(--border); border-radius:10px; overflow:hidden; position:relative; }
-        .preview-chart svg { width:100%; height:100%; }
+        /* Shiny Border Button */
+        .btn-shiny { position:relative; padding:1px; border-radius:9999px; overflow:hidden; display:inline-block; cursor:pointer; }
+        .btn-shiny::before { content:''; position:absolute; inset:-50%; width:200%; height:200%; background:conic-gradient(from 0deg, transparent 0%, #8B5CF6 40%, #06B6D4 50%, transparent 60%); animation:spinGrad 4s linear infinite; }
+        @keyframes spinGrad { to { transform:rotate(360deg); } }
+        .btn-shiny-inner { position:relative; z-index:1; background:#0a0a0a; border-radius:9999px; padding:0.85rem 2.5rem; font-weight:600; font-size:.95rem; color:#fff; display:flex; align-items:center; gap:8px; transition:background .3s; }
+        .btn-shiny:hover .btn-shiny-inner { background:#111; }
+        .btn-secondary { padding:0.85rem 2rem; border-radius:9999px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:.95rem; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:all .3s cubic-bezier(0.23,1,0.32,1); cursor:pointer; }
+        .btn-secondary:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
 
-        /* ── Trust Bar ── */
-        .trust-bar { padding:3rem 0; text-align:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-        .trust-bar p { font-size:.82rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:1px; font-weight:600; margin-bottom:1.5rem; }
-        .trust-logos { display:flex; justify-content:center; align-items:center; gap:3rem; flex-wrap:wrap; }
-        .trust-item { display:flex; align-items:center; gap:8px; color:var(--text-muted); font-size:.9rem; font-weight:600; opacity:.6; }
-        .trust-item i { font-size:1.4rem; }
+        /* ── TICKER ── */
+        .ticker-section { width:100%; background:rgba(0,0,0,0.5); border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); overflow:hidden; height:56px; display:flex; align-items:center; position:relative; z-index:1; }
+        .ticker-track { display:flex; align-items:center; gap:3rem; white-space:nowrap; animation:ticker 40s linear infinite; }
+        .ticker-track:hover { animation-play-state:paused; }
+        @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        .ticker-item { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
+        .ticker-label { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.2em; color:#475569; }
+        .ticker-value { font-size:.95rem; font-family:'JetBrains Mono',monospace; color:#fff; }
+        .ticker-value.violet { color:#a78bfa; }
+        .ticker-value.cyan { color:#22d3ee; }
+        .ticker-value.emerald { color:#10B981; }
+        .ticker-sep { width:1px; height:20px; background:rgba(255,255,255,0.08); }
 
-        /* ── Stats ── */
+        /* ── SECTION HEADERS ── */
+        .section-header { text-align:center; margin-bottom:3.5rem; }
+        .section-label { display:inline-flex; align-items:center; gap:6px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.15em; color:#a78bfa; margin-bottom:.75rem; }
+        .section-title { font-family:'Instrument Serif',serif; font-size:clamp(2rem,3.5vw,3rem); font-weight:400; letter-spacing:-.02em; margin-bottom:1rem; }
+        .section-desc { font-size:1rem; color:var(--text-muted); max-width:520px; margin:0 auto; font-weight:300; }
+
+        /* ── TRUST BAR ── */
+        .trust-bar { padding:3.5rem 0; text-align:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+        .trust-bar p { font-size:.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.15em; font-weight:600; margin-bottom:1.75rem; }
+        .trust-logos { display:flex; justify-content:center; align-items:center; gap:2.5rem; flex-wrap:wrap; }
+        .trust-item { display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; font-weight:600; transition:color .3s; }
+        .trust-item:hover { color:var(--text-muted); }
+        .trust-item i { font-size:1.3rem; }
+
+        /* ── STATS ── */
         .stats { padding:5rem 0; }
         .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.5rem; }
-        .stat-card { text-align:center; padding:2rem 1rem;
-            background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
-            transition:transform .3s, border-color .3s; }
-        .stat-card:hover { transform:translateY(-4px); border-color:var(--border-hover); }
-        .stat-number { font-size:2.8rem; font-weight:900; font-family:'JetBrains Mono',monospace;
-            background:linear-gradient(135deg,var(--accent-light),var(--cyan-light));
-            -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-        .stat-label { font-size:.85rem; color:var(--text-muted); margin-top:.25rem; font-weight:500; }
+        .stat-card { text-align:center; padding:2.5rem 1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:24px; backdrop-filter:blur(16px); transition:all .4s cubic-bezier(0.23,1,0.32,1); position:relative; overflow:hidden; cursor:pointer; }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(139,92,246,0.4),transparent); }
+        .stat-card:hover { transform:translateY(-8px); border-color:rgba(139,92,246,0.3); box-shadow:0 0 30px -10px rgba(139,92,246,0.3); }
+        .stat-number { font-family:'JetBrains Mono',monospace; font-size:2.5rem; font-weight:700; background:linear-gradient(135deg,#a78bfa,#22d3ee); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .stat-label { font-size:.78rem; color:var(--text-muted); margin-top:.35rem; font-weight:500; text-transform:uppercase; letter-spacing:.08em; }
 
-        /* ── Features ── */
+        /* ── FEATURES ── */
         .features { padding:5rem 0; }
-        .section-header { text-align:center; margin-bottom:3.5rem; }
-        .section-label { display:inline-flex; align-items:center; gap:6px;
-            font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:1.5px;
-            color:var(--accent-light); margin-bottom:.75rem; }
-        .section-title { font-size:clamp(1.8rem,3vw,2.5rem); font-weight:800; letter-spacing:-.5px; margin-bottom:1rem; }
-        .section-desc { font-size:1.05rem; color:var(--text-muted); max-width:540px; margin:0 auto; }
         .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
-        .feature-card { background:var(--bg-card); border:1px solid var(--border); border-radius:16px;
-            padding:2rem; transition:all .3s; position:relative; overflow:hidden; }
-        .feature-card:hover { transform:translateY(-4px); border-color:var(--border-hover);
-            box-shadow:0 20px 40px rgba(0,0,0,.3); }
-        .feature-icon { width:52px; height:52px; border-radius:14px; display:flex;
-            align-items:center; justify-content:center; font-size:1.3rem; margin-bottom:1.2rem; }
-        .feature-card:nth-child(1) .feature-icon { background:rgba(124,58,237,.12); color:var(--accent-light); }
-        .feature-card:nth-child(2) .feature-icon { background:rgba(6,182,212,.12); color:var(--cyan-light); }
-        .feature-card:nth-child(3) .feature-icon { background:rgba(34,197,94,.12); color:var(--green); }
-        .feature-card:nth-child(4) .feature-icon { background:rgba(245,158,11,.12); color:var(--amber); }
-        .feature-card:nth-child(5) .feature-icon { background:rgba(239,68,68,.12); color:var(--red); }
-        .feature-card:nth-child(6) .feature-icon { background:rgba(236,72,153,.12); color:#f472b6; }
-        .feature-card h3 { font-size:1.1rem; font-weight:700; margin-bottom:.5rem; }
-        .feature-card p { font-size:.88rem; color:var(--text-muted); line-height:1.7; }
+        .feature-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:2.5rem; transition:all .4s cubic-bezier(0.23,1,0.32,1); cursor:pointer; position:relative; overflow:hidden; }
+        .feature-card::after { content:''; position:absolute; inset:0; border-radius:24px; opacity:0; background:radial-gradient(circle at 50% 0%, rgba(139,92,246,0.08), transparent 70%); transition:opacity .4s; }
+        .feature-card:hover { transform:translateY(-12px); border-color:rgba(139,92,246,0.3); box-shadow:0 0 30px -10px rgba(139,92,246,0.3); }
+        .feature-card:hover::after { opacity:1; }
+        .feature-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; margin-bottom:1.25rem; transition:transform .4s cubic-bezier(0.23,1,0.32,1); }
+        .feature-card:hover .feature-icon { transform:scale(1.1) rotate(-5deg); }
+        .fi-1 { background:rgba(139,92,246,0.12); color:#a78bfa; }
+        .fi-2 { background:rgba(6,182,212,0.12); color:#22d3ee; }
+        .fi-3 { background:rgba(16,185,129,0.12); color:#10B981; }
+        .fi-4 { background:rgba(245,158,11,0.12); color:#fbbf24; }
+        .fi-5 { background:rgba(239,68,68,0.12); color:#f87171; }
+        .fi-6 { background:rgba(236,72,153,0.12); color:#f472b6; }
+        .feature-card h3 { font-family:'Instrument Serif',serif; font-size:1.2rem; font-weight:400; margin-bottom:.6rem; letter-spacing:-.01em; }
+        .feature-card p { font-size:.85rem; color:var(--text-muted); line-height:1.75; font-weight:300; }
 
-        /* ── How It Works ── */
+        /* ── HOW IT WORKS ── */
         .how-it-works { padding:5rem 0; }
         .steps-container { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; position:relative; }
-        .steps-container::before { content:''; position:absolute; top:42px; left:calc(16.67% + 1rem); right:calc(16.67% + 1rem);
-            height:2px; background:linear-gradient(90deg,var(--accent),var(--cyan),var(--green)); z-index:0; }
-        .step-card { text-align:center; position:relative; z-index:1; }
-        .step-number { width:84px; height:84px; border-radius:50%; margin:0 auto 1.5rem;
-            display:flex; align-items:center; justify-content:center;
-            font-size:1.8rem; font-weight:900; font-family:'JetBrains Mono',monospace; }
-        .step-card:nth-child(1) .step-number { background:linear-gradient(135deg,rgba(124,58,237,.15),rgba(124,58,237,.05)); border:2px solid rgba(124,58,237,.3); color:var(--accent-light); }
-        .step-card:nth-child(2) .step-number { background:linear-gradient(135deg,rgba(6,182,212,.15),rgba(6,182,212,.05)); border:2px solid rgba(6,182,212,.3); color:var(--cyan-light); }
-        .step-card:nth-child(3) .step-number { background:linear-gradient(135deg,rgba(34,197,94,.15),rgba(34,197,94,.05)); border:2px solid rgba(34,197,94,.3); color:var(--green); }
-        .step-card h3 { font-size:1.15rem; font-weight:700; margin-bottom:.5rem; }
-        .step-card p { font-size:.88rem; color:var(--text-muted); line-height:1.7; max-width:280px; margin:0 auto; }
+        .steps-container::before { content:''; position:absolute; top:42px; left:calc(16.67% + 1rem); right:calc(16.67% + 1rem); height:1px; background:linear-gradient(90deg,var(--violet),var(--cyan),var(--emerald)); z-index:0; opacity:.4; }
+        .step-card { text-align:center; position:relative; z-index:1; cursor:pointer; }
+        .step-number { width:84px; height:84px; border-radius:50%; margin:0 auto 1.5rem; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:1.8rem; font-weight:700; position:relative; }
+        .step-card:nth-child(1) .step-number { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.25); color:#a78bfa; }
+        .step-card:nth-child(2) .step-number { background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.25); color:#22d3ee; }
+        .step-card:nth-child(3) .step-number { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); color:#10B981; }
+        .step-card h3 { font-family:'Instrument Serif',serif; font-size:1.15rem; font-weight:400; margin-bottom:.5rem; }
+        .step-card p { font-size:.85rem; color:var(--text-muted); line-height:1.75; max-width:260px; margin:0 auto; font-weight:300; }
 
-        /* ── Portals ── */
+        /* ── CODE BLOCK ── */
+        .code-section { padding:5rem 0; }
+        .code-window { background:rgba(8,8,8,0.9); border:1px solid rgba(255,255,255,0.08); border-radius:24px; overflow:hidden; backdrop-filter:blur(16px); max-width:800px; margin:0 auto; }
+        .code-topbar { display:flex; align-items:center; gap:.75rem; padding:1rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
+        .code-dot { width:10px; height:10px; border-radius:50%; }
+        .code-dot.r { background:rgba(239,68,68,0.5); }
+        .code-dot.y { background:rgba(245,158,11,0.5); }
+        .code-dot.g { background:rgba(16,185,129,0.5); }
+        .code-filename { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:#475569; margin-left:.5rem; }
+        .code-body { padding:1.75rem 2rem; font-family:'JetBrains Mono',monospace; font-size:.82rem; line-height:1.75; overflow-x:auto; }
+        .c-violet { color:#a78bfa; }
+        .c-cyan { color:#22d3ee; }
+        .c-emerald { color:#10B981; }
+        .c-gray { color:#475569; }
+        .c-white { color:#f8f8f8; }
+
+        /* ── PORTALS ── */
         .portals-section { padding:5rem 0; }
         .portals-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
-        .portal-card { background:var(--bg-card); border:1px solid var(--border); border-radius:20px; padding:3rem 2.5rem;
-            cursor:pointer; transition:all .4s cubic-bezier(.175,.885,.32,1.275);
-            text-decoration:none; color:inherit; position:relative; overflow:hidden; }
-        .portal-card::before { content:''; position:absolute; top:0; left:0; right:0; height:4px; border-radius:20px 20px 0 0; }
-        .portal-card.company::before { background:linear-gradient(90deg,var(--accent),#6366f1); }
-        .portal-card.employee::before { background:linear-gradient(90deg,var(--cyan),var(--cyan-light)); }
-        .portal-card:hover { transform:translateY(-8px) scale(1.01); }
-        .portal-card.company:hover { border-color:rgba(124,58,237,.3); box-shadow:0 25px 60px rgba(124,58,237,.15); }
-        .portal-card.employee:hover { border-color:rgba(6,182,212,.3); box-shadow:0 25px 60px rgba(6,182,212,.15); }
-        .portal-icon-wrap { width:72px; height:72px; border-radius:18px;
-            display:flex; align-items:center; justify-content:center; font-size:1.8rem; margin-bottom:1.5rem;
-            transition:transform .3s; }
+        .portal-card { background:var(--bg-card); border:1px solid var(--border); border-radius:24px; padding:3rem 2.5rem; cursor:pointer; transition:all .4s cubic-bezier(0.23,1,0.32,1); text-decoration:none; color:inherit; position:relative; overflow:hidden; display:block; }
+        .portal-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:24px 24px 0 0; }
+        .portal-card.company::before { background:linear-gradient(90deg,var(--violet),#6366f1); }
+        .portal-card.employee::before { background:linear-gradient(90deg,var(--cyan),#22d3ee); }
+        .portal-card:hover { transform:translateY(-8px); }
+        .portal-card.company:hover { border-color:rgba(139,92,246,0.3); box-shadow:0 20px 60px rgba(139,92,246,0.1); }
+        .portal-card.employee:hover { border-color:rgba(6,182,212,0.3); box-shadow:0 20px 60px rgba(6,182,212,0.1); }
+        .portal-icon-wrap { width:64px; height:64px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:1.5rem; transition:transform .3s cubic-bezier(0.23,1,0.32,1); }
         .portal-card:hover .portal-icon-wrap { transform:scale(1.08) rotate(-3deg); }
-        .company .portal-icon-wrap { background:linear-gradient(135deg,rgba(124,58,237,.12),rgba(99,102,241,.08)); color:var(--accent-light); }
-        .employee .portal-icon-wrap { background:linear-gradient(135deg,rgba(6,182,212,.12),rgba(34,211,238,.08)); color:var(--cyan-light); }
-        .portal-card h2 { font-size:1.5rem; font-weight:800; margin-bottom:.5rem; }
-        .portal-card .portal-desc { font-size:.9rem; color:var(--text-muted); line-height:1.6; margin-bottom:1.5rem; }
-        .portal-features { list-style:none; text-align:left; }
-        .portal-features li { font-size:.84rem; color:var(--text-muted); padding:.35rem 0; display:flex; align-items:center; gap:8px; }
-        .company .portal-features li i { color:var(--accent-light); font-size:.7rem; }
-        .employee .portal-features li i { color:var(--cyan-light); font-size:.7rem; }
-        .portal-btn { display:flex; align-items:center; justify-content:center; gap:8px;
-            width:100%; padding:.85rem; border-radius:12px; font-weight:700; font-size:.95rem;
-            margin-top:1.5rem; border:none; cursor:pointer; transition:all .3s; }
-        .company .portal-btn { background:linear-gradient(135deg,var(--accent),#6366f1); color:#fff; }
-        .employee .portal-btn { background:linear-gradient(135deg,var(--cyan),var(--cyan-light)); color:#0f172a; }
-        .portal-card:hover .portal-btn { box-shadow:0 8px 25px rgba(0,0,0,.3); }
+        .company .portal-icon-wrap { background:rgba(139,92,246,0.1); color:#a78bfa; }
+        .employee .portal-icon-wrap { background:rgba(6,182,212,0.1); color:#22d3ee; }
+        .portal-card h2 { font-family:'Instrument Serif',serif; font-size:1.6rem; font-weight:400; margin-bottom:.5rem; letter-spacing:-.01em; }
+        .portal-card .portal-desc { font-size:.875rem; color:var(--text-muted); line-height:1.7; margin-bottom:1.5rem; font-weight:300; }
+        .portal-features { list-style:none; }
+        .portal-features li { font-size:.82rem; color:var(--text-muted); padding:.3rem 0; display:flex; align-items:center; gap:8px; }
+        .company .portal-features li i { color:#a78bfa; font-size:.65rem; }
+        .employee .portal-features li i { color:#22d3ee; font-size:.65rem; }
+        .portal-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:.85rem; border-radius:12px; font-weight:600; font-size:.9rem; margin-top:1.5rem; border:none; cursor:pointer; transition:all .3s; }
+        .company .portal-btn { background:linear-gradient(135deg,var(--violet),#6366f1); color:#fff; }
+        .employee .portal-btn { background:linear-gradient(135deg,var(--cyan),#22d3ee); color:#0f172a; }
 
-        /* ── Footer ── */
-        footer { padding:4rem 0 2rem; border-top:1px solid var(--border); }
+        /* ── FOOTER ── */
+        footer { padding:4rem 0 2rem; border-top:1px solid var(--border); background:#050505; }
         .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem; margin-bottom:3rem; }
-        .footer-brand p { font-size:.88rem; color:var(--text-muted); margin-top:.75rem; line-height:1.7; max-width:300px; }
-        .footer-col h4 { font-size:.82rem; text-transform:uppercase; letter-spacing:1px; color:var(--text-dim); font-weight:700; margin-bottom:1rem; }
-        .footer-col a { display:block; color:var(--text-muted); text-decoration:none; font-size:.88rem; padding:.3rem 0; transition:color .2s; }
+        .footer-brand p { font-size:.85rem; color:var(--text-muted); margin-top:.75rem; line-height:1.7; max-width:280px; font-weight:300; }
+        .footer-col h4 { font-size:.65rem; text-transform:uppercase; letter-spacing:.15em; color:var(--text-dim); font-weight:700; margin-bottom:1rem; }
+        .footer-col a { display:block; color:var(--text-muted); text-decoration:none; font-size:.85rem; padding:.3rem 0; transition:color .2s cubic-bezier(0.23,1,0.32,1); font-weight:300; }
         .footer-col a:hover { color:var(--text); }
-        .footer-bottom { display:flex; justify-content:space-between; align-items:center;
-            padding-top:2rem; border-top:1px solid var(--border); font-size:.8rem; color:var(--text-dim); }
-        .footer-social { display:flex; gap:1rem; }
-        .footer-social a { color:var(--text-dim); font-size:1.1rem; transition:color .2s; }
-        .footer-social a:hover { color:var(--accent-light); }
+        .footer-bottom { display:flex; justify-content:space-between; align-items:center; padding-top:2rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--text-dim); }
+        .footer-status { display:flex; align-items:center; gap:.5rem; }
+        .status-dot { width:6px; height:6px; border-radius:50%; background:var(--emerald); animation:pulse 2s infinite; }
 
-        /* ── Modal ── */
-        .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(6,9,24,0.85);
-            backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center;
-            opacity:0; pointer-events:none; transition:opacity .3s; padding:20px; }
+        /* ── MODAL ── */
+        .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(3,3,3,0.85); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; padding:20px; }
         .modal-overlay.active { opacity:1; pointer-events:all; }
-        .modal-container { background:var(--bg-card); border:1px solid var(--border-hover);
-            border-radius:24px; max-width:600px; width:100%; padding:2.5rem;
-            position:relative; transform:scale(0.9); transition:transform .3s;
-            box-shadow:0 30px 60px rgba(0,0,0,.5); }
+        .modal-container { background:rgba(10,10,10,0.9); border:1px solid rgba(139,92,246,0.3); border-radius:24px; max-width:560px; width:100%; padding:2.5rem; position:relative; transform:scale(0.95); transition:transform .3s cubic-bezier(0.23,1,0.32,1); box-shadow:0 30px 80px rgba(139,92,246,0.15); }
         .modal-overlay.active .modal-container { transform:scale(1); }
-        .modal-close { position:absolute; top:20px; right:20px; background:none; border:none;
-            color:var(--text-muted); font-size:1.5rem; cursor:pointer; transition:color .2s; }
+        .modal-close { position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; transition:color .2s; }
         .modal-close:hover { color:var(--text); }
         .modal-header { display:flex; align-items:center; gap:16px; margin-bottom:1.5rem; }
-        .modal-icon { width:56px; height:56px; border-radius:16px; display:flex;
-            align-items:center; justify-content:center; font-size:1.5rem; }
-        .modal-title { font-size:1.6rem; font-weight:800; }
-        .modal-body { font-size:1.05rem; color:var(--text-muted); line-height:1.8; margin-bottom:2rem; }
+        .modal-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+        .modal-title { font-family:'Instrument Serif',serif; font-size:1.6rem; font-weight:400; }
+        .modal-body { font-size:.95rem; color:var(--text-muted); line-height:1.8; margin-bottom:2rem; font-weight:300; }
         .modal-footer { border-top:1px solid var(--border); padding-top:1.5rem; display:flex; justify-content:flex-end; }
+        .modal-footer .btn-shiny { text-decoration:none; }
 
-        /* ── Clickable Cards ── */
-        .feature-card, .stat-card, .step-card { cursor:pointer; }
-        .feature-card:hover .feature-icon, .stat-card:hover .stat-number, .step-card:hover .step-number {
-             transform: scale(1.1); transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        /* ── Utilities ── */
+        /* ── UTILITIES ── */
         @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
-
-        /* ── Mobile menu ── */
-        .mobile-toggle { display:none; background:none; border:none; color:var(--text); font-size:1.3rem; cursor:pointer; }
 
         @media(max-width:1024px){
             .features-grid { grid-template-columns:1fr 1fr; }
             .stats-grid { grid-template-columns:repeat(2,1fr); }
-            .preview-content { grid-template-columns:1fr 1fr; }
             .footer-grid { grid-template-columns:1fr 1fr; gap:2rem; }
         }
         @media(max-width:768px){
             .nav-links { display:none; }
             .mobile-toggle { display:block; }
-            .hero h1 { font-size:2rem; }
+            .hero h1 { font-size:2.5rem; }
             .features-grid,.portals-grid,.steps-container { grid-template-columns:1fr; }
             .stats-grid { grid-template-columns:1fr 1fr; }
             .steps-container::before { display:none; }
             .footer-grid { grid-template-columns:1fr; }
             .hero-actions { flex-direction:column; align-items:center; }
-            .hero-preview { display:none; }
         }
+
+        /* ── CURSOR EFFECTS ── */
+        /* Hide default cursor on non-touch devices */
+        @media (pointer: fine) {
+            * { cursor: none !important; }
+        }
+        /* Spotlight glow that follows mouse */
+        #cursor-spotlight {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(
+                circle,
+                rgba(139, 92, 246, 0.07) 0%,
+                rgba(6, 182, 212, 0.04) 30%,
+                transparent 70%
+            );
+            transition: transform 0.05s linear, opacity 0.4s ease;
+            opacity: 0;
+            mix-blend-mode: screen;
+            will-change: transform;
+        }
+        /* Custom cursor dot */
+        #cursor-dot {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #a78bfa;
+            transform: translate(-50%, -50%);
+            transition: transform 0.08s cubic-bezier(0.23, 1, 0.32, 1),
+                        background 0.2s ease,
+                        width 0.2s cubic-bezier(0.23,1,0.32,1),
+                        height 0.2s cubic-bezier(0.23,1,0.32,1);
+            box-shadow: 0 0 12px rgba(167, 139, 250, 0.8), 0 0 4px rgba(167, 139, 250, 1);
+            opacity: 0;
+        }
+        /* Cursor ring */
+        #cursor-ring {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            transform: translate(-50%, -50%);
+            transition: transform 0.18s cubic-bezier(0.23, 1, 0.32, 1),
+                        width 0.25s cubic-bezier(0.23,1,0.32,1),
+                        height 0.25s cubic-bezier(0.23,1,0.32,1),
+                        border-color 0.2s ease,
+                        opacity 0.3s ease;
+            opacity: 0;
+        }
+        /* Hover states for interactive elements */
+        a:hover ~ #cursor-dot, button:hover ~ #cursor-dot { width: 16px; height: 16px; background: #22d3ee; }
+        .btn-shiny:hover #cursor-dot { background: #22d3ee; }
     </style>
 </head>
-<body>
-    <div class="bg-grid"></div>
-    <div class="bg-orb orb-1"></div>
-    <div class="bg-orb orb-2"></div>
-    <div class="bg-orb orb-3"></div>
 
-    <!-- ─── NAVBAR ──────────────────────────────────────────────────── -->
+<body>
+    <!-- Cursor Effects -->
+    <div id="cursor-spotlight"></div>
+    <div id="cursor-ring"></div>
+    <div id="cursor-dot"></div>
+
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+    <!-- NAV PILL -->
     <nav class="navbar" id="navbar">
-        <div class="container">
+        <div class="nav-inner">
             <a href="#" class="nav-brand">
-                <div class="nav-brand-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                <div class="nav-brand-dot"></div>
                 <span class="nav-brand-text">API Monitor</span>
             </a>
             <div class="nav-links">
                 <a href="#features" class="nav-link">Features</a>
                 <a href="#how-it-works" class="nav-link">How It Works</a>
                 <a href="#portals" class="nav-link">Portals</a>
-                <a href="login.html" class="nav-cta"><i class="fa-solid fa-rocket"></i> Get Started</a>
             </div>
+            <a href="login.html" class="nav-cta">Get Started</a>
             <button class="mobile-toggle" id="mobile-toggle"><i class="fa-solid fa-bars"></i></button>
         </div>
     </nav>
 
-    <!-- ─── HERO ────────────────────────────────────────────────────── -->
+    <!-- HERO -->
     <section class="hero">
         <div class="container">
             <div class="hero-badge"><span class="pulse"></span> Monitoring in real-time</div>
-            <h1>Never Miss a<br><span class="gradient">Downtime Again</span></h1>
-            <p class="hero-desc">
-                Monitor every API endpoint in real-time. Get instant alerts, deep analytics, and automated
-                daily reports — so your team can focus on building, not firefighting.
-            </p>
+            <h1>Never Miss a<br><span class="shimmer">Downtime Again</span></h1>
+            <p class="hero-desc">Monitor every API endpoint in real-time. Get instant alerts, deep analytics, and automated daily reports — so your team can focus on building, not firefighting.</p>
             <div class="hero-actions">
-                <a href="#portals" class="hero-btn primary"><i class="fa-solid fa-bolt"></i> Start Monitoring</a>
-                <a href="#features" class="hero-btn secondary"><i class="fa-solid fa-play"></i> See Features</a>
-            </div>
-
-            <!-- Dashboard Preview -->
-            <div class="hero-preview">
-                <div class="preview-wrapper" id="dashboard-preview">
-                    <div class="preview-topbar">
-                        <span class="preview-dot r"></span>
-                        <span class="preview-dot y"></span>
-                        <span class="preview-dot g"></span>
-                    </div>
-                    <div class="preview-content">
-                        <div class="preview-card">
-                            <div class="preview-label">Total APIs</div>
-                            <div class="preview-value" style="color:var(--accent-light);">24</div>
-                        </div>
-                        <div class="preview-card">
-                            <div class="preview-label">Uptime</div>
-                            <div class="preview-value" style="color:var(--green);">99.8%</div>
-                        </div>
-                        <div class="preview-card">
-                            <div class="preview-label">Avg Response</div>
-                            <div class="preview-value" style="color:var(--cyan-light);">142ms</div>
-                        </div>
-                        <div class="preview-card">
-                            <div class="preview-label">Incidents</div>
-                            <div class="preview-value" style="color:var(--red);">2</div>
-                        </div>
-                        <div class="preview-chart">
-                            <svg viewBox="0 0 900 130" preserveAspectRatio="none">
-                                <defs>
-                                    <linearGradient id="chartGrad" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="0%" stop-color="rgba(99,102,241,.3)"/>
-                                        <stop offset="100%" stop-color="rgba(99,102,241,0)"/>
-                                    </linearGradient>
-                                </defs>
-                                <path d="M0,80 C50,60 100,90 150,50 C200,10 250,70 300,45 C350,20 400,65 450,40 C500,15 550,55 600,30 C650,50 700,20 750,45 C800,70 850,25 900,35 L900,130 L0,130 Z" fill="url(#chartGrad)"/>
-                                <path d="M0,80 C50,60 100,90 150,50 C200,10 250,70 300,45 C350,20 400,65 450,40 C500,15 550,55 600,30 C650,50 700,20 750,45 C800,70 850,25 900,35" fill="none" stroke="#6366f1" stroke-width="2.5"/>
-                            </svg>
-                        </div>
-                    </div>
-                </div>
+                <a href="#portals" class="btn-shiny"><span class="btn-shiny-inner"><i class="fa-solid fa-bolt"></i> Start Monitoring</span></a>
+                <a href="#features" class="btn-secondary"><i class="fa-solid fa-play"></i> See Features</a>
             </div>
         </div>
     </section>
 
-    <!-- ─── TRUST BAR ───────────────────────────────────────────────── -->
+    <!-- TICKER -->
+    <div class="ticker-section">
+        <div class="ticker-track">
+            <div class="ticker-item"><span class="ticker-label">Uptime</span><span class="ticker-value emerald">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Avg Response</span><span class="ticker-value cyan">142ms</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Alert Time</span><span class="ticker-value violet">&lt;1s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Data Retention</span><span class="ticker-value">30 Days</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Monitoring</span><span class="ticker-value emerald">24/7</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Checks/min</span><span class="ticker-value cyan">60s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Accuracy</span><span class="ticker-value violet">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <!-- duplicate for seamless loop -->
+            <div class="ticker-item"><span class="ticker-label">Uptime</span><span class="ticker-value emerald">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Avg Response</span><span class="ticker-value cyan">142ms</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Alert Time</span><span class="ticker-value violet">&lt;1s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Data Retention</span><span class="ticker-value">30 Days</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Monitoring</span><span class="ticker-value emerald">24/7</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Checks/min</span><span class="ticker-value cyan">60s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Accuracy</span><span class="ticker-value violet">99.9%</span></div>
+        </div>
+    </div>
+
+    <!-- TRUST BAR -->
     <section class="trust-bar">
         <div class="container">
             <p>Trusted Technologies</p>
             <div class="trust-logos">
                 <div class="trust-item"><i class="fa-brands fa-python"></i> Python</div>
                 <div class="trust-item"><i class="fa-solid fa-flask-vial"></i> Flask</div>
-                <div class="trust-item"><i class="fa-solid fa-database"></i> SQLite</div>
+                <div class="trust-item"><i class="fa-solid fa-database"></i> PostgreSQL</div>
                 <div class="trust-item"><i class="fa-solid fa-lock"></i> JWT Auth</div>
                 <div class="trust-item"><i class="fa-solid fa-envelope"></i> SMTP Alerts</div>
                 <div class="trust-item"><i class="fa-solid fa-chart-line"></i> Chart.js</div>
@@ -364,31 +380,19 @@
         </div>
     </section>
 
-    <!-- ─── STATS ───────────────────────────────────────────────────── -->
+    <!-- STATS -->
     <section class="stats">
         <div class="container">
             <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-number">99.9%</div>
-                    <div class="stat-label">Uptime Tracking Accuracy</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">&lt;1s</div>
-                    <div class="stat-label">Alert Response Time</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">30d</div>
-                    <div class="stat-label">Data Retention</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-number">24/7</div>
-                    <div class="stat-label">Continuous Monitoring</div>
-                </div>
+                <div class="stat-card"><div class="stat-number">99.9%</div><div class="stat-label">Uptime Tracking Accuracy</div></div>
+                <div class="stat-card"><div class="stat-number">&lt;1s</div><div class="stat-label">Alert Response Time</div></div>
+                <div class="stat-card"><div class="stat-number">30d</div><div class="stat-label">Data Retention</div></div>
+                <div class="stat-card"><div class="stat-number">24/7</div><div class="stat-label">Continuous Monitoring</div></div>
             </div>
         </div>
     </section>
 
-    <!-- ─── FEATURES ────────────────────────────────────────────────── -->
+    <!-- FEATURES -->
     <section class="features" id="features">
         <div class="container">
             <div class="section-header">
@@ -397,41 +401,17 @@
                 <p class="section-desc">From real-time checks to automated daily reports, we've got your entire API infrastructure covered.</p>
             </div>
             <div class="features-grid">
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-bolt"></i></div>
-                    <h3>Real-Time Monitoring</h3>
-                    <p>Continuous health checks on all your API endpoints with instant status updates and response time tracking.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-bell"></i></div>
-                    <h3>Instant Email Alerts</h3>
-                    <p>Get notified the moment an API goes down or exceeds response time thresholds via beautifully formatted emails.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-chart-area"></i></div>
-                    <h3>Advanced Analytics</h3>
-                    <p>Hourly response time charts, uptime percentages, error breakdowns, and incident timelines at a glance.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-envelope-open-text"></i></div>
-                    <h3>Daily Summary Reports</h3>
-                    <p>Automated daily reports sent to HR/IT with comprehensive stats on the day's API monitoring data.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-user-shield"></i></div>
-                    <h3>Role-Based Access</h3>
-                    <p>Separate Company and Employee portals. Admins manage everything; employees see only what they need.</p>
-                </div>
-                <div class="feature-card">
-                    <div class="feature-icon"><i class="fa-solid fa-user-plus"></i></div>
-                    <h3>Employee Invitations</h3>
-                    <p>Invite team members by email. Secure credentials are auto-generated and sent directly — no manual setup.</p>
-                </div>
+                <div class="feature-card"><div class="feature-icon fi-1"><i class="fa-solid fa-bolt"></i></div><h3>Real-Time Monitoring</h3><p>Continuous health checks on all your API endpoints with instant status updates and response time tracking.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-2"><i class="fa-solid fa-bell"></i></div><h3>Instant Email Alerts</h3><p>Get notified the moment an API goes down or exceeds response time thresholds via beautifully formatted emails.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-3"><i class="fa-solid fa-chart-area"></i></div><h3>Advanced Analytics</h3><p>Hourly response time charts, uptime percentages, error breakdowns, and incident timelines at a glance.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-4"><i class="fa-solid fa-envelope-open-text"></i></div><h3>Daily Summary Reports</h3><p>Automated daily reports sent to HR/IT with comprehensive stats on the day's API monitoring data.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-5"><i class="fa-solid fa-user-shield"></i></div><h3>Role-Based Access</h3><p>Separate Company and Employee portals. Admins manage everything; employees see only what they need.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-6"><i class="fa-solid fa-user-plus"></i></div><h3>Employee Invitations</h3><p>Invite team members by email. Secure credentials are auto-generated and sent directly — no manual setup.</p></div>
             </div>
         </div>
     </section>
 
-    <!-- ─── HOW IT WORKS ────────────────────────────────────────────── -->
+    <!-- HOW IT WORKS -->
     <section class="how-it-works" id="how-it-works">
         <div class="container">
             <div class="section-header">
@@ -440,26 +420,52 @@
                 <p class="section-desc">Three simple steps to full API monitoring coverage for your team.</p>
             </div>
             <div class="steps-container">
-                <div class="step-card">
-                    <div class="step-number">1</div>
-                    <h3>Register Your Company</h3>
-                    <p>Create a company account with OTP-verified email. Set up your admin credentials in under a minute.</p>
+                <div class="step-card"><div class="step-number">1</div><h3>Register Your Company</h3><p>Create a company account with OTP-verified email. Set up your admin credentials in under a minute.</p></div>
+                <div class="step-card"><div class="step-number">2</div><h3>Add API Endpoints</h3><p>Enter your API URLs, set monitoring intervals, and configure alert thresholds. We start checking immediately.</p></div>
+                <div class="step-card"><div class="step-number">3</div><h3>Invite Your Team</h3><p>Add employees by email. They receive secure credentials instantly and can start monitoring right away.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CODE INTEGRATION -->
+    <section class="code-section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-code"></i> Integration</div>
+                <h2 class="section-title">Simple API Integration</h2>
+                <p class="section-desc">Add monitoring to your stack in seconds with our straightforward setup.</p>
+            </div>
+            <div class="code-window">
+                <div class="code-topbar">
+                    <span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span>
+                    <span class="code-filename">monitor_setup.py</span>
                 </div>
-                <div class="step-card">
-                    <div class="step-number">2</div>
-                    <h3>Add API Endpoints</h3>
-                    <p>Enter your API URLs, set monitoring intervals, and configure alert thresholds. We start checking immediately.</p>
-                </div>
-                <div class="step-card">
-                    <div class="step-number">3</div>
-                    <h3>Invite Your Team</h3>
-                    <p>Add employees by email. They receive secure credentials instantly and can start monitoring right away.</p>
+                <div class="code-body">
+<span class="c-violet">import</span> <span class="c-cyan">requests</span><br>
+<span class="c-violet">from</span> <span class="c-cyan">api_monitor</span> <span class="c-violet">import</span> <span class="c-white">APIMonitor</span><br>
+<br>
+<span class="c-gray"># Initialize with your company credentials</span><br>
+<span class="c-white">monitor</span> <span class="c-violet">=</span> <span class="c-cyan">APIMonitor</span>(<br>
+&nbsp;&nbsp;<span class="c-white">api_key</span><span class="c-violet">=</span><span class="c-emerald">"your_api_key_here"</span>,<br>
+&nbsp;&nbsp;<span class="c-white">company_id</span><span class="c-violet">=</span><span class="c-emerald">"acme-corp-001"</span><br>
+)<br>
+<br>
+<span class="c-gray"># Register endpoints to monitor</span><br>
+<span class="c-white">monitor</span>.<span class="c-cyan">add_endpoint</span>({<br>
+&nbsp;&nbsp;<span class="c-emerald">"name"</span>: <span class="c-emerald">"Payment Gateway"</span>,<br>
+&nbsp;&nbsp;<span class="c-emerald">"url"</span>: <span class="c-emerald">"https://api.payments.com/v2/health"</span>,<br>
+&nbsp;&nbsp;<span class="c-emerald">"interval"</span>: <span class="c-violet">60</span>,  <span class="c-gray"># seconds</span><br>
+&nbsp;&nbsp;<span class="c-emerald">"alert_on_down"</span>: <span class="c-violet">True</span><br>
+})<br>
+<br>
+<span class="c-gray"># Start monitoring — alerts fire automatically</span><br>
+<span class="c-white">monitor</span>.<span class="c-cyan">start</span>()
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- ─── PORTALS ─────────────────────────────────────────────────── -->
+    <!-- PORTALS -->
     <section class="portals-section" id="portals">
         <div class="container">
             <div class="section-header">
@@ -481,7 +487,6 @@
                     </ul>
                     <div class="portal-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Enter Admin Portal</div>
                 </a>
-
                 <a href="employee-login.html" class="portal-card employee" id="employee-portal">
                     <div class="portal-icon-wrap"><i class="fa-solid fa-user-tie"></i></div>
                     <h2>Employee</h2>
@@ -499,13 +504,13 @@
         </div>
     </section>
 
-    <!-- ─── FOOTER ──────────────────────────────────────────────────── -->
+    <!-- FOOTER -->
     <footer>
         <div class="container">
             <div class="footer-grid">
                 <div class="footer-brand">
                     <a href="#" class="nav-brand" style="margin-bottom:.5rem;">
-                        <div class="nav-brand-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                        <div class="nav-brand-dot"></div>
                         <span class="nav-brand-text">API Monitor</span>
                     </a>
                     <p>Real-time API monitoring and analytics platform. Built for teams that demand reliability and visibility.</p>
@@ -525,22 +530,22 @@
                 <div class="footer-col">
                     <h4>Tech Stack</h4>
                     <a href="#">Python & Flask</a>
-                    <a href="#">SQLite Database</a>
+                    <a href="#">PostgreSQL</a>
                     <a href="#">JWT Authentication</a>
                     <a href="#">SMTP Integration</a>
                 </div>
             </div>
             <div class="footer-bottom">
                 <span>&copy; 2026 API Monitor SaaS. All rights reserved.</span>
-                <div class="footer-social">
-                    <a href="#"><i class="fa-brands fa-github"></i></a>
-                    <a href="#"><i class="fa-brands fa-linkedin"></i></a>
-                    <a href="#"><i class="fa-brands fa-x-twitter"></i></a>
+                <div class="footer-status">
+                    <span class="status-dot"></span>
+                    <span style="color:#10B981;font-weight:600;">All Systems Operational</span>
                 </div>
             </div>
         </div>
     </footer>
 
+    <!-- MODAL -->
     <div class="modal-overlay" id="modal-overlay">
         <div class="modal-container">
             <button class="modal-close" id="modal-close">&times;</button>
@@ -550,32 +555,31 @@
             </div>
             <div class="modal-body" id="modal-body"></div>
             <div class="modal-footer">
-                <button class="btn primary" onclick="closeModal()">Got it</button>
+                <a href="#" class="btn-shiny" onclick="closeModal(); return false;"><span class="btn-shiny-inner">Got it</span></a>
             </div>
         </div>
     </div>
 
     <script>
-        // ── Details Content Mapping ──
         const detailsData = {
             'features': {
-                'Real-Time Monitoring': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(124,58,237,.12)', textColor: '#a78bfa', desc: 'Our system executes concurrent API checks every 60 seconds with sub-millisecond precision. Data is stored in an optimized local database with indexing for rapid retrieval.' },
+                'Real-Time Monitoring': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(139,92,246,.12)', textColor: '#a78bfa', desc: 'Our system executes concurrent API checks every 60 seconds with sub-millisecond precision. Data is stored in an optimized database with indexing for rapid retrieval.' },
                 'Instant Email Alerts': { icon: '<i class="fa-solid fa-bell"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', desc: 'Leveraging SMTP priority queues, alerts are dispatched within 3 seconds of failure detection. Templates are HTML5-optimized for all modern mail clients.' },
-                'Advanced Analytics': { icon: '<i class="fa-solid fa-chart-area"></i>', color: 'rgba(34,197,94,.12)', textColor: '#22c55e', desc: 'We provide rolling 24-hour response time windows with weighted averages. Incident timelines capture precise down/up timestamps with error code logging.' },
-                'Daily Summary Reports': { icon: '<i class="fa-solid fa-envelope-open-text"></i>', color: 'rgba(245,158,11,.12)', textColor: '#f59e0b', desc: 'Aggregated background jobs compile cross-API data at 00:00 UTC. Reports include uptime percentages, total incident counts, and performance deltas.' },
-                'Role-Based Access': { icon: '<i class="fa-solid fa-user-shield"></i>', color: 'rgba(239,68,68,.12)', textColor: '#ef4444', desc: 'Secure JWT-based session management separates Company (Admin) and Employee views. Permission layers ensure data isolation and secure portal entry.' },
+                'Advanced Analytics': { icon: '<i class="fa-solid fa-chart-area"></i>', color: 'rgba(16,185,129,.12)', textColor: '#10B981', desc: 'We provide rolling 24-hour response time windows with weighted averages. Incident timelines capture precise down/up timestamps with error code logging.' },
+                'Daily Summary Reports': { icon: '<i class="fa-solid fa-envelope-open-text"></i>', color: 'rgba(245,158,11,.12)', textColor: '#fbbf24', desc: 'Aggregated background jobs compile cross-API data at 00:00 UTC. Reports include uptime percentages, total incident counts, and performance deltas.' },
+                'Role-Based Access': { icon: '<i class="fa-solid fa-user-shield"></i>', color: 'rgba(239,68,68,.12)', textColor: '#f87171', desc: 'Secure JWT-based session management separates Company (Admin) and Employee views. Permission layers ensure data isolation and secure portal entry.' },
                 'Employee Invitations': { icon: '<i class="fa-solid fa-user-plus"></i>', color: 'rgba(236,72,153,.12)', textColor: '#f472b6', desc: 'One-click onboarding with secure password derivation. Credentials are sent via TLS-encrypted email directly to the employee\'s inbox.' }
             },
             'stats': {
-                '99.9%': { icon: '<i class="fa-solid fa-chart-line"></i>', color: 'rgba(124,58,237,.12)', textColor: '#a78bfa', title: 'Uptime Precision', desc: 'Measured over a 30-day rolling window. We track uptime based on successful HTTP 2xx/3xx responses from global monitoring nodes.' },
+                '99.9%': { icon: '<i class="fa-solid fa-chart-line"></i>', color: 'rgba(139,92,246,.12)', textColor: '#a78bfa', title: 'Uptime Precision', desc: 'Measured over a 30-day rolling window. We track uptime based on successful HTTP 2xx/3xx responses.' },
                 '<1s': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', title: 'Alert Latency', desc: 'Average latency from detection to SMTP dispatch. Our alert engine uses asynchronous task queues to minimize notification delays.' },
-                '30d': { icon: '<i class="fa-solid fa-database"></i>', color: 'rgba(34,197,94,.12)', textColor: '#22c55e', title: 'Data Retention', desc: 'Automatic cleanup jobs purge data older than 30 days to maintain dashboard performance and database efficiency.' },
-                '24/7': { icon: '<i class="fa-solid fa-clock"></i>', color: 'rgba(245,158,11,.12)', textColor: '#f59e0b', title: 'Always-On Coverage', desc: 'Redundant monitoring cycles ensure zero-gap coverage. If one monitoring cycle fails, our watchdog process immediately resumes the loop.' }
+                '30d': { icon: '<i class="fa-solid fa-database"></i>', color: 'rgba(16,185,129,.12)', textColor: '#10B981', title: 'Data Retention', desc: 'Automatic cleanup jobs purge data older than 30 days to maintain dashboard performance and database efficiency.' },
+                '24/7': { icon: '<i class="fa-solid fa-clock"></i>', color: 'rgba(245,158,11,.12)', textColor: '#fbbf24', title: 'Always-On Coverage', desc: 'Redundant monitoring cycles ensure zero-gap coverage. If one monitoring cycle fails, our watchdog process immediately resumes the loop.' }
             },
             'steps': {
-                '1': { icon: '1', color: 'rgba(124,58,237,.15)', textColor: '#a78bfa', title: 'Register Your Company', desc: 'Verification is handled via a 6-digit OTP sent to your provided company email. Once verified, you gain full ownership of your monitoring workspace.' },
+                '1': { icon: '1', color: 'rgba(139,92,246,.15)', textColor: '#a78bfa', title: 'Register Your Company', desc: 'Verification is handled via a 6-digit OTP sent to your provided company email. Once verified, you gain full ownership of your monitoring workspace.' },
                 '2': { icon: '2', color: 'rgba(6,182,212,.15)', textColor: '#22d3ee', title: 'Add API Endpoints', desc: 'Support for REST, GraphQL, and SOAP endpoints. Configure custom headers, body payloads, and timeout thresholds for each individual API.' },
-                '3': { icon: '3', color: 'rgba(34,197,94,.15)', textColor: '#22c55e', title: 'Invite Your Team', desc: 'Admins can scale their team instantly. Invited employees get immediate access to the dashboard with restricted monitoring-only permissions.' }
+                '3': { icon: '3', color: 'rgba(16,185,129,.15)', textColor: '#10B981', title: 'Invite Your Team', desc: 'Admins can scale their team instantly. Invited employees get immediate access to the dashboard with restricted monitoring-only permissions.' }
             }
         };
 
@@ -587,7 +591,6 @@
         function openModal(type, key) {
             const data = detailsData[type][key];
             if (!data) return;
-
             modalIcon.innerHTML = data.icon;
             modalIcon.style.background = data.color;
             modalIcon.style.color = data.textColor;
@@ -596,14 +599,11 @@
             modalOverlay.classList.add('active');
         }
 
-        function closeModal() {
-            modalOverlay.classList.remove('active');
-        }
+        function closeModal() { modalOverlay.classList.remove('active'); }
 
         document.getElementById('modal-close').onclick = closeModal;
         modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };
 
-        // ── Card Click Listeners ──
         document.querySelectorAll('.feature-card').forEach(card => {
             const title = card.querySelector('h3').textContent;
             card.onclick = () => openModal('features', title);
@@ -617,7 +617,6 @@
             card.onclick = () => openModal('steps', num);
         });
 
-        // ── Smooth scroll for anchor links ──
         document.querySelectorAll('a[href^="#"]').forEach(a => {
             a.addEventListener('click', e => {
                 e.preventDefault();
@@ -626,13 +625,6 @@
             });
         });
 
-        // ── Navbar background on scroll ──
-        window.addEventListener('scroll', () => {
-            document.getElementById('navbar').style.background =
-                window.scrollY > 40 ? 'rgba(6,9,24,0.92)' : 'rgba(6,9,24,0.75)';
-        });
-
-        // ── Intersection Observer for fade-in ──
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 if (e.isIntersecting) {
@@ -641,14 +633,13 @@
                 }
             });
         }, { threshold: 0.1 });
-        document.querySelectorAll('.feature-card, .stat-card, .step-card, .portal-card').forEach(el => {
+        document.querySelectorAll('.feature-card, .stat-card, .step-card, .portal-card').forEach((el, i) => {
             el.style.opacity = '0';
-            el.style.transform = 'translateY(24px)';
-            el.style.transition = 'opacity .6s ease, transform .6s ease';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = `opacity .6s ease ${i*0.08}s, transform .6s cubic-bezier(0.23,1,0.32,1) ${i*0.08}s`;
             observer.observe(el);
         });
 
-        // ── Auth redirect ──
         (function() {
             try {
                 const token = localStorage.getItem('auth_token');
@@ -657,6 +648,102 @@
                     window.location.href = user.role === 'employee' ? 'index.html' : 'company-dashboard.html';
                 }
             } catch(e) {}
+        })();
+
+        // ── CURSOR ANIMATION ──
+        (function() {
+            // Only run on non-touch devices
+            if (!window.matchMedia('(pointer: fine)').matches) return;
+
+            const spotlight = document.getElementById('cursor-spotlight');
+            const dot       = document.getElementById('cursor-dot');
+            const ring      = document.getElementById('cursor-ring');
+
+            let mouseX = 0, mouseY = 0;
+            let ringX  = 0, ringY  = 0;
+            let isVisible = false;
+
+            // Interactive elements that trigger cursor expansion
+            const interactiveSelectors = 'a, button, .feature-card, .stat-card, .step-card, .portal-card, .btn-shiny, .btn-secondary, .nav-cta';
+
+            function showCursor() {
+                if (!isVisible) {
+                    dot.style.opacity = '1';
+                    ring.style.opacity = '1';
+                    spotlight.style.opacity = '1';
+                    isVisible = true;
+                }
+            }
+
+            document.addEventListener('mousemove', function(e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
+
+                showCursor();
+
+                // Dot and spotlight snap immediately
+                dot.style.left = mouseX + 'px';
+                dot.style.top  = mouseY + 'px';
+                spotlight.style.left = mouseX + 'px';
+                spotlight.style.top  = mouseY + 'px';
+            }, { passive: true });
+
+            // Ring follows with a smooth lag (rAF lerp)
+            function animateRing() {
+                ringX += (mouseX - ringX) * 0.12;
+                ringY += (mouseY - ringY) * 0.12;
+                ring.style.left = ringX + 'px';
+                ring.style.top  = ringY + 'px';
+                requestAnimationFrame(animateRing);
+            }
+            animateRing();
+
+            // Expand cursor on hover over interactive elements
+            document.addEventListener('mouseover', function(e) {
+                if (e.target.closest(interactiveSelectors)) {
+                    dot.style.width  = '14px';
+                    dot.style.height = '14px';
+                    dot.style.background = '#22d3ee';
+                    dot.style.boxShadow = '0 0 16px rgba(34,211,238,0.9), 0 0 6px rgba(34,211,238,1)';
+                    ring.style.width  = '56px';
+                    ring.style.height = '56px';
+                    ring.style.borderColor = 'rgba(34,211,238,0.5)';
+                    // Shift spotlight to cyan on interactive
+                    spotlight.style.background = 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, rgba(139,92,246,0.05) 30%, transparent 70%)';
+                }
+            }, { passive: true });
+
+            document.addEventListener('mouseout', function(e) {
+                if (e.target.closest(interactiveSelectors)) {
+                    dot.style.width  = '8px';
+                    dot.style.height = '8px';
+                    dot.style.background = '#a78bfa';
+                    dot.style.boxShadow = '0 0 12px rgba(167,139,250,0.8), 0 0 4px rgba(167,139,250,1)';
+                    ring.style.width  = '36px';
+                    ring.style.height = '36px';
+                    ring.style.borderColor = 'rgba(139,92,246,0.4)';
+                    spotlight.style.background = 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, rgba(6,182,212,0.04) 30%, transparent 70%)';
+                }
+            }, { passive: true });
+
+            // Click burst effect
+            document.addEventListener('mousedown', function() {
+                dot.style.transform = 'translate(-50%, -50%) scale(0.7)';
+                ring.style.transform = 'translate(-50%, -50%) scale(0.85)';
+            });
+            document.addEventListener('mouseup', function() {
+                dot.style.transform = 'translate(-50%, -50%) scale(1)';
+                ring.style.transform = 'translate(-50%, -50%) scale(1)';
+            });
+
+            // Hide when cursor leaves window
+            document.addEventListener('mouseleave', function() {
+                dot.style.opacity = '0';
+                ring.style.opacity = '0';
+                spotlight.style.opacity = '0';
+                isVisible = false;
+            });
+            document.addEventListener('mouseenter', showCursor);
         })();
     </script>
 </body>

@@ -5,11 +5,35 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Employee Monitor — API Monitor</title>
     <meta name="description" content="Monitor all employee API activity, endpoint health, and key issues across your team.">
+    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="css/styles.css">
+
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        .em-stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.5rem; margin-bottom: 2.5rem; }
+        .glass-stat-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 20px; padding: 1.5rem; backdrop-filter: blur(10px); }
+        
+        .management-monolith { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; backdrop-filter: blur(20px); }
+        .management-header { padding: 1.5rem 2rem; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; background: rgba(255,255,255,0.02); }
+        
+        .emp-table-syn { width: 100%; border-collapse: collapse; }
+        .emp-table-syn th { text-align: left; padding: 1.25rem 1.5rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border); }
+        .emp-table-syn td { padding: 1.25rem 1.5rem; font-size: 0.85rem; color: #fff; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        
+        .avatar-hex { width: 36px; height: 36px; border-radius: 10px; background: var(--violet); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 800; color: #fff; box-shadow: 0 0 20px rgba(139, 92, 246, 0.2); }
+        
+        .side-panel-syn { position: fixed; top: 0; right: -100%; width: 600px; height: 100vh; background: rgba(3,3,3,0.8); backdrop-filter: blur(40px); border-left: 1px solid var(--border); z-index: 2000; transition: right 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        .side-panel-syn.open { right: 0; }
+        
+        .ep-row-syn { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; display: flex; align-items: center; justify-content: space-between; }
+    </style>
     <style>
         /* Summary Stats */
         .em-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
@@ -73,126 +97,140 @@
     </style>
 </head>
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Company</div>
-                <a href="company-dashboard.html" class="menu-item">
-                    <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Enterprise Control</div>
+                <a href="company-dashboard.html" class="nav-item">
+                    <i class="fa-solid fa-chart-line"></i><span>Global Analytics</span>
                 </a>
-                <a href="index.html" class="menu-item">
+                <a href="employee-monitor.html" class="nav-item active">
+                    <i class="fa-solid fa-users-viewfinder"></i><span>Entity Registry</span>
+                </a>
+                <a href="index.html" class="nav-item">
                     <i class="fa-solid fa-chart-pie"></i><span>Monitoring</span>
                 </a>
-                <a href="api-endpoints.html" class="menu-item">
-                    <i class="fa-solid fa-server"></i><span>API Endpoints</span>
+            </div>
+            <div class="nav-group">
+                <div class="nav-label">System Nodes</div>
+                <a href="api-endpoints.html" class="nav-item">
+                    <i class="fa-solid fa-server"></i><span>Data Nodes</span>
                 </a>
-                <a href="logs.html" class="menu-item">
-                    <i class="fa-solid fa-list-check"></i><span>Logs</span>
+                <a href="logs.html" class="nav-item">
+                    <i class="fa-solid fa-list-check"></i><span>Sequence Logs</span>
                 </a>
-                <a href="alerts.html" class="menu-item">
-                    <i class="fa-solid fa-bell"></i><span>Alerts</span>
+                <a href="alerts.html" class="nav-item">
+                    <i class="fa-solid fa-bell"></i><span>Anomaly Feed</span>
                 </a>
             </div>
-            <div class="menu-section">
-                <div class="menu-section-title">Management</div>
-                <a href="employee-monitor.html" class="menu-item active">
-                    <i class="fa-solid fa-users-viewfinder"></i><span>Employee Monitor</span>
+            <div class="nav-group">
+                <div class="nav-label">Config</div>
+                <a href="admin.html" class="nav-item">
+                    <i class="fa-solid fa-user-plus"></i><span>Provisioning</span>
                 </a>
-                <a href="admin.html" class="menu-item">
-                    <i class="fa-solid fa-user-plus"></i><span>Invite Employees</span>
-                </a>
-                <a href="profile.html" class="menu-item">
-                    <i class="fa-solid fa-user-gear"></i><span>Profile</span>
+                <a href="profile.html" class="nav-item">
+                    <i class="fa-solid fa-user-gear"></i><span>Identity</span>
                 </a>
             </div>
         </nav>
-        <div class="sidebar-footer">
-            <div class="user-avatar-small">A</div>
-            <div class="user-info">
-                <span class="user-name">Admin</span>
-                <span class="user-role">Company</span>
+        <div class="sidebar-user">
+            <div class="user-avatar-small">U</div>
+            <div class="user-meta">
+                <span class="user-name">Commander</span>
+                <span class="user-role">Corporate Admin</span>
             </div>
         </div>
     </aside>
 
     <!-- Main -->
     <main class="main-content">
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
-                <h2>Employee Monitor</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Entity Registry</h2>
+                </div>
             </div>
-            <div class="topbar-right">
-                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
-                <div class="user-avatar-small">A</div>
+            <div class="top-bar-right">
+                <button class="icon-btn" id="btn-refresh" title="Force Sync"><i class="fa-solid fa-rotate-right"></i></button>
+                <div class="user-avatar-small">U</div>
             </div>
         </header>
 
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h1>Employee Activity Monitor</h1>
-                    <p style="display:flex;align-items:center;gap:0.75rem;">
-                        Track all team member API usage and health
-                        <span class="live-badge">LIVE</span>
-                    </p>
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Employee Activity</h1>
+                    <p class="view-subtitle">Real-time surveillance of team API interaction cycles <span class="live-badge" style="margin-left: 1rem;">LIVE SYNC</span></p>
                 </div>
-                <div class="header-actions">
-                    <a href="admin.html" class="btn"><i class="fa-solid fa-user-plus"></i> Invite Employee</a>
+                <div class="view-actions">
+                    <div class="btn-shiny">
+                        <a href="admin.html" class="btn-shiny-inner" style="text-decoration: none;">
+                            <i class="fa-solid fa-user-plus"></i> PROVISION ENTITY
+                        </a>
+                    </div>
                 </div>
             </div>
 
             <!-- Summary Stats -->
-            <div class="em-stats" id="em-stats-row">
-                <div class="em-stat-card purple">
-                    <div class="em-stat-value" id="stat-emp-total">—</div>
-                    <div class="em-stat-label">Total Employees</div>
+            <div class="em-stats-grid" id="em-stats-row">
+                <div class="glass-stat-card">
+                    <div style="font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--violet);" id="stat-emp-total">—</div>
+                    <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem;">Registered Entities</div>
                 </div>
-                <div class="em-stat-card green">
-                    <div class="em-stat-value" id="stat-emp-apis">—</div>
-                    <div class="em-stat-label">Employee-Added APIs</div>
+                <div class="glass-stat-card">
+                    <div style="font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--cyan);" id="stat-emp-apis">—</div>
+                    <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem;">Active Nodes</div>
                 </div>
-                <div class="em-stat-card red">
-                    <div class="em-stat-value" id="stat-emp-down">—</div>
-                    <div class="em-stat-label">APIs Currently Down</div>
+                <div class="glass-stat-card">
+                    <div style="font-size: 2.5rem; font-weight: 800; line-height: 1; color: var(--rose);" id="stat-emp-down">—</div>
+                    <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem;">Critical Failures</div>
                 </div>
-                <div class="em-stat-card amber">
-                    <div class="em-stat-value" id="stat-emp-incidents">—</div>
-                    <div class="em-stat-label">Incidents Today (24h)</div>
+                <div class="glass-stat-card">
+                    <div style="font-size: 2.5rem; font-weight: 800; line-height: 1; color: #fbbf24;" id="stat-emp-incidents">—</div>
+                    <div style="font-size: 0.65rem; font-weight: 700; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.5rem;">Anomaly Signals</div>
                 </div>
             </div>
 
             <!-- Employee Table -->
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="card-header" style="padding:1.25rem 1.5rem;">
-                    <div class="card-title"><i class="fa-solid fa-table-list text-muted"></i> Team Overview</div>
-                    <div style="display:flex;gap:0.75rem;align-items:center;">
-                        <input type="text" id="emp-search" class="form-control" placeholder="Search employees..." style="width:200px;height:34px;font-size:0.85rem;">
+            <div class="management-monolith">
+                <div class="management-header">
+                    <div style="display: flex; gap: 2rem; align-items: center;">
+                        <div style="font-size: 0.65rem; font-weight: 800; letter-spacing: 0.15em; color: var(--text-dim); text-transform: uppercase;">Team Operational Status</div>
+                        <div class="search-input-group" style="width: 300px;">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="text" id="emp-search" placeholder="Filter entities...">
+                        </div>
                     </div>
                 </div>
                 <div class="emp-table-wrap">
-                    <table class="emp-table" id="emp-table">
+                    <table class="emp-table-syn" id="emp-table">
                         <thead>
                             <tr>
-                                <th data-col="name">Employee <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th data-col="total_endpoints">APIs <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th data-col="down_endpoints">Down <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th data-col="key_issues">Key Issues <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th data-col="recent_incidents">Incidents (24h) <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th data-col="avg_response_time">Avg RT <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
-                                <th>Health</th>
-                                <th>Last Activity</th>
+                                <th data-col="name">ENTITY <i class="fa-solid fa-sort"></i></th>
+                                <th data-col="total_endpoints">NODES <i class="fa-solid fa-sort"></i></th>
+                                <th data-col="down_endpoints">FAILURES <i class="fa-solid fa-sort"></i></th>
+                                <th data-col="key_issues">ISSUES <i class="fa-solid fa-sort"></i></th>
+                                <th data-col="recent_incidents">SIGNALS <i class="fa-solid fa-sort"></i></th>
+                                <th data-col="avg_response_time">LATENCY <i class="fa-solid fa-sort"></i></th>
+                                <th>HEALTH</th>
+                                <th>LAST SYNC</th>
                                 <th></th>
                             </tr>
                         </thead>
                         <tbody id="emp-tbody">
-                            <tr><td colspan="9" class="empty-state" style="padding:3rem;text-align:center;">
-                                <i class="fa-solid fa-circle-notch fa-spin"></i><p>Loading employees...</p>
+                            <tr><td colspan="9" style="padding: 5rem; text-align: center; opacity: 0.5;">
+                                <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem; display: block;"></i>
+                                SYNCHRONIZING ENTITY DATA...
                             </td></tr>
                         </tbody>
                     </table>
@@ -200,23 +238,24 @@
             </div>
         </div>
 
-        <!-- Employee Panel -->
-        <div class="emp-panel-overlay" id="empPanelOverlay"></div>
-        <div class="emp-panel" id="empPanel">
-            <div class="emp-panel-header">
-                <div>
-                    <div class="card-title" id="emp-panel-title"><i class="fa-solid fa-user"></i> Endpoints</div>
-                    <div style="font-size:0.78rem;color:var(--text-muted);" id="emp-panel-subtitle"></div>
+        <!-- Employee Panel (Synapse Style) -->
+        <div class="emp-panel-overlay" id="empPanelOverlay" style="background: rgba(0,0,0,0.8); backdrop-filter: blur(20px);"></div>
+        <div class="side-panel-syn" id="empPanel">
+            <div class="glass-card-header" style="padding: 2rem; border-bottom: 1px solid var(--border);">
+                <div style="flex: 1;">
+                    <div class="glass-card-title" id="emp-panel-title">ENTITY DATA NODES</div>
+                    <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 0.25rem;" id="emp-panel-subtitle"></div>
                 </div>
-                <button class="action-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
+                <button class="icon-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
             </div>
-            <div class="emp-panel-body">
+            <div style="padding: 2rem; overflow-y: auto; height: calc(100% - 80px);">
                 <div id="emp-panel-endpoints"></div>
             </div>
         </div>
     </main>
 
     <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script>
     // ── Auth + role guard ────────────────────────────────────────────────────
@@ -297,23 +336,22 @@
             const incCls  = emp.recent_incidents > 0 ? 'danger' : 'zero';
             return `<tr>
                 <td>
-                    <div class="emp-name-cell">
-                        <div class="emp-tbl-avatar">${(emp.name||'E').charAt(0).toUpperCase()}</div>
+                    <div class="user-pill">
+                        <div class="avatar-hex">${(emp.name||'E').charAt(0).toUpperCase()}</div>
                         <div>
-                            <div class="emp-name-main">${escapeHtml(emp.name)}</div>
-                            <div class="emp-email-sub">${escapeHtml(emp.email)}</div>
-                            ${emp.employee_id ? `<span class="emp-id-pill">${escapeHtml(emp.employee_id)}</span>` : ''}
+                            <div style="font-weight: 600;">${escapeHtml(emp.name)}</div>
+                            <div style="font-size: 0.7rem; color: var(--text-dim);">${escapeHtml(emp.email)}</div>
                         </div>
                     </div>
                 </td>
-                <td><span class="count-badge">${emp.total_endpoints}</span></td>
-                <td><span class="count-badge ${downCls}"><i class="fa-solid fa-circle-exclamation"></i> ${emp.down_endpoints}</span></td>
-                <td><span class="count-badge ${keyCls}"><i class="fa-solid fa-key"></i> ${emp.key_issues}</span></td>
-                <td><span class="count-badge ${incCls}">${emp.recent_incidents}</span></td>
-                <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">${emp.avg_response_time || 0}ms</td>
-                <td><span class="health-ring"><span class="health-dot ${health}"></span>${healthLabel}</span></td>
-                <td style="font-size:0.78rem;color:var(--text-muted);">${lastAct}</td>
-                <td><button class="btn-drill" onclick="openEmpPanel('${emp.id}', '${escapeHtml(emp.name)}')">View APIs</button></td>
+                <td><span style="font-family: 'JetBrains Mono'; font-weight: 700;">${emp.total_endpoints}</span></td>
+                <td><span style="color: ${emp.down_endpoints > 0 ? 'var(--rose)' : 'var(--text-dim)'}; font-weight: 700;">${emp.down_endpoints}</span></td>
+                <td><span style="color: ${emp.key_issues > 0 ? '#fbbf24' : 'var(--text-dim)'}; font-weight: 700;">${emp.key_issues}</span></td>
+                <td><span style="color: ${emp.recent_incidents > 0 ? 'var(--rose)' : 'var(--text-dim)'}; font-weight: 700;">${emp.recent_incidents}</span></td>
+                <td style="font-family:'JetBrains Mono',monospace; color: var(--cyan);">${emp.avg_response_time || 0}ms</td>
+                <td><span class="status-pill ${health}">${healthLabel}</span></td>
+                <td style="font-size:0.75rem; color:var(--text-dim);">${lastAct}</td>
+                <td style="text-align: right;"><button class="btn-glass" onclick="openEmpPanel('${emp.id}', '${escapeHtml(emp.name)}')">NODES</button></td>
             </tr>`;
         }).join('');
     }
@@ -353,17 +391,18 @@
                 const mCls = { GET:'m-get', POST:'m-post', PUT:'m-put', DELETE:'m-delete' }[method] || 'm-get';
                 const keyBadge = ep.key_status && ep.key_status !== 'VALID'
                     ? `<span style="font-size:0.68rem;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,0.15);color:#fbbf24;font-weight:600;">${ep.key_status}</span>` : '';
-                return `<div class="ep-row">
-                    <div>
-                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:2px;">
-                            <span class="monitor-card-method ${mCls}">${method}</span>
-                            <span class="ep-name">${escapeHtml(ep.name || 'Unnamed')}</span>
+                return `<div class="ep-row-syn">
+                    <div style="flex: 1;">
+                        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.25rem;">
+                            <span class="status-pill up" style="font-size: 0.6rem; padding: 2px 6px;">${method}</span>
+                            <span style="font-weight: 600; font-size: 0.9rem;">${escapeHtml(ep.name || 'Unnamed')}</span>
                         </div>
-                        <div class="ep-url">${escapeHtml(ep.url || '')}</div>
+                        <div style="font-size: 0.7rem; color: var(--text-dim); font-family: 'JetBrains Mono';">${escapeHtml(ep.url || '')}</div>
                     </div>
-                    <span class="status-pill ${sc}">${sl}</span>
-                    ${keyBadge}
-                    <span style="font-size:0.78rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">${ep.last_response_time != null ? ep.last_response_time + 'ms' : '—'}</span>
+                    <div style="display: flex; align-items: center; gap: 1.5rem;">
+                        <span class="status-pill ${sc}">${sl}</span>
+                        <span style="font-size: 0.85rem; color: var(--cyan); font-family: 'JetBrains Mono'; font-weight: 700;">${ep.last_response_time != null ? ep.last_response_time + 'ms' : '—'}</span>
+                    </div>
                 </div>`;
             }).join('');
         }).catch(() => {

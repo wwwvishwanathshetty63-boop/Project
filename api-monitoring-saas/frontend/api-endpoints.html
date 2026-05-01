@@ -9,64 +9,90 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 
     <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- App Styles -->
-    <link rel="stylesheet" href="css/styles.css">
+    <!-- Synapse Design System -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        .filter-bar-synapse { display: flex; align-items: center; gap: 1.5rem; padding: 1.5rem; background: rgba(255,255,255,0.02); border-bottom: 1px solid var(--border); }
+        .ep-table-container { background: rgba(255,255,255,0.01); border: 1px solid var(--border); border-radius: 24px; overflow: hidden; backdrop-filter: blur(20px); }
+        
+        .status-pill { font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; padding: 4px 10px; border-radius: 6px; text-transform: uppercase; }
+        .status-pill.up { background: rgba(16, 185, 129, 0.1); color: var(--emerald); border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-pill.down { background: rgba(244, 63, 94, 0.1); color: var(--rose); border: 1px solid rgba(244, 63, 94, 0.2); }
+        .status-pill.paused { background: rgba(255, 255, 255, 0.05); color: var(--text-dim); border: 1px solid var(--border); }
+
+        .search-input-group { position: relative; flex: 1; max-width: 400px; }
+        .search-input-group i { position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.8rem; }
+        .search-input-group input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 0.75rem 1rem 0.75rem 2.5rem; color: #fff; font-size: 0.85rem; transition: all 0.3s; }
+        .search-input-group input:focus { border-color: var(--violet); background: rgba(255,255,255,0.06); outline: none; box-shadow: 0 0 15px var(--violet-glow); }
+        
+        .pill-toggle { display: flex; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 4px; }
+        .pill-toggle-btn { background: transparent; border: none; color: var(--text-dim); padding: 6px 16px; border-radius: 8px; font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .pill-toggle-btn.active { background: #fff; color: #000; }
+        
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 1.25rem 1.5rem; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); font-weight: 700; border-bottom: 1px solid var(--border); }
+        td { padding: 1.25rem 1.5rem; font-size: 0.85rem; color: #fff; border-bottom: 1px solid var(--border); }
+        tr:hover td { background: rgba(255,255,255,0.02); }
+        
+        .ep-name-cell { font-weight: 700; letter-spacing: -0.01em; }
+        .ep-url-cell { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--text-dim); opacity: 0.7; }
+    </style>
 </head>
 
 <body>
+    <!-- Atmospheric Elements -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
 
     <!-- Sidebar -->
     <aside class="sidebar">
-        <div class="sidebar-header">
-            <i class="fa-solid fa-satellite-dish"></i>
-            <span>API Monitor</span>
+        <div class="sidebar-brand">
+            <div class="brand-logo"><i class="fa-solid fa-satellite-dish"></i></div>
+            <span class="brand-name">Synapse</span>
         </div>
-
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Main</div>
-                <a href="index.html" class="menu-item">
+        <nav class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-label">Core Systems</div>
+                <a href="index.html" class="nav-item">
                     <i class="fa-solid fa-chart-pie"></i>
-                    <span>Dashboard</span>
+                    <span>Command Center</span>
                 </a>
-                <a href="api-endpoints.html" class="menu-item active">
+                <a href="api-endpoints.html" class="nav-item active">
                     <i class="fa-solid fa-server"></i>
-                    <span>API Endpoints</span>
+                    <span>Data Nodes</span>
                 </a>
-                <a href="logs.html" class="menu-item">
+                <a href="logs.html" class="nav-item">
                     <i class="fa-solid fa-list-check"></i>
-                    <span>Monitoring Logs</span>
+                    <span>Sequence Logs</span>
                 </a>
-                <a href="alerts.html" class="menu-item">
+                <a href="alerts.html" class="nav-item">
                     <i class="fa-solid fa-bell"></i>
-                    <span>Alerts</span>
+                    <span>Anomaly Feed</span>
                 </a>
             </div>
-
-            <div class="menu-section">
-                <div class="menu-section-title">Settings</div>
-                <a href="profile.html" class="menu-item">
+            <div class="nav-group">
+                <div class="nav-label">Config</div>
+                <a href="profile.html" class="nav-item">
                     <i class="fa-solid fa-user-gear"></i>
-                    <span>Profile</span>
+                    <span>Identity</span>
                 </a>
-                <a href="admin.html" class="menu-item">
+                <a href="admin.html" class="nav-item">
                     <i class="fa-solid fa-shield-halved"></i>
-                    <span>Admin Panel</span>
+                    <span>Security Hub</span>
                 </a>
             </div>
         </nav>
-
-        <div class="sidebar-footer">
-            <div class="user-avatar-small">PP</div>
-            <div class="user-info">
-                <span class="user-name">User</span>
-                <span class="user-role">Admin</span>
+        <div class="sidebar-user">
+            <div class="user-avatar-small">U</div>
+            <div class="user-meta">
+                <span class="user-name">Operator</span>
+                <span class="user-role">System Admin</span>
             </div>
         </div>
     </aside>
@@ -74,70 +100,56 @@
     <!-- Main Content -->
     <main class="main-content">
         <!-- Top Navbar -->
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h2>API Endpoints</h2>
+        <header class="top-bar">
+            <div class="top-bar-left">
+                <div class="page-title">
+                    <h2 style="font-family: 'Instrument Serif', serif; font-size: 1.75rem; letter-spacing: -0.02em;">Managed Nodes</h2>
+                </div>
             </div>
-
-            <div class="topbar-right">
-                <button class="topbar-action" id="btn-refresh" title="Refresh Data">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </button>
-                <button class="topbar-action" title="Notifications">
-                    <i class="fa-solid fa-bell"></i>
-                    <span class="notification-badge"></span>
-                </button>
-                <div class="user-avatar-small">PP</div>
+            <div class="top-bar-right">
+                <button class="icon-btn" id="btn-refresh" title="Refresh Sync"><i class="fa-solid fa-rotate-right"></i></button>
+                <div class="user-avatar-small">U</div>
             </div>
         </header>
 
         <!-- Page Content -->
-        <div class="content">
-            <div class="page-header">
-                <div>
-                    <h1>Monitored APIs</h1>
-                    <p>Manage and view all your API endpoints</p>
+        <div class="content-body">
+            <div class="view-header">
+                <div class="view-title-group">
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 3rem; letter-spacing: -0.04em;">Endpoint Grid</h1>
+                    <p class="view-subtitle">Monitor and configure primary data ingestion points</p>
                 </div>
-                <button class="btn" id="btn-add-endpoint">
-                    <i class="fa-solid fa-plus"></i> Add Endpoint
-                </button>
+                <div class="view-actions">
+                    <div class="btn-shiny">
+                        <button class="btn-shiny-inner" id="btn-add-endpoint">
+                            <i class="fa-solid fa-plus"></i> ADD NODE
+                        </button>
+                    </div>
+                </div>
             </div>
 
             <!-- Full API Table -->
-            <div class="card" style="padding:0; overflow:hidden;">
-                <div class="card-header" style="padding:1.25rem 1.5rem; margin-bottom:0;">
-                    <div class="card-title">
-                        <i class="fa-solid fa-list text-muted"></i> All Endpoints
+            <div class="ep-table-container">
+                <div class="filter-bar-synapse">
+                    <div class="pill-toggle" id="ep-filter-pills">
+                        <button class="pill-toggle-btn active" data-filter="all">ALL</button>
+                        <button class="pill-toggle-btn" data-filter="up">OPTIMAL</button>
+                        <button class="pill-toggle-btn" data-filter="down">CRITICAL</button>
+                        <button class="pill-toggle-btn" data-filter="paused">STAGED</button>
                     </div>
-                    <span class="badge badge-gray" id="endpoints-count">Loading...</span>
-                </div>
+                    
+                    <div class="search-input-group">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="text" id="ep-search" placeholder="Search node designation or URI...">
+                    </div>
 
-                <!-- Filter bar -->
-                <div class="filter-bar">
-                    <div class="filter-pills" id="ep-filter-pills">
-                        <button class="filter-pill active" data-filter="all">All</button>
-                        <button class="filter-pill" data-filter="up">
-                            <span class="pulse-dot up" style="width:7px;height:7px;display:inline-block;margin-right:4px;"></span>Up
-                        </button>
-                        <button class="filter-pill" data-filter="down">
-                            <span class="pulse-dot down" style="width:7px;height:7px;display:inline-block;margin-right:4px;"></span>Down
-                        </button>
-                        <button class="filter-pill" data-filter="paused">Paused</button>
-                    </div>
-                    <div style="display:flex; align-items:center; gap:0.5rem; margin-left: 1rem;">
-                        <span style="font-size:0.8rem; color:var(--text-muted);">Range:</span>
-                        <select class="form-control" id="ep-range-selector" style="width:auto; padding:0.35rem 0.7rem; font-size:0.82rem;">
-                            <option value="1d">Last 24 Hours</option>
-                            <option value="7d">Last 7 Days</option>
-                            <option value="30d">Last 30 Days</option>
+                    <div style="margin-left: auto; display: flex; align-items: center; gap: 0.75rem;">
+                        <span style="font-size: 0.65rem; color: var(--text-dim); font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;">Scope</span>
+                        <select class="btn-glass" id="ep-range-selector" style="font-size: 0.75rem; border: 1px solid var(--border); padding: 0.5rem 1rem;">
+                            <option value="1d">LAST 24 HOURS</option>
+                            <option value="7d">LAST 7 DAYS</option>
+                            <option value="30d">LAST 30 DAYS</option>
                         </select>
-                    </div>
-                    <div class="filter-search" style="margin-left: auto;">
-                        <i class="fa-solid fa-magnifying-glass filter-search-icon"></i>
-                        <input type="text" id="ep-search" placeholder="Search APIs...">
                     </div>
                 </div>
 
@@ -145,14 +157,14 @@
                     <table id="all-endpoints-table">
                         <thead>
                             <tr>
-                                <th>API Name</th>
-                                <th>URL</th>
-                                <th>Method</th>
-                                <th>Status</th>
-                                <th>Response</th>
-                                <th id="uptime-header">Uptime (24h)</th>
-                                <th>Last Checked</th>
-                                <th class="text-right">Actions</th>
+                                <th>DESIGNATION</th>
+                                <th>NETWORK URI</th>
+                                <th>METHOD</th>
+                                <th>STATUS</th>
+                                <th>LATENCY</th>
+                                <th>RELIABILITY (24H)</th>
+                                <th>LAST SYNC</th>
+                                <th class="text-right">MGMT</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -162,94 +174,78 @@
                 </div>
             </div>
         </div>
+        </div>
 
         <!-- Add Endpoint Modal -->
-        <div id="addEndpointModal" class="modal-overlay"
-            style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
-            <div class="modal-content"
-                style="background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; width: 400px; max-width: 90%; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);">
-                <div class="modal-header"
-                    style="padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
-                    <h3 style="margin: 0; font-size: 1.25rem;">Add New Endpoint</h3>
-                    <button class="action-btn" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
+        <div id="addEndpointModal" class="modal-overlay" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 2000; align-items: center; justify-content: center; backdrop-filter: blur(20px);">
+            <div class="glass-card modal-content" style="width: 100%; max-width: 520px; padding: 0;">
+                <div class="glass-card-header" style="padding: 1.5rem 2rem; border-bottom: 1px solid var(--border);">
+                    <div class="glass-card-title">CONFIGURE NEW NODE</div>
+                    <button class="icon-btn" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
                 </div>
-                <div class="modal-body" style="padding: 1.5rem;">
-                    <div id="endpoint-error" class="error-alert" style="display: none;">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                        <span class="error-message"></span>
-                    </div>
+                <div class="modal-body" style="padding: 2rem;">
                     <form id="add-endpoint-form">
-                        <div class="form-group">
-                            <label class="form-label" for="endpoint-name">API Name</label>
-                            <input type="text" id="endpoint-name" class="form-control"
-                                placeholder="e.g. Payment Gateway" required>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>NODE DESIGNATION</label>
+                            <input type="text" id="endpoint-name" placeholder="Primary Gateway Alpha" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%;">
                         </div>
                         
-                        <div class="form-group">
-                            <label class="form-label">Monitor Type</label>
-                            <div style="display: flex; gap: 1.5rem; margin-top: 0.5rem;">
-                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-color); font-size: 0.875rem;">
-                                    <input type="radio" name="monitor_type" value="url" checked style="accent-color: var(--accent-color);">
-                                    Custom URL (Optional Key)
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>SECURITY PROTOCOL</label>
+                            <div style="display: flex; gap: 2rem; margin-top: 0.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; color: #fff; font-size: 0.8rem; font-weight: 500;">
+                                    <input type="radio" name="monitor_type" value="url" checked style="accent-color: var(--violet);">
+                                    Standard URI
                                 </label>
-                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: var(--text-color); font-size: 0.875rem;">
-                                    <input type="radio" name="monitor_type" value="api_key" style="accent-color: var(--accent-color);">
-                                    Secured API (Auto-detect URL)
+                                <label style="display: flex; align-items: center; gap: 0.75rem; cursor: pointer; color: #fff; font-size: 0.8rem; font-weight: 500;">
+                                    <input type="radio" name="monitor_type" value="api_key" style="accent-color: var(--violet);">
+                                    Secured Access
                                 </label>
                             </div>
                         </div>
 
-                        <div id="url-group-wrapper">
+                        <div id="url-group-wrapper" style="margin-bottom: 1.5rem;">
                             <div class="form-group">
-                                <label class="form-label" for="endpoint-url">Endpoint URL</label>
-                                <input type="url" id="endpoint-url" class="form-control"
-                                    placeholder="https://api.example.com/v1" required>
+                                <label>NETWORK ADDRESS (URI)</label>
+                                <input type="url" id="endpoint-url" placeholder="https://nexus.api.v1" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%;">
                             </div>
                         </div>
-                        <div class="form-group" style="display: flex; gap: 1rem;">
-                            <div style="flex: 1;">
-                                <label class="form-label" for="endpoint-method">Method</label>
-                                <select id="endpoint-method" class="form-control" required style="appearance: auto;">
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label>REQUEST METHOD</label>
+                                <select id="endpoint-method" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%; appearance: none; cursor: pointer;">
                                     <option value="GET">GET</option>
                                     <option value="POST">POST</option>
                                     <option value="PUT">PUT</option>
                                     <option value="DELETE">DELETE</option>
                                 </select>
                             </div>
-                            <div style="flex: 1;">
-                                <label class="form-label" for="endpoint-interval">Check Interval</label>
-                                <select id="endpoint-interval" class="form-control" required style="appearance: auto;">
-                                    <option value="60">1 min</option>
-                                    <option value="300">5 min</option>
-                                    <option value="600">10 min</option>
+                            <div class="form-group">
+                                <label>SYNC FREQUENCY</label>
+                                <select id="endpoint-interval" required style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%; appearance: none; cursor: pointer;">
+                                    <option value="60">1 MINUTE</option>
+                                    <option value="300">5 MINUTES</option>
+                                    <option value="600">10 MINUTES</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group" id="api-key-group" style="display: block;">
-                            <label class="form-label" for="endpoint-api-key">API Key</label>
+
+                        <div class="form-group" id="api-key-group" style="margin-bottom: 2rem;">
+                            <label>ENCRYPTION KEY / TOKEN</label>
                             <div style="position: relative;">
-                                <input type="password" id="endpoint-api-key" class="form-control"
-                                    placeholder="sk-xxxx... or Bearer token" style="padding-right: 2.5rem;">
-                                <button type="button" id="toggle-key-visibility" class="action-btn" 
-                                    style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%);"
-                                    title="Toggle visibility">
+                                <input type="password" id="endpoint-api-key" placeholder="••••••••••••••••" style="background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; color: #fff; width: 100%; padding-right: 3rem;">
+                                <button type="button" id="toggle-key-visibility" class="icon-btn" style="position: absolute; right: 1rem; top: 50%; transform: translateY(-50%);">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                             </div>
-                            <div style="display: flex; justify-content: space-between; align-items: start; margin-top: 0.25rem;">
-                                <small style="color: var(--text-muted); font-size: 0.72rem;">
-                                    <i class="fa-solid fa-shield-halved" style="margin-right: 4px;"></i>
-                                    Key is stored securely.
-                                </small>
-                                <small id="ai-detect-badge" style="display: none; align-items: center; gap: 4px; font-size: 0.72rem; padding: 2px 6px; border-radius: 4px;">
-                                    <!-- Badge content updated via JS -->
-                                </small>
-                            </div>
                         </div>
-                        <div class="modal-footer"
-                            style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
-                            <button type="button" class="btn btn-secondary" id="cancel-endpoint-modal">Cancel</button>
-                            <button type="submit" class="btn">Add Endpoint</button>
+
+                        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="button" class="btn-glass" id="cancel-endpoint-modal">ABORT</button>
+                            <div class="btn-shiny">
+                                <button type="submit" class="btn-shiny-inner" style="background: var(--violet); border: none; padding: 0.75rem 2rem; font-weight: 700; cursor: pointer;">INITIALIZE NODE</button>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -258,6 +254,7 @@
     </main>
 
     <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script src="js/table.js"></script>
     <script src="js/ai-analyzer.js"></script>
@@ -289,9 +286,9 @@
         });
 
         // ── Filter pills ───────────────────────────────────────
-        document.querySelectorAll('#ep-filter-pills .filter-pill').forEach(pill => {
+        document.querySelectorAll('#ep-filter-pills .pill-toggle-btn').forEach(pill => {
             pill.addEventListener('click', () => {
-                document.querySelectorAll('#ep-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                document.querySelectorAll('#ep-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
                 applyEpFilters();
             });
@@ -300,7 +297,8 @@
         document.getElementById('ep-search').addEventListener('input', applyEpFilters);
 
         function applyEpFilters() {
-            const f = document.querySelector('#ep-filter-pills .filter-pill.active').dataset.filter;
+            const pill = document.querySelector('#ep-filter-pills .pill-toggle-btn.active');
+            const f = pill ? pill.dataset.filter : 'all';
             const q = document.getElementById('ep-search').value.toLowerCase();
             const rows = document.querySelectorAll('#all-endpoints-table tbody tr');
             let count = 0;
