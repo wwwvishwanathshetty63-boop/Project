@@ -1,3 +1,4 @@
+"""TASK 4: Monitoring service with integrated key validation and dynamic status updates."""
 import time
 import logging
 import datetime
@@ -6,17 +7,13 @@ from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from backend.config import Config
 from backend.models import get_db, row_to_dict, rows_to_list, release_db
-from backend.services.alert_service import send_alert_email, build_alert_html
+from backend.services.alert_service import send_alert_email, build_alert_html, build_key_status_alert_html
+from backend.services.api_key_validator import mask_api_key, VALID, INVALID
+from backend.services.cache_service import cache
 
 logger = logging.getLogger(__name__)
 
-def mask_api_key(key: str) -> str:
-    """Masks an API key for safe logging."""
-    if not key:
-        return ""
-    if len(key) <= 8:
-        return "********"
-    return f"{key[:4]}{'*' * (len(key) - 8)}{key[-4:]}"
+
 def check_endpoint(endpoint: dict) -> tuple:
     """
     Send an HTTP request to the endpoint and measure response.
@@ -27,18 +24,22 @@ def check_endpoint(endpoint: dict) -> tuple:
     api_key = endpoint.get("api_key")
     api_key_header = endpoint.get("api_key_header", "Authorization")
     headers = {"User-Agent": "API-Monitor-SaaS/1.0"}
-    
+
     if api_key:
         headers[api_key_header] = api_key
         logger.debug(f"Attached API Key ({mask_api_key(api_key)}) in header '{api_key_header}'")
 
     # Set up session with retries for temporary failures
     session = http_requests.Session()
-    retries = Retry(total=3, backoff_factor=1, status_forcelist=[ 500, 502, 503, 504 ])
+    retries = Retry(total=3, backoff_factor=1, status_forcelist=[500, 502, 503, 504])
     session.mount('http://', HTTPAdapter(max_retries=retries))
     session.mount('https://', HTTPAdapter(max_retries=retries))
 
-    api_key_status = "Valid" if api_key else None
+    api_key_status = "VALID" if api_key else None
+    status_code = 0
+    is_success = False
+    error_detail = None
+    start_time = time.time()
 
     try:
         response = session.request(
@@ -54,31 +55,34 @@ def check_endpoint(endpoint: dict) -> tuple:
         # Determine API Key Status dynamically based on HTTP response
         if api_key:
             if status_code == 401:
-                api_key_status = "Invalid/Dummy"
+                api_key_status = "INVALID"
                 is_success = False
             elif status_code == 403:
-                api_key_status = "Forbidden (Insufficient Perms)"
+                api_key_status = "LIMITED"
                 is_success = False
             elif status_code == 429:
-                api_key_status = "Rate Limited"
+                api_key_status = "RATE_LIMITED"
                 is_success = False
             elif is_success:
-                api_key_status = "Valid"
+                api_key_status = "VALID"
 
         if not is_success:
             error_detail = f"HTTP {status_code}"
-            if api_key and api_key_status != "Valid":
-                 error_detail += f" - API Key Failed ({api_key_status})"
+            if api_key and api_key_status != "VALID":
+                error_detail += f" - API Key Failed ({api_key_status})"
 
     except http_requests.exceptions.Timeout:
         error_detail = "Request timed out"
-        if api_key: api_key_status = "Error"
+        if api_key:
+            api_key_status = "ERROR"
     except http_requests.exceptions.ConnectionError:
         error_detail = "Connection failed"
-        if api_key: api_key_status = "Error"
+        if api_key:
+            api_key_status = "ERROR"
     except http_requests.exceptions.RequestException as e:
         error_detail = str(e)[:200]
-        if api_key: api_key_status = "Error"
+        if api_key:
+            api_key_status = "ERROR"
     finally:
         session.close()
 
@@ -88,8 +92,8 @@ def check_endpoint(endpoint: dict) -> tuple:
         "endpoint_id": endpoint["id"],
         "status_code": status_code,
         "response_time": response_time,
-        "is_success": 1 if is_success else 0,
-        "api_key_status": api_key_status
+        "is_success": is_success,
+        "api_key_status": api_key_status,
     }
 
     return log_entry, error_detail
@@ -105,6 +109,9 @@ def save_log(log_entry: dict) -> dict:
             (log_entry["endpoint_id"], log_entry["status_code"], log_entry["response_time"], log_entry["is_success"], log_entry["api_key_status"]),
         )
         db.commit()
+        # Invalidate dashboard caches so next request shows fresh data
+        cache.invalidate("stats:")
+        cache.invalidate("chart:")
 
         row = db.execute(
             "SELECT * FROM monitoring_logs WHERE endpoint_id = %s ORDER BY checked_at DESC LIMIT 1",
@@ -114,6 +121,25 @@ def save_log(log_entry: dict) -> dict:
     except Exception as e:
         logger.error(f"Failed to save monitoring log: {e}")
         return None
+    finally:
+        if db:
+            release_db(db)
+
+
+def update_endpoint_key_status(endpoint_id: str, new_status: str):
+    """Update the key_status and last_validated_at on the api_endpoints table."""
+    db = None
+    try:
+        db = get_db()
+        now = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
+        db.execute(
+            "UPDATE api_endpoints SET key_status = %s, last_validated_at = %s WHERE id = %s",
+            (new_status, now, endpoint_id),
+        )
+        db.commit()
+        logger.info(f"Endpoint {endpoint_id} key_status updated to {new_status}")
+    except Exception as e:
+        logger.error(f"Failed to update endpoint key_status: {e}")
     finally:
         if db:
             release_db(db)
@@ -169,7 +195,7 @@ _LAST_PURGE_TIME = 0
 def purge_old_data(db, max_days=None):
     """Delete old logs, expired email verifications, and old invitations."""
     global _LAST_PURGE_TIME
-    
+
     # Only run purge once every 24 hours to reduce load
     current_time = time.time()
     if current_time - _LAST_PURGE_TIME < 86400:
@@ -185,7 +211,7 @@ def purge_old_data(db, max_days=None):
         )
         cursor_logs = db.execute("DELETE FROM monitoring_logs WHERE checked_at < %s", (since_logs,))
         logs_deleted = cursor_logs.rowcount
-        
+
         # 2. Purge Expired Email Verifications
         now_str = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S")
         cursor_verif = db.execute("DELETE FROM email_verifications WHERE expires_at < %s", (now_str,))
@@ -197,7 +223,7 @@ def purge_old_data(db, max_days=None):
 
         db.commit()
         _LAST_PURGE_TIME = current_time
-        
+
         if logs_deleted > 0 or verif_deleted > 0 or inv_deleted > 0:
             logger.info(
                 f"Maintenance Purge: Deleted {logs_deleted} logs, "
@@ -210,16 +236,16 @@ def purge_old_data(db, max_days=None):
 def run_monitoring_cycle():
     """
     Main monitoring cycle: check all active endpoints, log results,
-    and send alerts for failures.
+    detect key status transitions, and send alerts for failures.
     """
     try:
         db = get_db()
-        
+
         # Monthly/Daily Cleanup
         purge_old_data(db)
 
         endpoints = rows_to_list(
-            db.execute("SELECT * FROM api_endpoints WHERE is_active = 1").fetchall()
+            db.execute("SELECT * FROM api_endpoints WHERE is_active = TRUE").fetchall()
         )
         release_db(db)
 
@@ -234,6 +260,34 @@ def run_monitoring_cycle():
                 log_entry, error_detail = check_endpoint(endpoint)
                 save_log(log_entry)
 
+                # ── TASK 4: Dynamic key_status update ────────
+                previous_key_status = endpoint.get("key_status")
+                current_key_status = log_entry.get("api_key_status")
+
+                if current_key_status and current_key_status != previous_key_status:
+                    update_endpoint_key_status(endpoint["id"], current_key_status)
+
+                    # ── TASK 6: Alert on VALID → INVALID transition ──
+                    if previous_key_status == "VALID" and current_key_status == "INVALID":
+                        user_email = get_user_email(endpoint["user_id"])
+                        if user_email:
+                            timestamp = datetime.datetime.now(datetime.timezone.utc).strftime(
+                                "%Y-%m-%d %H:%M:%S UTC"
+                            )
+                            subject = f"🔑 KEY INVALIDATED: {endpoint['name']} API key is now INVALID"
+                            html = build_key_status_alert_html(
+                                api_name=endpoint["name"],
+                                api_url=endpoint["url"],
+                                timestamp=timestamp,
+                                old_status=previous_key_status,
+                                new_status=current_key_status,
+                            )
+                            send_alert_email(user_email, subject, html)
+                            logger.warning(
+                                f"Key status alert sent for '{endpoint['name']}': "
+                                f"{previous_key_status} → {current_key_status}"
+                            )
+
                 if not log_entry["is_success"]:
                     consecutive = check_consecutive_failures(endpoint["id"])
                     user_email = get_user_email(endpoint["user_id"])
@@ -241,10 +295,10 @@ def run_monitoring_cycle():
                     if user_email:
                         timestamp = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-                        if log_entry.get("api_key_status") in ["Invalid/Dummy", "Forbidden (Insufficient Perms)", "Rate Limited"]:
+                        if current_key_status in ["INVALID", "LIMITED", "RATE_LIMITED"]:
                             alert_type = "failure"
                             subject = f"🔑 API KEY ALERT: {endpoint['name']} is failing due to keys"
-                            error_msg = f"Your API Key seems to be {log_entry['api_key_status']}. ({error_detail})"
+                            error_msg = f"Your API Key seems to be {current_key_status}. ({error_detail})"
                         elif consecutive >= Config.CONSECUTIVE_FAILURES_THRESHOLD:
                             alert_type = "consecutive_failures"
                             subject = f"🚨 CRITICAL: {endpoint['name']} — {consecutive} Consecutive Failures"
@@ -266,6 +320,22 @@ def run_monitoring_cycle():
                             alert_type=alert_type,
                         )
                         send_alert_email(user_email, subject, html)
+
+                        # Also alert company admin if endpoint was created by an employee
+                        created_by = endpoint.get("created_by")
+                        if created_by and created_by != endpoint["user_id"]:
+                            company_email = get_user_email(endpoint["user_id"])
+                            if company_email and company_email != user_email:
+                                company_subject = f"[Employee Alert] {subject}"
+                                company_html = build_alert_html(
+                                    api_name=endpoint["name"],
+                                    api_url=endpoint["url"],
+                                    timestamp=timestamp,
+                                    error_details=f"[Added by employee] {error_msg}",
+                                    alert_type=alert_type,
+                                )
+                                send_alert_email(company_email, company_subject, company_html)
+                                logger.info(f"Company admin notified about employee endpoint failure: {endpoint['name']}")
 
                     logger.warning(f"Endpoint '{endpoint['name']}' ({endpoint['url']}) failed: {error_detail}")
                 else:

@@ -17,6 +17,7 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
 
     <!-- App Styles -->
     <link rel="stylesheet" href="css/styles.css">
@@ -333,6 +334,7 @@
     <script src="js/main.js"></script>
     <script src="js/dashboard.js"></script>
     <script src="js/charts.js"></script>
+    <script src="js/ai-analyzer.js"></script>
     <script>
         // ── Monitor card filter pills ──────────────────────────
         document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(pill => {
@@ -444,6 +446,7 @@
                         </div>
                     </div>
                     <div class="monitor-card-actions">
+                        ${statusClass === 'down' ? `<button class="btn-ai-analyze shimmer" onclick="openAIAnalyzer('${ep.id}')" title="AI Downtime Analysis"><i class="fa-solid fa-brain"></i><span>AI Analyze</span></button>` : ''}
                         <button class="action-btn" onclick="openEditModal('${ep.id}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
                         <button class="action-btn delete" onclick="deleteEndpoint('${ep.id}', '${(ep.name||'').replace(/'/g,"\\'")}')"
                             title="Delete"><i class="fa-solid fa-trash"></i></button>

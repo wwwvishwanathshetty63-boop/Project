@@ -24,14 +24,18 @@ def validate_password(password: str) -> tuple[bool, str]:
 
 
 def validate_url(url: str) -> bool:
-    """Validate URL format."""
+    """Validate URL format (Basic format only)."""
     if not url or not isinstance(url, str):
         return False
     try:
-        result = urlparse(url.strip())
+        url = url.strip()
+        result = urlparse(url)
         return all([result.scheme in ("http", "https"), result.netloc])
     except Exception:
         return False
+
+
+
 
 
 def validate_name(name: str, min_len: int = 2, max_len: int = 100) -> bool:

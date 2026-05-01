@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Employee Monitor — API Monitor</title>
+    <meta name="description" content="Monitor all employee API activity, endpoint health, and key issues across your team.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/styles.css">
+    <style>
+        /* Summary Stats */
+        .em-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.25rem; margin-bottom: 2rem; }
+        .em-stat-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 14px; padding: 1.25rem 1.5rem; position: relative; overflow: hidden; }
+        .em-stat-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+        .em-stat-card.purple::before { background: linear-gradient(90deg, #7c3aed, #6366f1); }
+        .em-stat-card.green::before  { background: linear-gradient(90deg, #10b981, #22c55e); }
+        .em-stat-card.red::before    { background: linear-gradient(90deg, #ef4444, #f87171); }
+        .em-stat-card.amber::before  { background: linear-gradient(90deg, #f59e0b, #fbbf24); }
+        .em-stat-value { font-size: 2rem; font-weight: 800; color: var(--text-color); }
+        .em-stat-label { font-size: 0.78rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-top: 0.25rem; }
+
+        /* Employee Table */
+        .emp-table-wrap { overflow-x: auto; }
+        .emp-table { width: 100%; border-collapse: collapse; }
+        .emp-table th { padding: 0.75rem 1rem; text-align: left; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); font-weight: 600; border-bottom: 1px solid var(--border-color); white-space: nowrap; cursor: pointer; user-select: none; }
+        .emp-table th:hover { color: var(--text-color); }
+        .emp-table th .sort-icon { margin-left: 4px; opacity: 0.4; }
+        .emp-table th.sorted .sort-icon { opacity: 1; color: #818cf8; }
+        .emp-table td { padding: 0.875rem 1rem; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: middle; }
+        .emp-table tr:last-child td { border-bottom: none; }
+        .emp-table tr:hover td { background: rgba(99,102,241,0.04); }
+
+        .emp-tbl-avatar { width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+        .emp-name-cell { display: flex; align-items: center; gap: 0.75rem; }
+        .emp-name-main { font-weight: 600; font-size: 0.875rem; color: var(--text-color); }
+        .emp-email-sub { font-size: 0.72rem; color: var(--text-muted); }
+        .emp-id-pill { font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; background: rgba(99,102,241,0.1); color: #818cf8; padding: 2px 6px; border-radius: 4px; }
+
+        .health-ring { display: inline-flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 600; }
+        .health-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .health-dot.healthy { background: #22c55e; box-shadow: 0 0 6px #22c55e88; }
+        .health-dot.warning { background: #f59e0b; box-shadow: 0 0 6px #f59e0b88; }
+        .health-dot.critical { background: #ef4444; box-shadow: 0 0 6px #ef444488; }
+
+        .count-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; }
+        .count-badge.zero { color: var(--text-muted); }
+        .count-badge.warn { color: #fbbf24; }
+        .count-badge.danger { color: #f87171; }
+
+        .btn-drill { font-size: 0.72rem; padding: 4px 10px; border-radius: 6px; background: rgba(99,102,241,0.12); color: #818cf8; border: none; cursor: pointer; font-weight: 600; }
+        .btn-drill:hover { background: rgba(99,102,241,0.25); }
+
+        /* Slide-in panel (same as company dashboard) */
+        .emp-panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1100; display: none; backdrop-filter: blur(4px); }
+        .emp-panel-overlay.open { display: block; }
+        .emp-panel { position: fixed; top: 0; right: -100%; width: min(680px, 95vw); height: 100vh; background: var(--card-bg); border-left: 1px solid var(--border-color); z-index: 1101; transition: right 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; display: flex; flex-direction: column; }
+        .emp-panel.open { right: 0; }
+        .emp-panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--card-bg); z-index: 10; }
+        .emp-panel-body { padding: 1.5rem; flex: 1; }
+        .ep-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 0.5rem; }
+        .ep-name { font-weight: 600; font-size: 0.85rem; color: var(--text-color); }
+        .ep-url { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 220px; }
+
+        .live-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #22c55e; font-weight: 600; }
+        .live-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100%{ opacity:1; } 50%{ opacity:0.4; } }
+
+        @media (max-width: 1024px) { .em-stats { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 640px) { .em-stats { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i class="fa-solid fa-satellite-dish"></i>
+            <span>API Monitor</span>
+        </div>
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Company</div>
+                <a href="company-dashboard.html" class="menu-item">
+                    <i class="fa-solid fa-chart-line"></i><span>Analytics</span>
+                </a>
+                <a href="index.html" class="menu-item">
+                    <i class="fa-solid fa-chart-pie"></i><span>Monitoring</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i><span>API Endpoints</span>
+                </a>
+                <a href="logs.html" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i><span>Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i><span>Alerts</span>
+                </a>
+            </div>
+            <div class="menu-section">
+                <div class="menu-section-title">Management</div>
+                <a href="employee-monitor.html" class="menu-item active">
+                    <i class="fa-solid fa-users-viewfinder"></i><span>Employee Monitor</span>
+                </a>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-user-plus"></i><span>Invite Employees</span>
+                </a>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i><span>Profile</span>
+                </a>
+            </div>
+        </nav>
+        <div class="sidebar-footer">
+            <div class="user-avatar-small">A</div>
+            <div class="user-info">
+                <span class="user-name">Admin</span>
+                <span class="user-role">Company</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main-content">
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn"><i class="fa-solid fa-bars"></i></button>
+                <h2>Employee Monitor</h2>
+            </div>
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
+                <div class="user-avatar-small">A</div>
+            </div>
+        </header>
+
+        <div class="content">
+            <div class="page-header">
+                <div>
+                    <h1>Employee Activity Monitor</h1>
+                    <p style="display:flex;align-items:center;gap:0.75rem;">
+                        Track all team member API usage and health
+                        <span class="live-badge">LIVE</span>
+                    </p>
+                </div>
+                <div class="header-actions">
+                    <a href="admin.html" class="btn"><i class="fa-solid fa-user-plus"></i> Invite Employee</a>
+                </div>
+            </div>
+
+            <!-- Summary Stats -->
+            <div class="em-stats" id="em-stats-row">
+                <div class="em-stat-card purple">
+                    <div class="em-stat-value" id="stat-emp-total">—</div>
+                    <div class="em-stat-label">Total Employees</div>
+                </div>
+                <div class="em-stat-card green">
+                    <div class="em-stat-value" id="stat-emp-apis">—</div>
+                    <div class="em-stat-label">Employee-Added APIs</div>
+                </div>
+                <div class="em-stat-card red">
+                    <div class="em-stat-value" id="stat-emp-down">—</div>
+                    <div class="em-stat-label">APIs Currently Down</div>
+                </div>
+                <div class="em-stat-card amber">
+                    <div class="em-stat-value" id="stat-emp-incidents">—</div>
+                    <div class="em-stat-label">Incidents Today (24h)</div>
+                </div>
+            </div>
+
+            <!-- Employee Table -->
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="card-header" style="padding:1.25rem 1.5rem;">
+                    <div class="card-title"><i class="fa-solid fa-table-list text-muted"></i> Team Overview</div>
+                    <div style="display:flex;gap:0.75rem;align-items:center;">
+                        <input type="text" id="emp-search" class="form-control" placeholder="Search employees..." style="width:200px;height:34px;font-size:0.85rem;">
+                    </div>
+                </div>
+                <div class="emp-table-wrap">
+                    <table class="emp-table" id="emp-table">
+                        <thead>
+                            <tr>
+                                <th data-col="name">Employee <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th data-col="total_endpoints">APIs <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th data-col="down_endpoints">Down <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th data-col="key_issues">Key Issues <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th data-col="recent_incidents">Incidents (24h) <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th data-col="avg_response_time">Avg RT <span class="sort-icon"><i class="fa-solid fa-sort"></i></span></th>
+                                <th>Health</th>
+                                <th>Last Activity</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="emp-tbody">
+                            <tr><td colspan="9" class="empty-state" style="padding:3rem;text-align:center;">
+                                <i class="fa-solid fa-circle-notch fa-spin"></i><p>Loading employees...</p>
+                            </td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Panel -->
+        <div class="emp-panel-overlay" id="empPanelOverlay"></div>
+        <div class="emp-panel" id="empPanel">
+            <div class="emp-panel-header">
+                <div>
+                    <div class="card-title" id="emp-panel-title"><i class="fa-solid fa-user"></i> Endpoints</div>
+                    <div style="font-size:0.78rem;color:var(--text-muted);" id="emp-panel-subtitle"></div>
+                </div>
+                <button class="action-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="emp-panel-body">
+                <div id="emp-panel-endpoints"></div>
+            </div>
+        </div>
+    </main>
+
+    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script>
+    // ── Auth + role guard ────────────────────────────────────────────────────
+    if (!isAuthenticated()) { window.location.href = 'login.html'; }
+    const _u = getUser();
+    if (_u && _u.role !== 'company') { window.location.href = 'index.html'; }
+
+    // ── Navbar setup ─────────────────────────────────────────────────────────
+    (function setupNav() {
+        const user = getUser(); if (!user) return;
+        document.querySelectorAll('.user-name').forEach(el => el.textContent = user.name);
+        document.querySelectorAll('.user-avatar-small').forEach(el => el.textContent = user.name.charAt(0).toUpperCase());
+        const topBarRight = document.querySelector('.topbar-right');
+        if (topBarRight && !document.getElementById('logout-btn')) {
+            const btn = document.createElement('button');
+            btn.id = 'logout-btn'; btn.className = 'btn btn-secondary btn-sm'; btn.style.marginRight = '0.5rem';
+            btn.innerHTML = '<i class="fa-solid fa-right-from-bracket"></i> Logout';
+            btn.onclick = logout;
+            topBarRight.insertBefore(btn, topBarRight.firstChild);
+        }
+    })();
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let employees = [];
+    let sortCol = 'name', sortAsc = true;
+
+    // ── Load data ────────────────────────────────────────────────────────────
+    async function loadData() {
+        try {
+            const data = await apiRequest('/api/company/employees/activity');
+            employees = data.employees || [];
+            renderStats(employees);
+            renderTable(employees);
+        } catch (err) {
+            document.getElementById('emp-tbody').innerHTML =
+                `<tr><td colspan="9" style="padding:2rem;text-align:center;color:#ef4444;">${err.message || 'Failed to load'}</td></tr>`;
+        }
+    }
+
+    function renderStats(emps) {
+        const totalAPIs = emps.reduce((s, e) => s + e.total_endpoints, 0);
+        const totalDown = emps.reduce((s, e) => s + e.down_endpoints, 0);
+        const totalInc  = emps.reduce((s, e) => s + e.recent_incidents, 0);
+        document.getElementById('stat-emp-total').textContent     = emps.length;
+        document.getElementById('stat-emp-apis').textContent      = totalAPIs;
+        document.getElementById('stat-emp-down').textContent      = totalDown;
+        document.getElementById('stat-emp-incidents').textContent = totalInc;
+    }
+
+    function renderTable(emps) {
+        const q = document.getElementById('emp-search').value.toLowerCase();
+        let rows = emps.filter(e =>
+            (e.name || '').toLowerCase().includes(q) ||
+            (e.email || '').toLowerCase().includes(q) ||
+            (e.employee_id || '').toLowerCase().includes(q)
+        );
+
+        // Sort
+        rows = rows.slice().sort((a, b) => {
+            let av = a[sortCol] ?? '', bv = b[sortCol] ?? '';
+            if (typeof av === 'string') av = av.toLowerCase(), bv = bv.toLowerCase();
+            return sortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+        });
+
+        if (!rows.length) {
+            document.getElementById('emp-tbody').innerHTML =
+                '<tr><td colspan="9" class="empty-state" style="padding:2rem;text-align:center;"><i class="fa-solid fa-users"></i><p>No employees found.</p></td></tr>';
+            return;
+        }
+
+        document.getElementById('emp-tbody').innerHTML = rows.map(emp => {
+            const health = emp.down_endpoints > 0 || emp.key_issues > 0
+                ? (emp.recent_incidents > 5 ? 'critical' : 'warning') : 'healthy';
+            const healthLabel = { healthy: 'Healthy', warning: 'Warning', critical: 'Critical' }[health];
+            const lastAct = emp.last_activity ? new Date(emp.last_activity).toLocaleString() : '—';
+            const downCls = emp.down_endpoints > 0 ? 'danger' : 'zero';
+            const keyCls  = emp.key_issues > 0 ? 'warn' : 'zero';
+            const incCls  = emp.recent_incidents > 0 ? 'danger' : 'zero';
+            return `<tr>
+                <td>
+                    <div class="emp-name-cell">
+                        <div class="emp-tbl-avatar">${(emp.name||'E').charAt(0).toUpperCase()}</div>
+                        <div>
+                            <div class="emp-name-main">${escapeHtml(emp.name)}</div>
+                            <div class="emp-email-sub">${escapeHtml(emp.email)}</div>
+                            ${emp.employee_id ? `<span class="emp-id-pill">${escapeHtml(emp.employee_id)}</span>` : ''}
+                        </div>
+                    </div>
+                </td>
+                <td><span class="count-badge">${emp.total_endpoints}</span></td>
+                <td><span class="count-badge ${downCls}"><i class="fa-solid fa-circle-exclamation"></i> ${emp.down_endpoints}</span></td>
+                <td><span class="count-badge ${keyCls}"><i class="fa-solid fa-key"></i> ${emp.key_issues}</span></td>
+                <td><span class="count-badge ${incCls}">${emp.recent_incidents}</span></td>
+                <td style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;">${emp.avg_response_time || 0}ms</td>
+                <td><span class="health-ring"><span class="health-dot ${health}"></span>${healthLabel}</span></td>
+                <td style="font-size:0.78rem;color:var(--text-muted);">${lastAct}</td>
+                <td><button class="btn-drill" onclick="openEmpPanel('${emp.id}', '${escapeHtml(emp.name)}')">View APIs</button></td>
+            </tr>`;
+        }).join('');
+    }
+
+    // ── Sort ─────────────────────────────────────────────────────────────────
+    document.querySelectorAll('.emp-table th[data-col]').forEach(th => {
+        th.addEventListener('click', () => {
+            const col = th.dataset.col;
+            if (sortCol === col) { sortAsc = !sortAsc; } else { sortCol = col; sortAsc = true; }
+            document.querySelectorAll('.emp-table th').forEach(t => t.classList.remove('sorted'));
+            th.classList.add('sorted');
+            renderTable(employees);
+        });
+    });
+    document.getElementById('emp-search').addEventListener('input', () => renderTable(employees));
+
+    // ── Employee Endpoints Panel ──────────────────────────────────────────────
+    function openEmpPanel(empId, empName) {
+        document.getElementById('emp-panel-title').innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(empName)}'s Endpoints`;
+        document.getElementById('emp-panel-subtitle').textContent = 'Loading...';
+        document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Fetching...</p></div>';
+        document.getElementById('empPanelOverlay').classList.add('open');
+        document.getElementById('empPanel').classList.add('open');
+
+        apiRequest(`/api/company/employees/${empId}/endpoints`).then(data => {
+            const eps = data.endpoints || [];
+            document.getElementById('emp-panel-subtitle').textContent = `${eps.length} endpoint${eps.length !== 1 ? 's' : ''} registered`;
+            if (!eps.length) {
+                document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><i class="fa-solid fa-server"></i><p>No endpoints added yet.</p></div>';
+                return;
+            }
+            document.getElementById('emp-panel-endpoints').innerHTML = eps.map(ep => {
+                const isDown = ep.is_down;
+                const sc = isDown ? 'down' : (ep.is_active ? 'up' : 'paused');
+                const sl = isDown ? 'DOWN' : (ep.is_active ? 'UP' : 'PAUSED');
+                const method = (ep.method || 'GET').toUpperCase();
+                const mCls = { GET:'m-get', POST:'m-post', PUT:'m-put', DELETE:'m-delete' }[method] || 'm-get';
+                const keyBadge = ep.key_status && ep.key_status !== 'VALID'
+                    ? `<span style="font-size:0.68rem;padding:2px 6px;border-radius:4px;background:rgba(245,158,11,0.15);color:#fbbf24;font-weight:600;">${ep.key_status}</span>` : '';
+                return `<div class="ep-row">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;margin-bottom:2px;">
+                            <span class="monitor-card-method ${mCls}">${method}</span>
+                            <span class="ep-name">${escapeHtml(ep.name || 'Unnamed')}</span>
+                        </div>
+                        <div class="ep-url">${escapeHtml(ep.url || '')}</div>
+                    </div>
+                    <span class="status-pill ${sc}">${sl}</span>
+                    ${keyBadge}
+                    <span style="font-size:0.78rem;color:var(--text-muted);font-family:'JetBrains Mono',monospace;">${ep.last_response_time != null ? ep.last_response_time + 'ms' : '—'}</span>
+                </div>`;
+            }).join('');
+        }).catch(() => {
+            document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><p style="color:#ef4444;">Failed to load endpoints.</p></div>';
+        });
+    }
+
+    function closeEmpPanel() {
+        document.getElementById('empPanelOverlay').classList.remove('open');
+        document.getElementById('empPanel').classList.remove('open');
+    }
+    document.getElementById('close-emp-panel').addEventListener('click', closeEmpPanel);
+    document.getElementById('empPanelOverlay').addEventListener('click', closeEmpPanel);
+
+    // ── Init ─────────────────────────────────────────────────────────────────
+    document.getElementById('btn-refresh').addEventListener('click', loadData);
+    loadData();
+    setInterval(loadData, 30000);
+    </script>
+</body>
+</html>

@@ -48,10 +48,12 @@ def create_app() -> Flask:
     from backend.routes.auth_routes import auth_bp
     from backend.routes.endpoint_routes import endpoint_bp
     from backend.routes.dashboard_routes import dashboard_bp
+    from backend.routes.company_routes import company_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(endpoint_bp)
     app.register_blueprint(dashboard_bp)
+    app.register_blueprint(company_bp)
 
     # Serve frontend pages
     @app.route("/")
@@ -106,6 +108,12 @@ def create_app() -> Flask:
     @app.route("/api/health")
     def health_check():
         return jsonify({"status": "healthy", "service": "API Monitor SaaS"}), 200
+
+    # Cache statistics (admin/debug endpoint)
+    @app.route("/api/cache/stats")
+    def cache_stats():
+        from backend.services.cache_service import cache
+        return jsonify(cache.stats()), 200
 
     # Global error handlers
     @app.errorhandler(404)

@@ -114,6 +114,16 @@ document.addEventListener('DOMContentLoaded', () => {
             addEndpointModal.querySelector('h3').textContent = 'Add New Endpoint';
             addEndpointForm.querySelector('button[type="submit"]').textContent = 'Add Endpoint';
             addEndpointForm.reset();
+            document.getElementById('endpoint-error').style.display = 'none';
+            document.querySelector('input[name="monitor_type"][value="url"]').checked = true;
+            document.getElementById('api-key-group').style.display = 'none';
+            document.getElementById('endpoint-api-key').required = false;
+            document.getElementById('url-group-wrapper').style.display = 'block';
+            document.getElementById('endpoint-url').required = true;
+            document.getElementById('ai-detect-badge').style.display = 'none';
+            
+            const apiKeyInput = document.getElementById('endpoint-api-key');
+            if (apiKeyInput) apiKeyInput.value = '';
             addEndpointModal.style.display = 'flex';
         };
 
@@ -130,6 +140,111 @@ document.addEventListener('DOMContentLoaded', () => {
         if (closeEndpointModal) closeEndpointModal.addEventListener('click', closeEndpoint);
         if (cancelEndpointModal) cancelEndpointModal.addEventListener('click', closeEndpoint);
 
+        // Monitor Type Radio Logic
+        const monitorRadios = document.querySelectorAll('input[name="monitor_type"]');
+        monitorRadios.forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const isApiKey = e.target.value === 'api_key';
+                const keyGroup = document.getElementById('api-key-group');
+                const keyInput = document.getElementById('endpoint-api-key');
+                const urlWrapper = document.getElementById('url-group-wrapper');
+
+                if (keyGroup && keyInput && urlWrapper) {
+                    keyGroup.style.display = 'block'; // Always visible! (User requested for Custom URL)
+                    keyInput.required = isApiKey;
+                    
+                    // Hide URL field only if "Secured API" auto-detect mode is selected
+                    urlWrapper.style.display = isApiKey ? 'none' : 'block';
+                    document.getElementById('endpoint-url').required = !isApiKey;
+                    
+                    if (!isApiKey) {
+                        document.getElementById('ai-detect-badge').style.display = 'none';
+                    }
+                }
+            });
+        });
+
+        // AI URL Auto-Detection Logic
+        const apiKeyInputEl = document.getElementById('endpoint-api-key');
+        if (apiKeyInputEl) {
+            apiKeyInputEl.addEventListener('blur', async (e) => {
+                const val = e.target.value.trim();
+                const badge = document.getElementById('ai-detect-badge');
+                const urlInput = document.getElementById('endpoint-url');
+                
+                // Only trigger if in 'api_key' mode and a value exists
+                if (!val || document.querySelector('input[name="monitor_type"]:checked').value !== 'api_key') {
+                    if (badge) badge.style.display = 'none';
+                    return;
+                }
+                
+                if (badge) {
+                    badge.style.display = 'flex';
+                    badge.style.color = 'var(--text-color)';
+                    badge.style.backgroundColor = 'rgba(255,255,255,0.1)';
+                    badge.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> AI Detecting...';
+                }
+                
+                try {
+                    const res = await fetch('/api/endpoints/detect-url', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${localStorage.getItem('token')}`
+                        },
+                        body: JSON.stringify({ api_key: val })
+                    });
+                    
+                    const data = await res.json();
+                    
+                    if (!res.ok) throw new Error(data.error || 'Failed to detect URL');
+                    
+                    // Success!
+                    if (urlInput) urlInput.value = data.base_url;
+                    if (badge) {
+                        badge.style.color = '#10b981'; // Success Green
+                        badge.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                        badge.innerHTML = `<i class="fa-solid fa-check-circle"></i> ${data.provider} Detected`;
+                    }
+                    
+                } catch (err) {
+                    // Javascript Fallback Detect
+                    const jsFallback = (k) => {
+                        k = k.trim();
+                        if (k.startsWith('sk_live_') || k.startsWith('sk_test_')) return { p: 'Stripe', u: 'https://api.stripe.com/v1/balance' };
+                        if (k.startsWith('ghp_')) return { p: 'GitHub', u: 'https://api.github.com/user' };
+                        if (k.startsWith('SG.')) return { p: 'SendGrid', u: 'https://api.sendgrid.com/v3/scopes' };
+                        if (k.startsWith('xoxb-') || k.startsWith('xoxp-')) return { p: 'Slack', u: 'https://slack.com/api/api.test' };
+                        if (k.match(/^sk-[a-zA-Z0-9]{48}$/) || k.startsWith('sk-proj-')) return { p: 'OpenAI', u: 'https://api.openai.com/v1/models' };
+                        if (k.length === 64 && /^[0-9a-fA-F]+$/.test(k)) return { p: 'VirusTotal', u: 'https://www.virustotal.com/api/v3/users/__logged_in__' };
+                        return null;
+                    };
+                    
+                    const fallback = jsFallback(val);
+                    if (fallback) {
+                        if (urlInput) urlInput.value = fallback.u;
+                        if (badge) {
+                            badge.style.color = '#10b981'; // Success Green
+                            badge.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
+                            badge.innerHTML = `<i class="fa-solid fa-bolt"></i> ${fallback.p} Detected (Fallback)`;
+                        }
+                    } else {
+                        // Fail gracefully, show the URL field so they can enter manually
+                        if (badge) {
+                            badge.style.color = '#ef4444'; // Error Red
+                            badge.style.backgroundColor = 'rgba(239, 68, 68, 0.1)';
+                            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> Auto-detect failed`;
+                        }
+                        const urlWrapper = document.getElementById('url-group-wrapper');
+                        if (urlWrapper) {
+                            urlWrapper.style.display = 'block'; // Force show
+                            if (urlInput) urlInput.required = true;
+                        }
+                    }
+                }
+            });
+        }
+
         // Global functions for table row actions
         window.openEditModal = async function (id) {
             try {
@@ -140,6 +255,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('endpoint-url').value = ep.url;
                 document.getElementById('endpoint-method').value = ep.method;
                 document.getElementById('endpoint-interval').value = ep.interval || 60;
+                
+                // If endpoint has an API key masked value, assume it's secured
+                const hasApiKey = ep.api_key_masked ? true : false;
+                const radio = document.querySelector(`input[name="monitor_type"][value="${hasApiKey ? 'api_key' : 'url'}"]`);
+                if (radio) {
+                    radio.checked = true;
+                    radio.dispatchEvent(new Event('change'));
+                }
+
+                // API key is never sent back from server (masked), so clear the field
+                const editKeyInput = document.getElementById('endpoint-api-key');
+                if (editKeyInput) editKeyInput.value = '';
 
                 editEndpointId = id;
                 addEndpointModal.querySelector('h3').textContent = 'Edit Endpoint';
@@ -181,17 +308,22 @@ document.addEventListener('DOMContentLoaded', () => {
                     const url = document.getElementById('endpoint-url').value;
                     const method = document.getElementById('endpoint-method').value;
                     const interval = document.getElementById('endpoint-interval').value;
+                    const monitorType = document.querySelector('input[name="monitor_type"]:checked').value;
+                    const api_key = document.getElementById('endpoint-api-key')?.value;
+
+                    const body = { name, url, method, interval };
+                    if (api_key && api_key.trim()) body.api_key = api_key.trim();
 
                     if (editEndpointId) {
                         await apiRequest(`/api/endpoints/${editEndpointId}`, {
                             method: 'PUT',
-                            body: { name, url, method, interval }
+                            body
                         });
                         window.showNotification('Endpoint updated successfully!');
                     } else {
                         await apiRequest('/api/endpoints', {
                             method: 'POST',
-                            body: { name, url, method, interval }
+                            body
                         });
                         window.showNotification('Endpoint added successfully!');
                     }
@@ -204,10 +336,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (typeof loadDashboardData === 'function') loadDashboardData();
 
                 } catch (error) {
-                    if (typeof showToast === 'function') {
-                        showToast(error.message || 'Failed to save endpoint', 'error');
+                    const errorEl = document.getElementById('endpoint-error');
+                    if (errorEl) {
+                        let msg = error.message || 'Failed to save endpoint';
+                        if (error.detail) {
+                            msg += `: ${error.detail}`;
+                        }
+                        errorEl.querySelector('.error-message').textContent = msg;
+                        errorEl.style.display = 'flex';
+                        
+                        // Restart animation by cloning and replacing or just re-adding class
+                        errorEl.style.animation = 'none';
+                        errorEl.offsetHeight; // trigger reflow
+                        errorEl.style.animation = null; 
                     } else {
-                        alert(error.message || 'Failed to save endpoint');
+                        if (typeof showToast === 'function') {
+                            showToast(error.message || 'Failed to save endpoint', 'error');
+                        } else {
+                            alert(error.message || 'Failed to save endpoint');
+                        }
                     }
                 } finally {
                     submitBtn.disabled = false;

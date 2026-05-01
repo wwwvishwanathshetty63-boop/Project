@@ -32,18 +32,45 @@
         .incident-error { font-size: 0.78rem; color: #ef4444; }
         .incident-time { font-size: 0.75rem; color: var(--text-muted); margin-left: auto; white-space: nowrap; }
 
-        .emp-row { display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0; border-bottom: 1px solid var(--border-color); }
-        .emp-row:last-child { border-bottom: none; }
-        .emp-avatar { width: 32px; height: 32px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; color: #fff; flex-shrink: 0; }
-        .emp-name { font-weight: 600; font-size: 0.85rem; color: var(--text-color); }
-        .emp-email { font-size: 0.75rem; color: var(--text-muted); }
+        /* Employee Activity Cards */
+        .emp-activity-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+        .emp-activity-card { background: var(--card-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.25rem; transition: border-color 0.2s, box-shadow 0.2s; }
+        .emp-activity-card:hover { border-color: #6366f1; box-shadow: 0 0 0 1px rgba(99,102,241,0.2); }
+        .emp-activity-card.healthy { border-left: 3px solid #22c55e; }
+        .emp-activity-card.warning { border-left: 3px solid #f59e0b; }
+        .emp-activity-card.critical { border-left: 3px solid #ef4444; }
+        .emp-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem; }
+        .emp-avatar-lg { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #6366f1, #06b6d4); display: flex; align-items: center; justify-content: center; font-size: 1rem; font-weight: 700; color: #fff; flex-shrink: 0; }
+        .emp-card-name { font-weight: 700; font-size: 0.95rem; color: var(--text-color); }
+        .emp-card-id { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .emp-card-stats { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+        .emp-stat-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; font-weight: 600; padding: 3px 8px; border-radius: 20px; }
+        .emp-stat-badge.total { background: rgba(99,102,241,0.12); color: #818cf8; }
+        .emp-stat-badge.down { background: rgba(239,68,68,0.12); color: #f87171; }
+        .emp-stat-badge.key { background: rgba(245,158,11,0.12); color: #fbbf24; }
+        .emp-stat-badge.incident { background: rgba(239,68,68,0.08); color: #ef4444; }
+        .emp-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem; }
+        .emp-rt { font-size: 0.78rem; color: var(--text-muted); }
+        .btn-view-emp { font-size: 0.75rem; padding: 4px 12px; border-radius: 6px; background: rgba(99,102,241,0.12); color: #818cf8; border: none; cursor: pointer; font-weight: 600; transition: background 0.2s; }
+        .btn-view-emp:hover { background: rgba(99,102,241,0.25); }
+
+        /* Slide-in employee endpoints panel */
+        .emp-panel-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1100; display: none; backdrop-filter: blur(4px); }
+        .emp-panel-overlay.open { display: block; }
+        .emp-panel { position: fixed; top: 0; right: -100%; width: min(640px, 95vw); height: 100vh; background: var(--card-bg); border-left: 1px solid var(--border-color); z-index: 1101; transition: right 0.3s cubic-bezier(0.4,0,0.2,1); overflow-y: auto; display: flex; flex-direction: column; }
+        .emp-panel.open { right: 0; }
+        .emp-panel-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; background: var(--card-bg); z-index: 10; }
+        .emp-panel-body { padding: 1.5rem; flex: 1; }
+        .ep-row { display: grid; grid-template-columns: 1fr auto auto auto; gap: 1rem; align-items: center; padding: 0.75rem; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 0.5rem; background: rgba(255,255,255,0.02); }
+        .ep-name { font-weight: 600; font-size: 0.85rem; color: var(--text-color); }
+        .ep-url { font-size: 0.72rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 200px; }
 
         .live-badge { display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; color: #22c55e; font-weight: 600; }
         .live-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #22c55e; animation: pulse 2s ease-in-out infinite; }
         @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
 
         @media (max-width: 1024px) { .analytics-grid { grid-template-columns: repeat(2, 1fr); } .section-grid,.section-grid-equal { grid-template-columns: 1fr; } }
-        @media (max-width: 640px) { .analytics-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 640px) { .analytics-grid { grid-template-columns: 1fr; } .emp-activity-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -79,6 +106,10 @@
             </div>
             <div class="menu-section">
                 <div class="menu-section-title">Management</div>
+                <a href="employee-monitor.html" class="menu-item">
+                    <i class="fa-solid fa-users-viewfinder"></i>
+                    <span>Employee Monitor</span>
+                </a>
                 <a href="admin.html" class="menu-item">
                     <i class="fa-solid fa-user-plus"></i>
                     <span>Invite Employees</span>
@@ -192,17 +223,24 @@
                 </div>
             </div>
 
-            <!-- Employees -->
-            <div class="section-grid-equal">
-                <div class="card">
-                    <div class="card-header">
-                        <div class="card-title"><i class="fa-solid fa-users text-muted"></i> Team Members</div>
+            <!-- Employee Activity Monitor -->
+            <div class="card" style="margin-bottom: 2rem;">
+                <div class="card-header">
+                    <div class="card-title"><i class="fa-solid fa-users-viewfinder text-muted"></i> Employee Activity Monitor</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <span class="live-badge">LIVE</span>
                         <button class="btn btn-sm" id="btn-invite-emp-2"><i class="fa-solid fa-user-plus"></i> Invite</button>
                     </div>
-                    <div id="employees-list" style="padding: 0.5rem 0; max-height: 300px; overflow-y: auto;">
-                        <div class="empty-state" style="padding: 2rem;"><p style="color:var(--text-muted); font-size: 0.85rem;">No employees yet. Invite your first team member!</p></div>
+                </div>
+                <div style="padding: 1rem;">
+                    <div id="emp-activity-grid" class="emp-activity-grid">
+                        <div class="empty-state" style="padding:2rem; grid-column:1/-1;"><p style="color:var(--text-muted);font-size:0.85rem;">Loading employee activity…</p></div>
                     </div>
                 </div>
+            </div>
+
+            <!-- Failures Breakdown -->
+            <div class="section-grid-equal" style="margin-bottom:2rem;">
                 <div class="card">
                     <div class="card-header">
                         <div class="card-title"><i class="fa-solid fa-chart-pie text-muted"></i> Failures Breakdown</div>
@@ -212,6 +250,30 @@
                         <canvas id="failuresChart"></canvas>
                     </div>
                 </div>
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-title"><i class="fa-solid fa-triangle-exclamation text-muted"></i> Recent Incidents</div>
+                        <div class="badge badge-danger" id="incident-count">0</div>
+                    </div>
+                    <div id="incidents-list" style="padding: 0.5rem 0; max-height: 300px; overflow-y: auto;">
+                        <div class="empty-state" style="padding: 2rem;"><p style="color:var(--text-muted); font-size: 0.85rem;">No incidents today 🎉</p></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employee Endpoints Slide-in Panel -->
+        <div class="emp-panel-overlay" id="empPanelOverlay"></div>
+        <div class="emp-panel" id="empPanel">
+            <div class="emp-panel-header">
+                <div>
+                    <div class="card-title" id="emp-panel-title"><i class="fa-solid fa-user"></i> Employee Endpoints</div>
+                    <div style="font-size:0.78rem; color:var(--text-muted);" id="emp-panel-subtitle"></div>
+                </div>
+                <button class="action-btn" id="close-emp-panel"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="emp-panel-body">
+                <div id="emp-panel-endpoints"><div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Loading endpoints...</p></div></div>
             </div>
         </div>
 
@@ -265,6 +327,90 @@
             topBarRight.insertBefore(btn, topBarRight.firstChild);
         }
     })();
+
+    // ── Load Employee Activity ──────────────────────────────────────────────
+    async function loadEmployeeActivity() {
+        try {
+            const data = await apiRequest('/api/company/employees/activity');
+            renderEmployeeActivity(data.employees || []);
+        } catch (err) {
+            console.error('Employee activity load failed:', err);
+        }
+    }
+
+    function renderEmployeeActivity(employees) {
+        const grid = document.getElementById('emp-activity-grid');
+        if (!grid) return;
+        if (!employees.length) {
+            grid.innerHTML = '<div class="empty-state" style="padding:2rem;grid-column:1/-1;"><i class="fa-solid fa-users"></i><p>No employees yet. Invite your first team member!</p></div>';
+            return;
+        }
+        grid.innerHTML = employees.map(emp => {
+            const health = emp.down_endpoints > 0 || emp.key_issues > 0 ? (emp.recent_incidents > 5 ? 'critical' : 'warning') : 'healthy';
+            const healthIcon = health === 'healthy' ? '🟢' : health === 'warning' ? '🟡' : '🔴';
+            const lastAct = emp.last_activity ? new Date(emp.last_activity).toLocaleTimeString() : 'No activity';
+            return `
+            <div class="emp-activity-card ${health}">
+                <div class="emp-card-header">
+                    <div class="emp-avatar-lg">${(emp.name||'E').charAt(0).toUpperCase()}</div>
+                    <div>
+                        <div class="emp-card-name">${escapeHtml(emp.name)} ${healthIcon}</div>
+                        <div class="emp-card-id">${emp.employee_id || emp.email}</div>
+                    </div>
+                </div>
+                <div class="emp-card-stats">
+                    <span class="emp-stat-badge total"><i class="fa-solid fa-server"></i> ${emp.total_endpoints} APIs</span>
+                    ${emp.down_endpoints ? `<span class="emp-stat-badge down"><i class="fa-solid fa-circle-exclamation"></i> ${emp.down_endpoints} Down</span>` : ''}
+                    ${emp.key_issues ? `<span class="emp-stat-badge key"><i class="fa-solid fa-key"></i> ${emp.key_issues} Key Issue${emp.key_issues > 1 ? 's' : ''}</span>` : ''}
+                    ${emp.recent_incidents ? `<span class="emp-stat-badge incident"><i class="fa-solid fa-triangle-exclamation"></i> ${emp.recent_incidents} Incident${emp.recent_incidents > 1 ? 's' : ''} (24h)</span>` : ''}
+                </div>
+                <div class="emp-card-footer">
+                    <span class="emp-rt"><i class="fa-solid fa-bolt" style="color:#818cf8;"></i> Avg ${emp.avg_response_time || 0}ms &bull; Last: ${lastAct}</span>
+                    <button class="btn-view-emp" onclick="openEmpPanel('${emp.id}', '${escapeHtml(emp.name)}')">View Endpoints →</button>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    // ── Employee Endpoints Panel ────────────────────────────────────────────
+    function openEmpPanel(empId, empName) {
+        document.getElementById('emp-panel-title').innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHtml(empName)}'s Endpoints`;
+        document.getElementById('emp-panel-subtitle').textContent = 'Loading...';
+        document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><i class="fa-solid fa-circle-notch fa-spin"></i><p>Fetching endpoints...</p></div>';
+        document.getElementById('empPanelOverlay').classList.add('open');
+        document.getElementById('empPanel').classList.add('open');
+        apiRequest(`/api/company/employees/${empId}/endpoints`).then(data => {
+            const eps = data.endpoints || [];
+            document.getElementById('emp-panel-subtitle').textContent = `${eps.length} endpoint${eps.length !== 1 ? 's' : ''} registered`;
+            if (!eps.length) {
+                document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><i class="fa-solid fa-server"></i><p>No endpoints added yet.</p></div>';
+                return;
+            }
+            document.getElementById('emp-panel-endpoints').innerHTML = eps.map(ep => {
+                const isDown = ep.is_down;
+                const statusCls = isDown ? 'down' : (ep.is_active ? 'up' : 'paused');
+                const statusLabel = isDown ? 'DOWN' : (ep.is_active ? 'UP' : 'PAUSED');
+                const keyBadge = ep.key_status && ep.key_status !== 'VALID' ? `<span class="emp-stat-badge key" style="font-size:0.68rem;">${ep.key_status}</span>` : '';
+                return `<div class="ep-row">
+                    <div>
+                        <div class="ep-name">${escapeHtml(ep.name || 'Unnamed')}</div>
+                        <div class="ep-url">${escapeHtml(ep.url || '')}</div>
+                    </div>
+                    <span class="status-pill ${statusCls}">${statusLabel}</span>
+                    ${keyBadge}
+                    <span style="font-size:0.78rem;color:var(--text-muted);">${ep.last_response_time ? ep.last_response_time + 'ms' : '—'}</span>
+                </div>`;
+            }).join('');
+        }).catch(() => {
+            document.getElementById('emp-panel-endpoints').innerHTML = '<div class="empty-state"><p style="color:#ef4444;">Failed to load endpoints.</p></div>';
+        });
+    }
+    function closeEmpPanel() {
+        document.getElementById('empPanelOverlay').classList.remove('open');
+        document.getElementById('empPanel').classList.remove('open');
+    }
+    document.getElementById('close-emp-panel').addEventListener('click', closeEmpPanel);
+    document.getElementById('empPanelOverlay').addEventListener('click', closeEmpPanel);
 
     // ── Load Analytics ─────────────────────────────────────────────────────
     let hourlyChart = null, failuresChart = null;
@@ -360,25 +506,7 @@
                 `).join('');
             }
         }
-
-        // Employees
-        const empList = document.getElementById('employees-list');
-        if (empList) {
-            const employees = d.employees || [];
-            if (!employees.length) {
-                empList.innerHTML = '<div class="empty-state" style="padding:2rem;"><p style="color:var(--text-muted);font-size:0.85rem;">No employees yet. Invite your first team member!</p></div>';
-            } else {
-                empList.innerHTML = employees.map(emp => `
-                    <div class="emp-row">
-                        <div class="emp-avatar">${(emp.name || 'E').charAt(0).toUpperCase()}</div>
-                        <div>
-                            <div class="emp-name">${escapeHtml(emp.name)}</div>
-                            <div class="emp-email">${escapeHtml(emp.email)}</div>
-                        </div>
-                    </div>
-                `).join('');
-            }
-        }
+        // Incidents are now shown in their own card (bottom section)
     }
 
     // ── Invite Employee ────────────────────────────────────────────────────
@@ -426,7 +554,9 @@
 
     // ── Init ───────────────────────────────────────────────────────────────
     loadAnalytics();
+    loadEmployeeActivity();
     setInterval(loadAnalytics, 30000);
+    setInterval(loadEmployeeActivity, 30000);
     </script>
 </body>
 </html>

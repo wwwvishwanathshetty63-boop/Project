@@ -3,6 +3,7 @@ import logging
 from flask import Blueprint, jsonify, request, g
 from backend.models import get_db, row_to_dict, rows_to_list, release_db, release_db
 from backend.utils.auth import token_required
+from backend.services.cache_service import cache, build_key, TTL_STATS, TTL_CHART, TTL_ANALYTICS
 
 logger = logging.getLogger(__name__)
 
@@ -12,25 +13,30 @@ dashboard_bp = Blueprint("dashboard", __name__, url_prefix="/api/dashboard")
 @dashboard_bp.route("/stats", methods=["GET"])
 @token_required
 def get_stats():
-    """Get dashboard statistics for the current user."""
+    """Dashboard stats — employees see only their own endpoints, company sees all (cached 20s)."""
+    user_id = g.current_user_id
+    user_role = g.current_user_role
+    time_range = request.args.get("range", "1d")
+
+    cache_key = build_key("stats", user_id, time_range)
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
     db = get_db()
     try:
-        user_id = g.current_user_id
-        user_role = g.current_user_role
-        time_range = request.args.get("range", "1d")
-
         days_map = {"1d": 1, "7d": 7, "30d": 30}
         days = days_map.get(time_range, 1)
 
-        # For employees, show endpoints from their company
+        # Employees → only endpoints they created; Company → all owned endpoints
         if user_role == "employee":
-            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = %s", (user_id,)).fetchone())
-            if user_row and user_row.get("company_id"):
-                user_id = user_row["company_id"]
-
-        endpoints = rows_to_list(
-            db.execute("SELECT * FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
-        )
+            endpoints = rows_to_list(
+                db.execute("SELECT * FROM api_endpoints WHERE created_by = %s", (user_id,)).fetchall()
+            )
+        else:
+            endpoints = rows_to_list(
+                db.execute("SELECT * FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
+            )
         total_apis = len(endpoints)
         active_apis = sum(1 for e in endpoints if e.get("is_active"))
 
@@ -114,22 +120,19 @@ def get_stats():
                 }
             )
 
-        return (
-            jsonify(
-                {
-                    "stats": {
-                        "total_apis": total_apis,
-                        "active_apis": active_apis,
-                        "down_apis": down_apis,
-                        "avg_response_time": avg_response_time,
-                        "uptime_percentage": uptime_percentage,
-                        "error_rate": error_rate,
-                    },
-                    "endpoints": endpoint_statuses,
-                }
-            ),
-            200,
-        )
+        result = {
+            "stats": {
+                "total_apis": total_apis,
+                "active_apis": active_apis,
+                "down_apis": down_apis,
+                "avg_response_time": avg_response_time,
+                "uptime_percentage": uptime_percentage,
+                "error_rate": error_rate,
+            },
+            "endpoints": endpoint_statuses,
+        }
+        cache.set(cache_key, result, ttl=TTL_STATS)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching dashboard stats: {e}")
         return jsonify({"error": "Failed to load stats. Please try again."}), 500
@@ -140,25 +143,30 @@ def get_stats():
 @dashboard_bp.route("/response-times", methods=["GET"])
 @token_required
 def get_response_times():
-    """Get response time data for charts."""
+    """Response time chart data — employees see own endpoints only (cached 15s)."""
+    user_id = g.current_user_id
+    user_role = g.current_user_role
+    time_range = request.args.get("range", "1d")
+
+    cache_key = build_key("chart", user_id, time_range)
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
     db = get_db()
     try:
-        user_id = g.current_user_id
-        user_role = g.current_user_role
-        time_range = request.args.get("range", "1d")
-
         days_map = {"1d": 1, "7d": 7, "30d": 30}
         days = days_map.get(time_range, 1)
 
-        # For employees, show endpoints from their company
+        # Employees → only their own; Company → all owned
         if user_role == "employee":
-            user_row = row_to_dict(db.execute("SELECT company_id FROM users WHERE id = %s", (user_id,)).fetchone())
-            if user_row and user_row.get("company_id"):
-                user_id = user_row["company_id"]
-
-        endpoints = rows_to_list(
-            db.execute("SELECT id, name FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
-        )
+            endpoints = rows_to_list(
+                db.execute("SELECT id, name FROM api_endpoints WHERE created_by = %s", (user_id,)).fetchall()
+            )
+        else:
+            endpoints = rows_to_list(
+                db.execute("SELECT id, name FROM api_endpoints WHERE user_id = %s", (user_id,)).fetchall()
+            )
 
         if not endpoints:
             return jsonify({"series": []}), 200
@@ -188,7 +196,9 @@ def get_response_times():
 
             series.append({"endpoint_id": ep["id"], "name": ep["name"], "data": data_points})
 
-        return jsonify({"series": series}), 200
+        result = {"series": series}
+        cache.set(cache_key, result, ttl=TTL_CHART)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching response times: {e}")
         return jsonify({"error": "Failed to load response times. Please try again."}), 500
@@ -199,13 +209,18 @@ def get_response_times():
 @dashboard_bp.route("/analytics", methods=["GET"])
 @token_required
 def get_analytics():
-    """Get real-time analytics data for the Company dashboard."""
+    """Get real-time analytics data for the Company dashboard (cached 30s)."""
     if g.current_user_role != "company":
         return jsonify({"error": "Only company accounts can view analytics"}), 403
 
+    user_id = g.current_user_id
+    cache_key = build_key("analytics", user_id)
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
     db = get_db()
     try:
-        user_id = g.current_user_id
 
         # Get all endpoints for company
         endpoints = rows_to_list(
@@ -275,7 +290,10 @@ def get_analytics():
             hour_end = hour_start + datetime.timedelta(hours=1)
             hour_logs = [
                 log for log in today_logs
-                if log.get("checked_at") and hour_start.strftime("%Y-%m-%d %H:%M:%S") <= log["checked_at"] < hour_end.strftime("%Y-%m-%d %H:%M:%S")
+                if log.get("checked_at") and (
+                    (isinstance(log["checked_at"], str) and hour_start.strftime("%Y-%m-%d %H:%M:%S") <= log["checked_at"] < hour_end.strftime("%Y-%m-%d %H:%M:%S"))
+                    or (hasattr(log["checked_at"], 'replace') and hour_start <= log["checked_at"].replace(tzinfo=datetime.timezone.utc) < hour_end)
+                )
             ]
             hour_rts = [log["response_time"] for log in hour_logs if log.get("response_time") is not None]
             hourly_data.append({
@@ -305,7 +323,7 @@ def get_analytics():
             ).fetchall()
         )
 
-        return jsonify({
+        analytics_result = {
             "total_apis": total_apis,
             "total_checks_today": total_checks_today,
             "successful_today": successful_today,
@@ -317,7 +335,9 @@ def get_analytics():
             "hourly_data": hourly_data,
             "incidents": incidents,
             "employees": employees,
-        }), 200
+        }
+        cache.set(cache_key, analytics_result, ttl=TTL_ANALYTICS)
+        return jsonify(analytics_result), 200
 
     except Exception as e:
         logger.error(f"Error fetching analytics: {e}")

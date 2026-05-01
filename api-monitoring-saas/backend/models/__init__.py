@@ -75,7 +75,7 @@ def init_db():
     """Initialize the PostgreSQL database schema."""
     init_pool()
     conn = get_db()
-    cursor = conn.cursor()
+    cursor = conn.conn.cursor()
 
     try:
         # PostgreSQL syntax for tables and defaults
@@ -106,6 +106,7 @@ def init_db():
             CREATE TABLE IF NOT EXISTS api_endpoints (
                 id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
                 user_id TEXT NOT NULL,
+                created_by TEXT,
                 name TEXT NOT NULL,
                 url TEXT NOT NULL,
                 method TEXT DEFAULT 'GET',
@@ -113,6 +114,9 @@ def init_db():
                 is_active BOOLEAN DEFAULT TRUE,
                 api_key TEXT,
                 api_key_header TEXT DEFAULT 'Authorization',
+                auth_type TEXT DEFAULT 'header',
+                key_status TEXT,
+                last_validated_at TIMESTAMP WITH TIME ZONE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
             );
@@ -145,11 +149,24 @@ def init_db():
             CREATE INDEX IF NOT EXISTS idx_users_employee_id ON users(employee_id);
             CREATE INDEX IF NOT EXISTS idx_invitations_token ON employee_invitations(token);
             CREATE INDEX IF NOT EXISTS idx_endpoints_user_id ON api_endpoints(user_id);
+            CREATE INDEX IF NOT EXISTS idx_endpoints_created_by ON api_endpoints(created_by);
             CREATE INDEX IF NOT EXISTS idx_logs_endpoint_id ON monitoring_logs(endpoint_id);
             CREATE INDEX IF NOT EXISTS idx_logs_checked_at ON monitoring_logs(checked_at);
             CREATE INDEX IF NOT EXISTS idx_email_verif_email ON email_verifications(email);
             """
         )
+
+        # Safe migrations for existing deployments
+        for col_sql in [
+            "ALTER TABLE api_endpoints ADD COLUMN IF NOT EXISTS created_by TEXT",
+            "ALTER TABLE api_endpoints ADD COLUMN IF NOT EXISTS auth_type TEXT DEFAULT 'header'",
+            "ALTER TABLE api_endpoints ADD COLUMN IF NOT EXISTS key_status TEXT",
+            "ALTER TABLE api_endpoints ADD COLUMN IF NOT EXISTS last_validated_at TIMESTAMP WITH TIME ZONE",
+        ]:
+            try:
+                cursor.execute(col_sql)
+            except Exception:
+                conn.rollback()
 
         conn.commit()
         logger.info(f"PostgreSQL database initialized")

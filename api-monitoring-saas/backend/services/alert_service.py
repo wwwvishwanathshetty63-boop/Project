@@ -375,3 +375,87 @@ def send_otp_email(to_email: str, otp: str, company_name: str = "") -> bool:
 
     return send_alert_email(to_email, subject, body_html)
 
+
+def build_key_status_alert_html(
+    api_name: str,
+    api_url: str,
+    timestamp: str,
+    old_status: str,
+    new_status: str,
+) -> str:
+    """Build HTML email for API key status transition alerts (e.g. VALID → INVALID)."""
+
+    status_colors = {
+        "VALID": "#10b981",
+        "INVALID": "#ef4444",
+        "LIMITED": "#f59e0b",
+        "RATE_LIMITED": "#f97316",
+        "ERROR": "#6b7280",
+    }
+    old_color = status_colors.get(old_status, "#6b7280")
+    new_color = status_colors.get(new_status, "#ef4444")
+
+    return f"""
+    <!DOCTYPE html>
+    <html>
+    <head><meta charset="utf-8"></head>
+    <body style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f8fafc; padding: 20px; text-align: center; margin: 0;">
+        <table align="center" border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; margin: 0 auto; background-color: #1e293b; border-radius: 12px; overflow: hidden; text-align: left; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+            <tr>
+                <td style="background: linear-gradient(135deg, #dc2626, #b91c1c); background-color: #dc2626; padding: 24px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 22px;">🔑 API Key Status Changed</h1>
+                    <div style="display: inline-block; background-color: #991b1b; color: #ffffff; padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: bold; margin-top: 12px;">KEY INVALIDATED</div>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 24px;">
+                    <p style="color: #e2e8f0; font-size: 15px; margin-top: 0; margin-bottom: 16px;">
+                        The API key for one of your monitored endpoints has been <strong style="color: #ef4444;">invalidated</strong>.
+                        This usually means the key was revoked, expired, or is no longer accepted by the target API.
+                    </p>
+                    <table border="0" cellpadding="12" cellspacing="0" width="100%" style="background-color: #0f172a; border-radius: 8px; margin: 0 0 16px 0;">
+                        <tr>
+                            <td style="border-bottom: 1px solid #334155;">
+                                <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">API Name</div>
+                                <div style="color: #f1f5f9; font-weight: bold; font-size: 15px; padding-top: 4px;">{api_name}</div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border-bottom: 1px solid #334155;">
+                                <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">URL</div>
+                                <div style="color: #38bdf8; font-weight: bold; font-size: 14px; padding-top: 4px; word-break: break-all;">
+                                    <a href="{api_url}" style="color: #38bdf8; text-decoration: none;">{api_url}</a>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="border-bottom: 1px solid #334155;">
+                                <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Status Change</div>
+                                <div style="padding-top: 4px; font-size: 15px;">
+                                    <span style="color: {old_color}; font-weight: bold;">{old_status}</span>
+                                    <span style="color: #64748b;"> → </span>
+                                    <span style="color: {new_color}; font-weight: bold;">{new_status}</span>
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <div style="color: #94a3b8; font-size: 12px; text-transform: uppercase;">Detected At</div>
+                                <div style="color: #f1f5f9; font-size: 14px; padding-top: 4px;">{timestamp}</div>
+                            </td>
+                        </tr>
+                    </table>
+                    <p style="color: #fbbf24; font-size: 14px; margin-bottom: 0; background: rgba(245, 158, 11, 0.1); padding: 12px; border-radius: 8px; border: 1px solid rgba(245, 158, 11, 0.2);">
+                        ⚠️ <strong>Action Required:</strong> Update or replace the API key for this endpoint in your dashboard to restore monitoring.
+                    </p>
+                </td>
+            </tr>
+            <tr>
+                <td style="padding: 16px 24px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #334155;">
+                    API Monitor SaaS &bull; Key Status Alert
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """

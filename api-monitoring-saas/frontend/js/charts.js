@@ -167,7 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('chartDataReady', (e) => {
         const { series } = e.detail;
 
-        if (responseChartInst && series) {
+        // ── Response Time Chart ──────────────────────────────────
+        if (responseChartInst && series && series.length > 0) {
             const colors = [
                 { line: '#7C3AED', bg: 'rgba(124, 58, 237, 0.1)' },
                 { line: '#06b6d4', bg: 'rgba(6,182,212,0.1)' },
@@ -200,8 +201,36 @@ document.addEventListener('DOMContentLoaded', () => {
             responseChartInst.update('default');
         }
 
-        // Ideally we would get uptime series from backend too, 
-        // but since it's not currently provided by `/api/dashboard/response-times` 
-        // we'll leave it empty unless added later.
+        // ── Uptime Chart (computed from series data) ─────────────
+        if (uptimeChartInst && series && series.length > 0) {
+            // Merge all data points, sorted by time
+            const allPoints = [];
+            series.forEach(s => {
+                s.data.forEach(d => {
+                    allPoints.push({
+                        time: new Date(d.time),
+                        success: d.is_success ? 1 : 0,
+                    });
+                });
+            });
+            allPoints.sort((a, b) => a.time - b.time);
+
+            if (allPoints.length > 0) {
+                // Compute rolling uptime percentage
+                let successCount = 0;
+                const uptimeData = allPoints.map((p, i) => {
+                    successCount += p.success;
+                    const pct = ((successCount / (i + 1)) * 100);
+                    return { x: p.time, y: Math.round(pct * 100) / 100 };
+                });
+
+                // Adjust y-axis min based on data
+                const minUptime = Math.min(...uptimeData.map(d => d.y));
+                uptimeChartInst.options.scales.y.min = Math.max(0, Math.floor(minUptime - 2));
+
+                uptimeChartInst.data.datasets[0].data = uptimeData;
+                uptimeChartInst.update('default');
+            }
+        }
     });
 });

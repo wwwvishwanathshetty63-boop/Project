@@ -77,6 +77,7 @@ async function loadEndpointsTable(tbody, range = '1d') {
                     <td style="color: var(--text-muted); font-size:0.8rem;">${lastChecked}</td>
                     <td class="text-right">
                         <div class="action-btns">
+                            ${api.is_down ? `<button class="btn-ai-analyze shimmer" title="AI Downtime Analysis" onclick="openAIAnalyzer('${api.id}')"><i class="fa-solid fa-brain"></i><span>AI Analyze</span></button>` : ''}
                             <button class="action-btn" title="Edit" onclick="openEditModal('${api.id}')"><i class="fa-solid fa-pen"></i></button>
                             <button class="action-btn delete" title="Delete" onclick="deleteEndpoint('${api.id}', '${escapeHtml(api.name)}')"><i class="fa-solid fa-trash"></i></button>
                         </div>

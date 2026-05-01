@@ -13,6 +13,7 @@ from backend.utils.validators import (
     validate_name,
     sanitize_string,
 )
+from backend.services.cache_service import cache, build_key, TTL_PROFILE, TTL_EMPLOYEES
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ def send_otp():
         expires_at = datetime.utcnow() + timedelta(minutes=10)
 
         # Invalidate any prior unused OTPs for same email
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = %s AND is_used = 0", (email,))
+        db.execute("UPDATE email_verifications SET is_used = TRUE WHERE email = %s AND is_used = FALSE", (email,))
         db.execute(
             "INSERT INTO email_verifications (email, otp, expires_at) VALUES (%s, %s, %s)",
             (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
@@ -104,7 +105,7 @@ def verify_otp():
         record = row_to_dict(
             db.execute(
                 """SELECT * FROM email_verifications
-                   WHERE email = %s AND otp = %s AND is_used = 0
+                   WHERE email = %s AND otp = %s AND is_used = FALSE
                    ORDER BY created_at DESC LIMIT 1""",
                 (email, otp),
             ).fetchone()
@@ -113,13 +114,19 @@ def verify_otp():
         if not record:
             return jsonify({"error": "Invalid or expired OTP. Please request a new one."}), 400
 
-        if datetime.utcnow() > datetime.strptime(record["expires_at"], "%Y-%m-%d %H:%M:%S"):
-            db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
+        expires_at = record["expires_at"]
+        if isinstance(expires_at, str):
+            expires_at = datetime.strptime(expires_at, "%Y-%m-%d %H:%M:%S")
+        # Strip timezone info for comparison with utcnow()
+        if expires_at.tzinfo is not None:
+            expires_at = expires_at.replace(tzinfo=None)
+        if datetime.utcnow() > expires_at:
+            db.execute("UPDATE email_verifications SET is_used = TRUE WHERE id = %s", (record["id"],))
             db.commit()
             return jsonify({"error": "OTP has expired. Please request a new one."}), 400
 
         # Mark OTP used
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
+        db.execute("UPDATE email_verifications SET is_used = TRUE WHERE id = %s", (record["id"],))
         db.commit()
     finally:
         release_db(db)
@@ -152,7 +159,7 @@ def reset_password_request():
         expires_at = datetime.utcnow() + timedelta(minutes=10)
 
         # Invalidate prior reset OTPs
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE email = %s AND is_used = 0", (email,))
+        db.execute("UPDATE email_verifications SET is_used = TRUE WHERE email = %s AND is_used = FALSE", (email,))
         db.execute(
             "INSERT INTO email_verifications (email, otp, expires_at) VALUES (%s, %s, %s)",
             (email, otp, expires_at.strftime("%Y-%m-%d %H:%M:%S")),
@@ -199,7 +206,7 @@ def reset_password_verify():
         record = row_to_dict(
             db.execute(
                 """SELECT * FROM email_verifications
-                   WHERE email = %s AND otp = %s AND is_used = 0
+                   WHERE email = %s AND otp = %s AND is_used = FALSE
                    ORDER BY created_at DESC LIMIT 1""",
                 (email, otp),
             ).fetchone()
@@ -216,7 +223,7 @@ def reset_password_verify():
 
         # Update password AND mark OTP used
         db.execute("UPDATE users SET password_hash = %s WHERE email = %s", (password_hash, email))
-        db.execute("UPDATE email_verifications SET is_used = 1 WHERE id = %s", (record["id"],))
+        db.execute("UPDATE email_verifications SET is_used = TRUE WHERE id = %s", (record["id"],))
         db.commit()
     finally:
         release_db(db)
@@ -403,7 +410,7 @@ def invite_employee():
         # Record the invitation
         token = secrets.token_urlsafe(48)
         db.execute(
-            "INSERT INTO employee_invitations (company_id, name, email, token, is_used) VALUES (%s, %s, %s, %s, 1)",
+            "INSERT INTO employee_invitations (company_id, name, email, token, is_used) VALUES (%s, %s, %s, %s, TRUE)",
             (g.current_user_id, name, email, token),
         )
         db.commit()
@@ -427,15 +434,22 @@ def invite_employee():
             201,
         )
     finally:
+        # New employee changes employee list
+        cache.invalidate(build_key("employees", g.current_user_id))
         release_db(db)
 
 
 @auth_bp.route("/employees", methods=["GET"])
 @token_required
 def list_employees():
-    """List all employees invited by the current company."""
+    """List all employees invited by the current company (cached 30s)."""
     if g.current_user_role != "company":
         return jsonify({"error": "Only company accounts can view employees"}), 403
+
+    cache_key = build_key("employees", g.current_user_id)
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
 
     db = get_db()
     try:
@@ -448,12 +462,14 @@ def list_employees():
 
         pending_invites = rows_to_list(
             db.execute(
-                "SELECT id, name, email, created_at FROM employee_invitations WHERE company_id = %s AND is_used = 0",
+                "SELECT id, name, email, created_at FROM employee_invitations WHERE company_id = %s AND is_used = FALSE",
                 (g.current_user_id,),
             ).fetchall()
         )
 
-        return jsonify({"employees": employees, "pending_invites": pending_invites}), 200
+        result = {"employees": employees, "pending_invites": pending_invites}
+        cache.set(cache_key, result, ttl=TTL_EMPLOYEES)
+        return jsonify(result), 200
     finally:
         release_db(db)
 
@@ -461,7 +477,12 @@ def list_employees():
 @auth_bp.route("/profile", methods=["GET"])
 @token_required
 def get_profile():
-    """Get current user's profile."""
+    """Get current user's profile (cached 60s)."""
+    cache_key = build_key("profile", g.current_user_id)
+    cached = cache.get(cache_key)
+    if cached:
+        return jsonify(cached), 200
+
     db = get_db()
     try:
         user = row_to_dict(
@@ -472,7 +493,9 @@ def get_profile():
         )
         if not user:
             return jsonify({"error": "User not found"}), 404
-        return jsonify({"user": user}), 200
+        result = {"user": user}
+        cache.set(cache_key, result, ttl=TTL_PROFILE)
+        return jsonify(result), 200
     finally:
         release_db(db)
 
@@ -522,4 +545,6 @@ def update_profile():
 
         return jsonify({"message": "Profile updated", "user": user}), 200
     finally:
+        # Profile changed — invalidate cached profile
+        cache.delete(build_key("profile", g.current_user_id))
         release_db(db)

@@ -59,7 +59,9 @@ async function apiRequest(endpoint, options = {}) {
         }
 
         if (!response.ok) {
-            throw new Error(data.error || `HTTP ${response.status}`);
+            const err = new Error(data.error || `HTTP ${response.status}`);
+            Object.assign(err, data);
+            throw err;
         }
 
         return data;
