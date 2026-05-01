@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Monitor - Dashboard</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
+
+    <!-- Synapse Styles -->
+    <link rel="stylesheet" href="css/synapse.css">
+    <style>
+        /* Dashboard-specific tweaks */
+        .sidebar { background: rgba(10,10,10,0.8); backdrop-filter: blur(20px); border-right: 1px solid var(--border); width: 280px; }
+        .sidebar-header { font-family: 'Instrument Serif', serif; font-size: 1.5rem; color: var(--violet); }
+        .menu-item.active { background: rgba(139, 92, 246, 0.1); color: var(--violet); border-right: 3px solid var(--violet); }
+        .topbar { background: rgba(3,3,3,0.5); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
+        .stat-card { text-decoration: none; display: block; height: 100%; }
+        .stat-icon-wrapper { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.2rem; }
+        .stat-icon-primary { background: rgba(139, 92, 246, 0.1); color: var(--violet); }
+        .stat-icon-success { background: rgba(16, 185, 129, 0.1); color: var(--emerald); }
+        .stat-icon-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .stat-icon-info { background: rgba(6, 182, 212, 0.1); color: var(--cyan); }
+        .stat-icon-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        
+        .monitor-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
+        .monitor-card:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.04); transform: translateX(4px); }
+        .monitor-card-left { display: flex; align-items: center; gap: 1rem; flex: 1; }
+        .monitor-card-name { font-family: 'Instrument Serif', serif; font-size: 1.1rem; color: #fff; }
+        .monitor-card-url { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
+        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; }
+        .pulse-dot.up { background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
+        .pulse-dot.down { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+        .pulse-dot.paused { background: #94a3b8; }
+        
+        .filter-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 0.4rem 1rem; border-radius: 9999px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.3s; }
+        .filter-pill.active { background: var(--violet); color: #fff; border-color: var(--violet); }
+        
+        .uptime-mini-bar { background: rgba(255,255,255,0.05) !important; }
+    </style>
+</head>
+
+<body>
+    <!-- Ambient Orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <div class="sidebar-header" style="padding: 2rem 1.5rem;">
+            <div class="nav-brand-dot" style="margin-bottom: 0.5rem;"></div>
+            <span style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; letter-spacing: -0.02em;">Synapse <span style="font-size: 0.8rem; color: var(--text-muted); font-family: 'Inter'; font-weight: 400;">Monitor</span></span>
+        </div>
+
+        <nav class="sidebar-menu">
+            <div class="menu-section">
+                <div class="menu-section-title">Main Control</div>
+                <a href="company-dashboard.html" class="menu-item" data-role="company">
+                    <i class="fa-solid fa-chart-line"></i>
+                    <span>Intelligence</span>
+                </a>
+                <a href="dashboard.html" class="menu-item active">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Nexus Dashboard</span>
+                </a>
+                <a href="api-endpoints.html" class="menu-item">
+                    <i class="fa-solid fa-server"></i>
+                    <span>Endpoints</span>
+                </a>
+                <a href="logs.html" class="menu-item">
+                    <i class="fa-solid fa-list-check"></i>
+                    <span>Activity Logs</span>
+                </a>
+                <a href="alerts.html" class="menu-item">
+                    <i class="fa-solid fa-bell"></i>
+                    <span>Incidents</span>
+                </a>
+            </div>
+
+            <div class="menu-section" data-role="company">
+                <div class="menu-section-title">Operations</div>
+                <a href="admin.html" class="menu-item">
+                    <i class="fa-solid fa-user-plus"></i>
+                    <span>Access Control</span>
+                </a>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Profile</span>
+                </a>
+            </div>
+
+            <div class="menu-section" data-role="employee">
+                <div class="menu-section-title">Entity</div>
+                <a href="profile.html" class="menu-item">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>Settings</span>
+                </a>
+            </div>
+        </nav>
+
+        <div class="sidebar-footer" style="background: rgba(255,255,255,0.02); border-top: 1px solid var(--border);">
+            <div class="user-avatar-small" style="background: var(--violet);">U</div>
+            <div class="user-info">
+                <span class="user-name">Observer</span>
+                <span class="user-role" style="font-family: 'JetBrains Mono';">System Agent</span>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Top Navbar -->
+        <header class="topbar">
+            <div class="topbar-left">
+                <button class="mobile-menu-btn">
+                    <i class="fa-solid fa-bars"></i>
+                </button>
+                <h2 style="font-family: 'Instrument Serif', serif; font-weight: 400;">Nexus</h2>
+            </div>
+
+            <div class="topbar-right">
+                <button class="topbar-action" id="btn-refresh" title="Synchronize">
+                    <i class="fa-solid fa-rotate-right"></i>
+                </button>
+                <button class="topbar-action" title="Signals">
+                    <i class="fa-solid fa-bell"></i>
+                    <span class="notification-badge" style="background: var(--violet);"></span>
+                </button>
+                <div class="user-avatar-small" style="border: 1px solid var(--violet);">S</div>
+            </div>
+        </header>
+
+        <!-- Page Content -->
+        <div class="content">
+            <div class="page-header" style="margin-bottom: 2.5rem;">
+                <div>
+                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 2.5rem; letter-spacing: -0.03em;">Nexus Overview</h1>
+                    <p style="color: var(--text-muted); font-weight: 300;">Unified monitoring intelligence</p>
+                </div>
+                <div class="header-actions">
+                    <select class="form-control" id="stats-range-selector" style="width: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: #fff; border-radius: 9999px; padding: 0 1.5rem;">
+                        <option value="1d">T-24 Hours</option>
+                        <option value="7d">T-7 Days</option>
+                        <option value="30d">T-30 Days</option>
+                    </select>
+                    <div class="btn-shiny" id="btn-add-endpoint-shiny">
+                        <div class="btn-shiny-inner">
+                            <i class="fa-solid fa-plus"></i> Initialize API
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statistics Cards Grid -->
+            <div class="stats-grid">
+
+                <!-- Total APIs -->
+                <a href="api-endpoints.html" class="glass-card stat-card" title="View all API endpoints">
+                    <div class="stat-icon-wrapper stat-icon-primary">
+                        <i class="fa-solid fa-server"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Monitored Endpoints</div>
+                        <div class="stat-value" id="stat-total" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
+                    </div>
+                </a>
+
+                <!-- Active APIs -->
+                <a href="api-endpoints.html?filter=active" class="glass-card stat-card" title="View active APIs">
+                    <div class="stat-icon-wrapper stat-icon-success">
+                        <i class="fa-solid fa-check-circle"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Operational</div>
+                        <div class="stat-value" id="stat-active" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
+                    </div>
+                </a>
+
+                <!-- Down APIs -->
+                <a href="api-endpoints.html?filter=down" class="glass-card stat-card" title="View down APIs">
+                    <div class="stat-icon-wrapper stat-icon-danger">
+                        <i class="fa-solid fa-circle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Incidents</div>
+                        <div class="stat-value" id="stat-down" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
+                    </div>
+                </a>
+
+                <!-- Avg Response Time -->
+                <a href="logs.html" class="glass-card stat-card" title="View monitoring logs">
+                    <div class="stat-icon-wrapper stat-icon-info">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Avg Latency</div>
+                        <div class="stat-value" id="stat-response" style="font-family: 'Instrument Serif'; font-size: 3rem;">—</div>
+                    </div>
+                </a>
+
+                <!-- Uptime -->
+                <a href="logs.html" class="glass-card stat-card" title="View uptime logs">
+                    <div class="stat-icon-wrapper stat-icon-success">
+                        <i class="fa-solid fa-arrow-trend-up"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Core Uptime</div>
+                        <div class="stat-value" id="stat-uptime" style="font-family: 'Instrument Serif'; font-size: 3rem;">—</div>
+                    </div>
+                </a>
+
+                <!-- Active Alerts -->
+                <a href="alerts.html" class="glass-card stat-card" title="View alerts">
+                    <div class="stat-icon-wrapper stat-icon-warning">
+                        <i class="fa-solid fa-triangle-exclamation"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Signals</div>
+                        <div class="stat-value" id="stat-alerts" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
+                    </div>
+                </a>
+
+            </div>
+
+
+            <!-- Charts Section -->
+            <div class="charts-grid" style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="glass-card">
+                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
+                            <i class="fa-solid fa-chart-line" style="color: var(--violet); margin-right: 8px;"></i> Latency Matrix
+                        </div>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">RT / 24H</span>
+                    </div>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="responseTimeChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="glass-card">
+                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
+                            <i class="fa-solid fa-chart-area" style="color: var(--cyan); margin-right: 8px;"></i> Availability Flux
+                        </div>
+                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">UP / 24H</span>
+                    </div>
+                    <div class="chart-container" style="height: 300px;">
+                        <canvas id="uptimeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Monitor List -->
+            <div class="glass-card" style="margin-top: 2rem; padding: 0;">
+                <div class="card-header" style="padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+                    <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.5rem;">
+                        <i class="fa-solid fa-satellite-dish" style="color: var(--violet); margin-right: 12px;"></i> Active Monitors
+                    </div>
+                    <div style="display:flex; align-items:center; gap:1.5rem;">
+                        <span style="font-size:0.75rem; color:var(--text-muted); font-family: 'JetBrains Mono';">
+                            <span class="pulse-dot up pulse" style="display:inline-block; margin-right:6px;"></span>SYNCHRONIZED
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Filter bar -->
+                <div class="filter-bar" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
+                    <div class="filter-pills" id="monitor-filter-pills" style="display: flex; gap: 0.5rem;">
+                        <button class="filter-pill active" data-filter="all">All Channels</button>
+                        <button class="filter-pill" data-filter="up">Operational</button>
+                        <button class="filter-pill" data-filter="down">Incident</button>
+                        <button class="filter-pill" data-filter="paused">Halted</button>
+                    </div>
+                    <div class="filter-search" style="position: relative; width: 260px;">
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.8rem;"></i>
+                        <input type="text" id="monitor-search" placeholder="Filter monitors..." style="padding-left: 2.5rem; border-radius: 9999px;">
+                    </div>
+                </div>
+
+                <!-- Monitor cards list -->
+                <div class="monitor-list" id="monitor-card-list" style="padding: 1.5rem;">
+                    <div class="empty-state" id="monitor-loading" style="padding: 4rem; text-align: center; color: var(--text-muted);">
+                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: var(--violet);"></i>
+                        <p style="font-weight: 300;">Calibrating neural links...</p>
+                    </div>
+                </div>
+            </div>
+
+
+
+
+        </div>
+
+        <!-- Add Endpoint Modal -->
+        <div id="addEndpointModal" class="modal-overlay">
+            <div class="modal-container">
+                <button class="modal-close" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
+                <div class="modal-header">
+                    <div class="modal-icon" style="background: rgba(139,92,246,0.1); color: var(--violet);">
+                        <i class="fa-solid fa-plus"></i>
+                    </div>
+                    <h3 class="modal-title">Initialize Monitor</h3>
+                </div>
+                <div class="modal-body">
+                    <form id="add-endpoint-form">
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>Designation</label>
+                            <input type="text" id="endpoint-name" placeholder="e.g. Gateway Delta" required>
+                        </div>
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label>Endpoint Vector (URL)</label>
+                            <input type="url" id="endpoint-url" placeholder="https://api.synapse.com/v1" required>
+                        </div>
+                        <div class="form-group" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                            <div style="flex: 1;">
+                                <label>Protocol</label>
+                                <select id="endpoint-method" class="form-control" required style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
+                                    <option value="GET">GET</option>
+                                    <option value="POST">POST</option>
+                                    <option value="PUT">PUT</option>
+                                    <option value="DELETE">DELETE</option>
+                                </select>
+                            </div>
+                            <div style="flex: 1;">
+                                <label>Pulse Rate</label>
+                                <select id="endpoint-interval" class="form-control" required style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
+                                    <option value="60">60s (Live)</option>
+                                    <option value="300">5m (Eco)</option>
+                                    <option value="600">10m (Stable)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display: flex; justify-content: flex-end; gap: 1rem;">
+                            <button type="button" class="btn-secondary" id="cancel-endpoint-modal">Abort</button>
+                            <div class="btn-shiny" style="padding: 0;">
+                                <button type="submit" class="btn-shiny-inner" style="border:none; cursor:pointer;">Establish Link</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </main>    <script src="js/app.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/ai-analyzer.js"></script>
+    <script src="js/synapse.js"></script>
+    <script>
+        // Wire up the new shiny button
+        document.getElementById('btn-add-endpoint-shiny').addEventListener('click', () => {
+            const modal = document.getElementById('addEndpointModal');
+            modal.style.display = 'flex';
+            setTimeout(() => modal.classList.add('active'), 10);
+        });
+        
+        document.getElementById('close-endpoint-modal').addEventListener('click', () => {
+            const modal = document.getElementById('addEndpointModal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+
+        document.getElementById('cancel-endpoint-modal').addEventListener('click', () => {
+            const modal = document.getElementById('addEndpointModal');
+            modal.classList.remove('active');
+            setTimeout(() => modal.style.display = 'none', 300);
+        });
+
+        // ── Monitor card filter pills ──────────────────────────
+        document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(pill => {
+            pill.addEventListener('click', () => {
+                document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
+                pill.classList.add('active');
+                filterMonitorCards();
+            });
+        });
+
+        document.getElementById('monitor-search').addEventListener('input', filterMonitorCards);
+
+        function filterMonitorCards() {
+            const f = document.querySelector('#monitor-filter-pills .filter-pill.active').dataset.filter;
+            const q = document.getElementById('monitor-search').value.toLowerCase();
+            document.querySelectorAll('#monitor-card-list .monitor-card').forEach(card => {
+                const status = card.dataset.status || 'up';
+                const textMatch = card.textContent.toLowerCase().includes(q);
+                const filterMatch = f === 'all' || status === f;
+                card.style.display = (textMatch && filterMatch) ? '' : 'none';
+            });
+        }
+
+        // ── Inject monitor cards when dashboard data loads ─────
+        document.addEventListener('DOMContentLoaded', () => {
+            const origLoad = window.loadDashboardData;
+            window.loadDashboardData = async function () {
+                if (typeof origLoad === 'function') await origLoad();
+                await renderMonitorCards();
+            };
+            setTimeout(renderMonitorCards, 1200);
+        });
+
+        async function renderMonitorCards() {
+            const list = document.getElementById('monitor-card-list');
+            if (!list) return;
+
+            const range = document.getElementById('stats-range-selector')?.value || '1d';
+
+            let endpoints = [];
+            try {
+                const data = await apiRequest(`/api/endpoints?range=${range}`);
+                endpoints = data.endpoints || [];
+            } catch (e) {
+                list.innerHTML = `<div class="empty-state">
+                    <i class="fa-solid fa-plug-circle-exclamation" style="font-size:2rem; margin-bottom:1rem; color:#ef4444;"></i>
+                    <p>Neural link failed. Verify credentials and server uplink.</p>
+                </div>`;
+                return;
+            }
+
+            list.innerHTML = '';
+
+            if (!endpoints.length) {
+                list.innerHTML = `<div class="empty-state">
+                    <i class="fa-solid fa-satellite-dish" style="font-size:2rem; margin-bottom:1rem; color:var(--text-dim);"></i>
+                    <p>No active monitors. Initialize your first endpoint to begin intelligence gathering.</p>
+                </div>`;
+                return;
+            }
+
+            endpoints.forEach(ep => {
+                const statusClass = ep.is_down ? 'down' : (ep.is_active ? 'up' : 'paused');
+                const statusLabel = statusClass === 'up' ? 'OPERATIONAL' : statusClass === 'down' ? 'INCIDENT' : 'HALTED';
+                const method = (ep.method || 'GET').toUpperCase();
+                const rt = ep.last_response_time ? ep.last_response_time + 'ms' : '—';
+                const uptime = ep.uptime_percentage != null ? ep.uptime_percentage : 100;
+                const lastChecked = ep.last_check ? new Date(ep.last_check).toLocaleTimeString() : '—';
+                const rangeLabel = range === '1d' ? '24H' : (range === '7d' ? '7D' : '30D');
+
+                const card = document.createElement('div');
+                card.className = 'monitor-card';
+                card.dataset.status = statusClass;
+                card.innerHTML = `
+                    <div class="monitor-card-left">
+                        <span class="pulse-dot ${statusClass} ${statusClass === 'up' ? 'pulse' : ''}"></span>
+                        <div style="flex: 1;">
+                            <div class="monitor-card-name">${escapeHtml(ep.name || 'Unknown')} <span style="font-size:0.6rem; color:var(--text-dim); font-family:'JetBrains Mono'; margin-left:8px;">${method}</span></div>
+                            <div class="monitor-card-url">${escapeHtml(ep.url || '')}</div>
+                        </div>
+                    </div>
+                    <div class="monitor-card-meta" style="display:flex; gap:2rem; align-items:center;">
+                        <div style="text-align:right;">
+                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Latency</div>
+                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:#fff;">${rt}</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Uptime (${rangeLabel})</div>
+                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:${uptime >= 99 ? 'var(--emerald)' : (uptime >= 95 ? '#F59E0B' : '#EF4444')};">${uptime}%</div>
+                        </div>
+                    </div>
+                    <div class="monitor-card-actions" style="display:flex; gap:0.5rem; margin-left:1rem;">
+                        <button class="action-btn" onclick="openEditModal('${ep.id}')" style="background:none; border:1px solid var(--border); color:var(--text-muted); padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn" onclick="deleteEndpoint('${ep.id}', '${(ep.name||'').replace(/'/g,"\\'")}')" style="background:none; border:1px solid var(--border); color:#ef4444; padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,483 +1,750 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Monitor - Dashboard</title>
-
-    <!-- Google Fonts -->
+    <title>API Monitor — Real-Time API Monitoring & Analytics</title>
+    <meta name="description" content="Monitor your APIs in real-time with instant alerts, uptime tracking, and detailed analytics. Built for teams that demand reliability.">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-
-    <!-- FontAwesome -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800;900&family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3"></script>
-
-    <!-- Synapse Styles -->
-    <link rel="stylesheet" href="css/synapse.css">
     <style>
-        /* Dashboard-specific tweaks */
-        .sidebar { background: rgba(10,10,10,0.8); backdrop-filter: blur(20px); border-right: 1px solid var(--border); width: 280px; }
-        .sidebar-header { font-family: 'Instrument Serif', serif; font-size: 1.5rem; color: var(--violet); }
-        .menu-item.active { background: rgba(139, 92, 246, 0.1); color: var(--violet); border-right: 3px solid var(--violet); }
-        .topbar { background: rgba(3,3,3,0.5); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
-        .stat-card { text-decoration: none; display: block; height: 100%; }
-        .stat-icon-wrapper { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; font-size: 1.2rem; }
-        .stat-icon-primary { background: rgba(139, 92, 246, 0.1); color: var(--violet); }
-        .stat-icon-success { background: rgba(16, 185, 129, 0.1); color: var(--emerald); }
-        .stat-icon-danger { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
-        .stat-icon-info { background: rgba(6, 182, 212, 0.1); color: var(--cyan); }
-        .stat-icon-warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
-        
-        .monitor-card { background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 16px; padding: 1.25rem; margin-bottom: 1rem; transition: all 0.3s; display: flex; align-items: center; justify-content: space-between; gap: 1.5rem; }
-        .monitor-card:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.04); transform: translateX(4px); }
-        .monitor-card-left { display: flex; align-items: center; gap: 1rem; flex: 1; }
-        .monitor-card-name { font-family: 'Instrument Serif', serif; font-size: 1.1rem; color: #fff; }
-        .monitor-card-url { font-size: 0.75rem; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; }
-        .pulse-dot { width: 8px; height: 8px; border-radius: 50%; }
-        .pulse-dot.up { background: var(--emerald); box-shadow: 0 0 10px var(--emerald); }
-        .pulse-dot.down { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
-        .pulse-dot.paused { background: #94a3b8; }
-        
-        .filter-pill { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text-muted); padding: 0.4rem 1rem; border-radius: 9999px; cursor: pointer; font-size: 0.75rem; font-weight: 600; transition: all 0.3s; }
-        .filter-pill.active { background: var(--violet); color: #fff; border-color: var(--violet); }
-        
-        .uptime-mini-bar { background: rgba(255,255,255,0.05) !important; }
+        :root {
+            --bg: #030303;
+            --bg-card: rgba(10,10,10,0.7);
+            --bg-elevated: rgba(15,15,15,0.8);
+            --border: rgba(255,255,255,0.06);
+            --border-hover: rgba(139,92,246,0.4);
+            --text: #f8f8f8;
+            --text-muted: #94a3b8;
+            --text-dim: #475569;
+            --violet: #8B5CF6;
+            --violet-glow: rgba(139,92,246,0.4);
+            --cyan: #06B6D4;
+            --cyan-glow: rgba(6,182,212,0.4);
+            --emerald: #10B981;
+            --accent: #8B5CF6;
+            --accent-light: #a78bfa;
+            --cyan-light: #22d3ee;
+            --green: #10B981; --red: #ef4444; --amber: #f59e0b;
+        }
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+        html { scroll-behavior: smooth; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); overflow-x:hidden; line-height:1.6; }
+
+        /* Ambient orbs */
+        .orb { position:fixed; border-radius:50%; pointer-events:none; z-index:0; }
+        .orb-1 { width:700px; height:700px; background:radial-gradient(circle, rgba(139,92,246,0.18) 0%, transparent 70%); top:-200px; left:-150px; animation:orbFloat 12s ease-in-out infinite; }
+        .orb-2 { width:600px; height:600px; background:radial-gradient(circle, rgba(6,182,212,0.12) 0%, transparent 70%); bottom:-150px; right:-100px; animation:orbFloat 18s ease-in-out infinite reverse; }
+        .orb-3 { width:400px; height:400px; background:radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 70%); top:40%; left:55%; animation:orbFloat 15s ease-in-out infinite 3s; }
+        @keyframes orbFloat { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-20px) scale(1.05)} }
+
+        .container { max-width:1200px; margin:0 auto; padding:0 2rem; position:relative; z-index:1; }
+
+        /* ── NAV PILL ── */
+        .navbar { position:fixed; top:1.5rem; left:50%; transform:translateX(-50%); z-index:100; width:95%; max-width:672px; }
+        .nav-inner { display:flex; align-items:center; justify-content:space-between; background:rgba(10,10,10,0.75); backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,0.08); border-radius:9999px; padding:0.5rem 1.25rem; gap:1rem; }
+        .nav-brand { display:flex; align-items:center; gap:8px; text-decoration:none; flex-shrink:0; }
+        .nav-brand-dot { width:22px; height:22px; border-radius:50%; background:conic-gradient(from 180deg, var(--violet), var(--cyan), var(--violet)); flex-shrink:0; }
+        .nav-brand-text { font-family:'Instrument Serif',serif; font-size:1.1rem; color:var(--text); letter-spacing:-0.01em; }
+        .nav-links { display:flex; align-items:center; gap:1.5rem; }
+        .nav-link { color:var(--text-muted); text-decoration:none; font-size:.72rem; font-weight:600; text-transform:uppercase; letter-spacing:.12em; transition:color .2s cubic-bezier(0.23,1,0.32,1); }
+        .nav-link:hover { color:var(--text); }
+        .nav-cta { padding:0.45rem 1.1rem; border-radius:9999px; background:#fff; color:#000; font-weight:600; font-size:.8rem; text-decoration:none; transition:all .3s cubic-bezier(0.23,1,0.32,1); white-space:nowrap; }
+        .nav-cta:hover { background:rgba(255,255,255,0.85); box-shadow:0 0 20px rgba(255,255,255,0.15); }
+        .mobile-toggle { display:none; background:none; border:none; color:var(--text); font-size:1.2rem; cursor:pointer; }
+
+        /* ── HERO ── */
+        .hero { min-height:100vh; display:flex; align-items:center; justify-content:center; text-align:center; padding:8rem 0 4rem; position:relative; overflow:hidden; }
+        .hero::before { content:''; position:absolute; top:0; left:50%; transform:translateX(-50%); width:800px; height:400px; background:radial-gradient(ellipse, rgba(139,92,246,0.18) 0%, transparent 70%); pointer-events:none; }
+        .hero-badge { display:inline-flex; align-items:center; gap:8px; background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.2); border-radius:9999px; padding:6px 16px; font-size:.72rem; font-weight:600; color:#a78bfa; letter-spacing:.1em; text-transform:uppercase; margin-bottom:2rem; animation:fadeUp .6s ease-out both; }
+        .hero-badge .pulse { width:6px; height:6px; border-radius:50%; background:var(--emerald); animation:pulse 2s infinite; }
+        .hero h1 { font-family:'Instrument Serif',serif; font-size:clamp(3rem,7vw,6rem); font-weight:400; line-height:.95; letter-spacing:-0.03em; margin-bottom:1.5rem; animation:fadeUp .7s .1s ease-out both; }
+        .hero h1 .shimmer { background:linear-gradient(90deg,#a78bfa 0%,#fff 40%,#fff 60%,#22d3ee 100%); background-size:200% auto; -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; animation:shimmer 4s linear infinite; }
+        @keyframes shimmer { to { background-position:200% center; } }
+        .hero-desc { font-size:1.1rem; color:var(--text-muted); max-width:520px; margin:0 auto 2.5rem; font-weight:300; line-height:1.75; animation:fadeUp .7s .2s ease-out both; }
+        .hero-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; animation:fadeUp .7s .3s ease-out both; }
+
+        /* Shiny Border Button */
+        .btn-shiny { position:relative; padding:1px; border-radius:9999px; overflow:hidden; display:inline-block; cursor:pointer; }
+        .btn-shiny::before { content:''; position:absolute; inset:-50%; width:200%; height:200%; background:conic-gradient(from 0deg, transparent 0%, #8B5CF6 40%, #06B6D4 50%, transparent 60%); animation:spinGrad 4s linear infinite; }
+        @keyframes spinGrad { to { transform:rotate(360deg); } }
+        .btn-shiny-inner { position:relative; z-index:1; background:#0a0a0a; border-radius:9999px; padding:0.85rem 2.5rem; font-weight:600; font-size:.95rem; color:#fff; display:flex; align-items:center; gap:8px; transition:background .3s; }
+        .btn-shiny:hover .btn-shiny-inner { background:#111; }
+        .btn-secondary { padding:0.85rem 2rem; border-radius:9999px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:.95rem; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:all .3s cubic-bezier(0.23,1,0.32,1); cursor:pointer; }
+        .btn-secondary:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+
+        /* ── TICKER ── */
+        .ticker-section { width:100%; background:rgba(0,0,0,0.5); border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); overflow:hidden; height:56px; display:flex; align-items:center; position:relative; z-index:1; }
+        .ticker-track { display:flex; align-items:center; gap:3rem; white-space:nowrap; animation:ticker 40s linear infinite; }
+        .ticker-track:hover { animation-play-state:paused; }
+        @keyframes ticker { from{transform:translateX(0)} to{transform:translateX(-50%)} }
+        .ticker-item { display:flex; align-items:center; gap:.6rem; flex-shrink:0; }
+        .ticker-label { font-size:.65rem; font-family:'JetBrains Mono',monospace; text-transform:uppercase; letter-spacing:.2em; color:#475569; }
+        .ticker-value { font-size:.95rem; font-family:'JetBrains Mono',monospace; color:#fff; }
+        .ticker-value.violet { color:#a78bfa; }
+        .ticker-value.cyan { color:#22d3ee; }
+        .ticker-value.emerald { color:#10B981; }
+        .ticker-sep { width:1px; height:20px; background:rgba(255,255,255,0.08); }
+
+        /* ── SECTION HEADERS ── */
+        .section-header { text-align:center; margin-bottom:3.5rem; }
+        .section-label { display:inline-flex; align-items:center; gap:6px; font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.15em; color:#a78bfa; margin-bottom:.75rem; }
+        .section-title { font-family:'Instrument Serif',serif; font-size:clamp(2rem,3.5vw,3rem); font-weight:400; letter-spacing:-.02em; margin-bottom:1rem; }
+        .section-desc { font-size:1rem; color:var(--text-muted); max-width:520px; margin:0 auto; font-weight:300; }
+
+        /* ── TRUST BAR ── */
+        .trust-bar { padding:3.5rem 0; text-align:center; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
+        .trust-bar p { font-size:.65rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.15em; font-weight:600; margin-bottom:1.75rem; }
+        .trust-logos { display:flex; justify-content:center; align-items:center; gap:2.5rem; flex-wrap:wrap; }
+        .trust-item { display:flex; align-items:center; gap:8px; color:var(--text-dim); font-size:.85rem; font-weight:600; transition:color .3s; }
+        .trust-item:hover { color:var(--text-muted); }
+        .trust-item i { font-size:1.3rem; }
+
+        /* ── STATS ── */
+        .stats { padding:5rem 0; }
+        .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:1.5rem; }
+        .stat-card { text-align:center; padding:2.5rem 1.5rem; background:var(--bg-card); border:1px solid var(--border); border-radius:24px; backdrop-filter:blur(16px); transition:all .4s cubic-bezier(0.23,1,0.32,1); position:relative; overflow:hidden; cursor:pointer; }
+        .stat-card::before { content:''; position:absolute; top:0; left:0; right:0; height:1px; background:linear-gradient(90deg,transparent,rgba(139,92,246,0.4),transparent); }
+        .stat-card:hover { transform:translateY(-8px); border-color:rgba(139,92,246,0.3); box-shadow:0 0 30px -10px rgba(139,92,246,0.3); }
+        .stat-number { font-family:'JetBrains Mono',monospace; font-size:2.5rem; font-weight:700; background:linear-gradient(135deg,#a78bfa,#22d3ee); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
+        .stat-label { font-size:.78rem; color:var(--text-muted); margin-top:.35rem; font-weight:500; text-transform:uppercase; letter-spacing:.08em; }
+
+        /* ── FEATURES ── */
+        .features { padding:5rem 0; }
+        .features-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:1.5rem; }
+        .feature-card { background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:24px; padding:2.5rem; transition:all .4s cubic-bezier(0.23,1,0.32,1); cursor:pointer; position:relative; overflow:hidden; }
+        .feature-card::after { content:''; position:absolute; inset:0; border-radius:24px; opacity:0; background:radial-gradient(circle at 50% 0%, rgba(139,92,246,0.08), transparent 70%); transition:opacity .4s; }
+        .feature-card:hover { transform:translateY(-12px); border-color:rgba(139,92,246,0.3); box-shadow:0 0 30px -10px rgba(139,92,246,0.3); }
+        .feature-card:hover::after { opacity:1; }
+        .feature-icon { width:48px; height:48px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; margin-bottom:1.25rem; transition:transform .4s cubic-bezier(0.23,1,0.32,1); }
+        .feature-card:hover .feature-icon { transform:scale(1.1) rotate(-5deg); }
+        .fi-1 { background:rgba(139,92,246,0.12); color:#a78bfa; }
+        .fi-2 { background:rgba(6,182,212,0.12); color:#22d3ee; }
+        .fi-3 { background:rgba(16,185,129,0.12); color:#10B981; }
+        .fi-4 { background:rgba(245,158,11,0.12); color:#fbbf24; }
+        .fi-5 { background:rgba(239,68,68,0.12); color:#f87171; }
+        .fi-6 { background:rgba(236,72,153,0.12); color:#f472b6; }
+        .feature-card h3 { font-family:'Instrument Serif',serif; font-size:1.2rem; font-weight:400; margin-bottom:.6rem; letter-spacing:-.01em; }
+        .feature-card p { font-size:.85rem; color:var(--text-muted); line-height:1.75; font-weight:300; }
+
+        /* ── HOW IT WORKS ── */
+        .how-it-works { padding:5rem 0; }
+        .steps-container { display:grid; grid-template-columns:repeat(3,1fr); gap:2rem; position:relative; }
+        .steps-container::before { content:''; position:absolute; top:42px; left:calc(16.67% + 1rem); right:calc(16.67% + 1rem); height:1px; background:linear-gradient(90deg,var(--violet),var(--cyan),var(--emerald)); z-index:0; opacity:.4; }
+        .step-card { text-align:center; position:relative; z-index:1; cursor:pointer; }
+        .step-number { width:84px; height:84px; border-radius:50%; margin:0 auto 1.5rem; display:flex; align-items:center; justify-content:center; font-family:'JetBrains Mono',monospace; font-size:1.8rem; font-weight:700; position:relative; }
+        .step-card:nth-child(1) .step-number { background:rgba(139,92,246,0.08); border:1px solid rgba(139,92,246,0.25); color:#a78bfa; }
+        .step-card:nth-child(2) .step-number { background:rgba(6,182,212,0.08); border:1px solid rgba(6,182,212,0.25); color:#22d3ee; }
+        .step-card:nth-child(3) .step-number { background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.25); color:#10B981; }
+        .step-card h3 { font-family:'Instrument Serif',serif; font-size:1.15rem; font-weight:400; margin-bottom:.5rem; }
+        .step-card p { font-size:.85rem; color:var(--text-muted); line-height:1.75; max-width:260px; margin:0 auto; font-weight:300; }
+
+        /* ── CODE BLOCK ── */
+        .code-section { padding:5rem 0; }
+        .code-window { background:rgba(8,8,8,0.9); border:1px solid rgba(255,255,255,0.08); border-radius:24px; overflow:hidden; backdrop-filter:blur(16px); max-width:800px; margin:0 auto; }
+        .code-topbar { display:flex; align-items:center; gap:.75rem; padding:1rem 1.5rem; border-bottom:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); }
+        .code-dot { width:10px; height:10px; border-radius:50%; }
+        .code-dot.r { background:rgba(239,68,68,0.5); }
+        .code-dot.y { background:rgba(245,158,11,0.5); }
+        .code-dot.g { background:rgba(16,185,129,0.5); }
+        .code-filename { font-family:'JetBrains Mono',monospace; font-size:.72rem; color:#475569; margin-left:.5rem; }
+        .code-body { padding:1.75rem 2rem; font-family:'JetBrains Mono',monospace; font-size:.82rem; line-height:1.75; overflow-x:auto; }
+        .c-violet { color:#a78bfa; }
+        .c-cyan { color:#22d3ee; }
+        .c-emerald { color:#10B981; }
+        .c-gray { color:#475569; }
+        .c-white { color:#f8f8f8; }
+
+        /* ── PORTALS ── */
+        .portals-section { padding:5rem 0; }
+        .portals-grid { display:grid; grid-template-columns:1fr 1fr; gap:2rem; }
+        .portal-card { background:var(--bg-card); border:1px solid var(--border); border-radius:24px; padding:3rem 2.5rem; cursor:pointer; transition:all .4s cubic-bezier(0.23,1,0.32,1); text-decoration:none; color:inherit; position:relative; overflow:hidden; display:block; }
+        .portal-card::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; border-radius:24px 24px 0 0; }
+        .portal-card.company::before { background:linear-gradient(90deg,var(--violet),#6366f1); }
+        .portal-card.employee::before { background:linear-gradient(90deg,var(--cyan),#22d3ee); }
+        .portal-card:hover { transform:translateY(-8px); }
+        .portal-card.company:hover { border-color:rgba(139,92,246,0.3); box-shadow:0 20px 60px rgba(139,92,246,0.1); }
+        .portal-card.employee:hover { border-color:rgba(6,182,212,0.3); box-shadow:0 20px 60px rgba(6,182,212,0.1); }
+        .portal-icon-wrap { width:64px; height:64px; border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:1.6rem; margin-bottom:1.5rem; transition:transform .3s cubic-bezier(0.23,1,0.32,1); }
+        .portal-card:hover .portal-icon-wrap { transform:scale(1.08) rotate(-3deg); }
+        .company .portal-icon-wrap { background:rgba(139,92,246,0.1); color:#a78bfa; }
+        .employee .portal-icon-wrap { background:rgba(6,182,212,0.1); color:#22d3ee; }
+        .portal-card h2 { font-family:'Instrument Serif',serif; font-size:1.6rem; font-weight:400; margin-bottom:.5rem; letter-spacing:-.01em; }
+        .portal-card .portal-desc { font-size:.875rem; color:var(--text-muted); line-height:1.7; margin-bottom:1.5rem; font-weight:300; }
+        .portal-features { list-style:none; }
+        .portal-features li { font-size:.82rem; color:var(--text-muted); padding:.3rem 0; display:flex; align-items:center; gap:8px; }
+        .company .portal-features li i { color:#a78bfa; font-size:.65rem; }
+        .employee .portal-features li i { color:#22d3ee; font-size:.65rem; }
+        .portal-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:.85rem; border-radius:12px; font-weight:600; font-size:.9rem; margin-top:1.5rem; border:none; cursor:pointer; transition:all .3s; }
+        .company .portal-btn { background:linear-gradient(135deg,var(--violet),#6366f1); color:#fff; }
+        .employee .portal-btn { background:linear-gradient(135deg,var(--cyan),#22d3ee); color:#0f172a; }
+
+        /* ── FOOTER ── */
+        footer { padding:4rem 0 2rem; border-top:1px solid var(--border); background:#050505; }
+        .footer-grid { display:grid; grid-template-columns:2fr 1fr 1fr 1fr; gap:3rem; margin-bottom:3rem; }
+        .footer-brand p { font-size:.85rem; color:var(--text-muted); margin-top:.75rem; line-height:1.7; max-width:280px; font-weight:300; }
+        .footer-col h4 { font-size:.65rem; text-transform:uppercase; letter-spacing:.15em; color:var(--text-dim); font-weight:700; margin-bottom:1rem; }
+        .footer-col a { display:block; color:var(--text-muted); text-decoration:none; font-size:.85rem; padding:.3rem 0; transition:color .2s cubic-bezier(0.23,1,0.32,1); font-weight:300; }
+        .footer-col a:hover { color:var(--text); }
+        .footer-bottom { display:flex; justify-content:space-between; align-items:center; padding-top:2rem; border-top:1px solid var(--border); font-size:.78rem; color:var(--text-dim); }
+        .footer-status { display:flex; align-items:center; gap:.5rem; }
+        .status-dot { width:6px; height:6px; border-radius:50%; background:var(--emerald); animation:pulse 2s infinite; }
+
+        /* ── MODAL ── */
+        .modal-overlay { position:fixed; inset:0; z-index:1000; background:rgba(3,3,3,0.85); backdrop-filter:blur(16px); display:flex; align-items:center; justify-content:center; opacity:0; pointer-events:none; transition:opacity .3s; padding:20px; }
+        .modal-overlay.active { opacity:1; pointer-events:all; }
+        .modal-container { background:rgba(10,10,10,0.9); border:1px solid rgba(139,92,246,0.3); border-radius:24px; max-width:560px; width:100%; padding:2.5rem; position:relative; transform:scale(0.95); transition:transform .3s cubic-bezier(0.23,1,0.32,1); box-shadow:0 30px 80px rgba(139,92,246,0.15); }
+        .modal-overlay.active .modal-container { transform:scale(1); }
+        .modal-close { position:absolute; top:20px; right:20px; background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; transition:color .2s; }
+        .modal-close:hover { color:var(--text); }
+        .modal-header { display:flex; align-items:center; gap:16px; margin-bottom:1.5rem; }
+        .modal-icon { width:52px; height:52px; border-radius:14px; display:flex; align-items:center; justify-content:center; font-size:1.4rem; }
+        .modal-title { font-family:'Instrument Serif',serif; font-size:1.6rem; font-weight:400; }
+        .modal-body { font-size:.95rem; color:var(--text-muted); line-height:1.8; margin-bottom:2rem; font-weight:300; }
+        .modal-footer { border-top:1px solid var(--border); padding-top:1.5rem; display:flex; justify-content:flex-end; }
+        .modal-footer .btn-shiny { text-decoration:none; }
+
+        /* ── UTILITIES ── */
+        @keyframes fadeUp { from{opacity:0;transform:translateY(20px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(1.4)} }
+
+        @media(max-width:1024px){
+            .features-grid { grid-template-columns:1fr 1fr; }
+            .stats-grid { grid-template-columns:repeat(2,1fr); }
+            .footer-grid { grid-template-columns:1fr 1fr; gap:2rem; }
+        }
+        @media(max-width:768px){
+            .nav-links { display:none; }
+            .mobile-toggle { display:block; }
+            .hero h1 { font-size:2.5rem; }
+            .features-grid,.portals-grid,.steps-container { grid-template-columns:1fr; }
+            .stats-grid { grid-template-columns:1fr 1fr; }
+            .steps-container::before { display:none; }
+            .footer-grid { grid-template-columns:1fr; }
+            .hero-actions { flex-direction:column; align-items:center; }
+        }
+
+        /* ── CURSOR EFFECTS ── */
+        /* Hide default cursor on non-touch devices */
+        @media (pointer: fine) {
+            * { cursor: none !important; }
+        }
+        /* Spotlight glow that follows mouse */
+        #cursor-spotlight {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            width: 600px;
+            height: 600px;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            background: radial-gradient(
+                circle,
+                rgba(139, 92, 246, 0.07) 0%,
+                rgba(6, 182, 212, 0.04) 30%,
+                transparent 70%
+            );
+            transition: transform 0.05s linear, opacity 0.4s ease;
+            opacity: 0;
+            mix-blend-mode: screen;
+            will-change: transform;
+        }
+        /* Custom cursor dot */
+        #cursor-dot {
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #a78bfa;
+            transform: translate(-50%, -50%);
+            transition: transform 0.08s cubic-bezier(0.23, 1, 0.32, 1),
+                        background 0.2s ease,
+                        width 0.2s cubic-bezier(0.23,1,0.32,1),
+                        height 0.2s cubic-bezier(0.23,1,0.32,1);
+            box-shadow: 0 0 12px rgba(167, 139, 250, 0.8), 0 0 4px rgba(167, 139, 250, 1);
+            opacity: 0;
+        }
+        /* Cursor ring */
+        #cursor-ring {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9998;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            border: 1px solid rgba(139, 92, 246, 0.4);
+            transform: translate(-50%, -50%);
+            transition: transform 0.18s cubic-bezier(0.23, 1, 0.32, 1),
+                        width 0.25s cubic-bezier(0.23,1,0.32,1),
+                        height 0.25s cubic-bezier(0.23,1,0.32,1),
+                        border-color 0.2s ease,
+                        opacity 0.3s ease;
+            opacity: 0;
+        }
+        /* Hover states for interactive elements */
+        a:hover ~ #cursor-dot, button:hover ~ #cursor-dot { width: 16px; height: 16px; background: #22d3ee; }
+        .btn-shiny:hover #cursor-dot { background: #22d3ee; }
     </style>
 </head>
 
-<body>
-    <!-- Ambient Orbs -->
+<body data-page="landing">
+    <!-- Cursor Effects -->
+    <div id="cursor-spotlight"></div>
+    <div id="cursor-ring"></div>
+    <div id="cursor-dot"></div>
+
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
-
-    <!-- Sidebar -->
-    <aside class="sidebar">
-        <div class="sidebar-header" style="padding: 2rem 1.5rem;">
-            <div class="nav-brand-dot" style="margin-bottom: 0.5rem;"></div>
-            <span style="font-family: 'Instrument Serif', serif; font-size: 1.4rem; letter-spacing: -0.02em;">Synapse <span style="font-size: 0.8rem; color: var(--text-muted); font-family: 'Inter'; font-weight: 400;">Monitor</span></span>
+    <!-- NAV PILL -->
+    <nav class="navbar" id="navbar">
+        <div class="nav-inner">
+            <a href="#" class="nav-brand">
+                <div class="nav-brand-dot"></div>
+                <span class="nav-brand-text">API Monitor</span>
+            </a>
+            <div class="nav-links">
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#how-it-works" class="nav-link">How It Works</a>
+                <a href="#portals" class="nav-link">Portals</a>
+            </div>
+            <a href="login.html" class="nav-cta">Get Started</a>
+            <button class="mobile-toggle" id="mobile-toggle"><i class="fa-solid fa-bars"></i></button>
         </div>
+    </nav>
 
-        <nav class="sidebar-menu">
-            <div class="menu-section">
-                <div class="menu-section-title">Main Control</div>
-                <a href="company-dashboard.html" class="menu-item" data-role="company">
-                    <i class="fa-solid fa-chart-line"></i>
-                    <span>Intelligence</span>
-                </a>
-                <a href="index.html" class="menu-item active">
-                    <i class="fa-solid fa-chart-pie"></i>
-                    <span>Nexus Dashboard</span>
-                </a>
-                <a href="api-endpoints.html" class="menu-item">
-                    <i class="fa-solid fa-server"></i>
-                    <span>Endpoints</span>
-                </a>
-                <a href="logs.html" class="menu-item">
-                    <i class="fa-solid fa-list-check"></i>
-                    <span>Activity Logs</span>
-                </a>
-                <a href="alerts.html" class="menu-item">
-                    <i class="fa-solid fa-bell"></i>
-                    <span>Incidents</span>
-                </a>
-            </div>
-
-            <div class="menu-section" data-role="company">
-                <div class="menu-section-title">Operations</div>
-                <a href="admin.html" class="menu-item">
-                    <i class="fa-solid fa-user-plus"></i>
-                    <span>Access Control</span>
-                </a>
-                <a href="profile.html" class="menu-item">
-                    <i class="fa-solid fa-user-gear"></i>
-                    <span>Profile</span>
-                </a>
-            </div>
-
-            <div class="menu-section" data-role="employee">
-                <div class="menu-section-title">Entity</div>
-                <a href="profile.html" class="menu-item">
-                    <i class="fa-solid fa-user-gear"></i>
-                    <span>Settings</span>
-                </a>
-            </div>
-        </nav>
-
-        <div class="sidebar-footer" style="background: rgba(255,255,255,0.02); border-top: 1px solid var(--border);">
-            <div class="user-avatar-small" style="background: var(--violet);">U</div>
-            <div class="user-info">
-                <span class="user-name">Observer</span>
-                <span class="user-role" style="font-family: 'JetBrains Mono';">System Agent</span>
+    <!-- HERO -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-badge"><span class="pulse"></span> Monitoring in real-time</div>
+            <h1>Never Miss a<br><span class="shimmer">Downtime Again</span></h1>
+            <p class="hero-desc">Monitor every API endpoint in real-time. Get instant alerts, deep analytics, and automated daily reports — so your team can focus on building, not firefighting.</p>
+            <div class="hero-actions">
+                <a href="#portals" class="btn-shiny"><span class="btn-shiny-inner"><i class="fa-solid fa-bolt"></i> Start Monitoring</span></a>
+                <a href="#features" class="btn-secondary"><i class="fa-solid fa-play"></i> See Features</a>
             </div>
         </div>
-    </aside>
+    </section>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        <!-- Top Navbar -->
-        <header class="topbar">
-            <div class="topbar-left">
-                <button class="mobile-menu-btn">
-                    <i class="fa-solid fa-bars"></i>
-                </button>
-                <h2 style="font-family: 'Instrument Serif', serif; font-weight: 400;">Nexus</h2>
+    <!-- TICKER -->
+    <div class="ticker-section">
+        <div class="ticker-track">
+            <div class="ticker-item"><span class="ticker-label">Uptime</span><span class="ticker-value emerald">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Avg Response</span><span class="ticker-value cyan">142ms</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Alert Time</span><span class="ticker-value violet">&lt;1s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Data Retention</span><span class="ticker-value">30 Days</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Monitoring</span><span class="ticker-value emerald">24/7</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Checks/min</span><span class="ticker-value cyan">60s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Accuracy</span><span class="ticker-value violet">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <!-- duplicate for seamless loop -->
+            <div class="ticker-item"><span class="ticker-label">Uptime</span><span class="ticker-value emerald">99.9%</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Avg Response</span><span class="ticker-value cyan">142ms</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Alert Time</span><span class="ticker-value violet">&lt;1s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Data Retention</span><span class="ticker-value">30 Days</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Monitoring</span><span class="ticker-value emerald">24/7</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Checks/min</span><span class="ticker-value cyan">60s</span></div>
+            <div class="ticker-sep"></div>
+            <div class="ticker-item"><span class="ticker-label">Accuracy</span><span class="ticker-value violet">99.9%</span></div>
+        </div>
+    </div>
+
+    <!-- TRUST BAR -->
+    <section class="trust-bar">
+        <div class="container">
+            <p>Trusted Technologies</p>
+            <div class="trust-logos">
+                <div class="trust-item"><i class="fa-brands fa-python"></i> Python</div>
+                <div class="trust-item"><i class="fa-solid fa-flask-vial"></i> Flask</div>
+                <div class="trust-item"><i class="fa-solid fa-database"></i> PostgreSQL</div>
+                <div class="trust-item"><i class="fa-solid fa-lock"></i> JWT Auth</div>
+                <div class="trust-item"><i class="fa-solid fa-envelope"></i> SMTP Alerts</div>
+                <div class="trust-item"><i class="fa-solid fa-chart-line"></i> Chart.js</div>
             </div>
+        </div>
+    </section>
 
-            <div class="topbar-right">
-                <button class="topbar-action" id="btn-refresh" title="Synchronize">
-                    <i class="fa-solid fa-rotate-right"></i>
-                </button>
-                <button class="topbar-action" title="Signals">
-                    <i class="fa-solid fa-bell"></i>
-                    <span class="notification-badge" style="background: var(--violet);"></span>
-                </button>
-                <div class="user-avatar-small" style="border: 1px solid var(--violet);">S</div>
-            </div>
-        </header>
-
-        <!-- Page Content -->
-        <div class="content">
-            <div class="page-header" style="margin-bottom: 2.5rem;">
-                <div>
-                    <h1 style="font-family: 'Instrument Serif', serif; font-size: 2.5rem; letter-spacing: -0.03em;">Nexus Overview</h1>
-                    <p style="color: var(--text-muted); font-weight: 300;">Unified monitoring intelligence</p>
-                </div>
-                <div class="header-actions">
-                    <select class="form-control" id="stats-range-selector" style="width: auto; background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: #fff; border-radius: 9999px; padding: 0 1.5rem;">
-                        <option value="1d">T-24 Hours</option>
-                        <option value="7d">T-7 Days</option>
-                        <option value="30d">T-30 Days</option>
-                    </select>
-                    <div class="btn-shiny" id="btn-add-endpoint-shiny">
-                        <div class="btn-shiny-inner">
-                            <i class="fa-solid fa-plus"></i> Initialize API
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Statistics Cards Grid -->
+    <!-- STATS -->
+    <section class="stats">
+        <div class="container">
             <div class="stats-grid">
-
-                <!-- Total APIs -->
-                <a href="api-endpoints.html" class="glass-card stat-card" title="View all API endpoints">
-                    <div class="stat-icon-wrapper stat-icon-primary">
-                        <i class="fa-solid fa-server"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Monitored Endpoints</div>
-                        <div class="stat-value" id="stat-total" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
-                    </div>
-                </a>
-
-                <!-- Active APIs -->
-                <a href="api-endpoints.html?filter=active" class="glass-card stat-card" title="View active APIs">
-                    <div class="stat-icon-wrapper stat-icon-success">
-                        <i class="fa-solid fa-check-circle"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Operational</div>
-                        <div class="stat-value" id="stat-active" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
-                    </div>
-                </a>
-
-                <!-- Down APIs -->
-                <a href="api-endpoints.html?filter=down" class="glass-card stat-card" title="View down APIs">
-                    <div class="stat-icon-wrapper stat-icon-danger">
-                        <i class="fa-solid fa-circle-exclamation"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Incidents</div>
-                        <div class="stat-value" id="stat-down" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
-                    </div>
-                </a>
-
-                <!-- Avg Response Time -->
-                <a href="logs.html" class="glass-card stat-card" title="View monitoring logs">
-                    <div class="stat-icon-wrapper stat-icon-info">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Avg Latency</div>
-                        <div class="stat-value" id="stat-response" style="font-family: 'Instrument Serif'; font-size: 3rem;">—</div>
-                    </div>
-                </a>
-
-                <!-- Uptime -->
-                <a href="logs.html" class="glass-card stat-card" title="View uptime logs">
-                    <div class="stat-icon-wrapper stat-icon-success">
-                        <i class="fa-solid fa-arrow-trend-up"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Core Uptime</div>
-                        <div class="stat-value" id="stat-uptime" style="font-family: 'Instrument Serif'; font-size: 3rem;">—</div>
-                    </div>
-                </a>
-
-                <!-- Active Alerts -->
-                <a href="alerts.html" class="glass-card stat-card" title="View alerts">
-                    <div class="stat-icon-wrapper stat-icon-warning">
-                        <i class="fa-solid fa-triangle-exclamation"></i>
-                    </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Signals</div>
-                        <div class="stat-value" id="stat-alerts" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
-                    </div>
-                </a>
-
+                <div class="stat-card"><div class="stat-number">99.9%</div><div class="stat-label">Uptime Tracking Accuracy</div></div>
+                <div class="stat-card"><div class="stat-number">&lt;1s</div><div class="stat-label">Alert Response Time</div></div>
+                <div class="stat-card"><div class="stat-number">30d</div><div class="stat-label">Data Retention</div></div>
+                <div class="stat-card"><div class="stat-number">24/7</div><div class="stat-label">Continuous Monitoring</div></div>
             </div>
-
-
-            <!-- Charts Section -->
-            <div class="charts-grid" style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="glass-card">
-                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
-                            <i class="fa-solid fa-chart-line" style="color: var(--violet); margin-right: 8px;"></i> Latency Matrix
-                        </div>
-                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">RT / 24H</span>
-                    </div>
-                    <div class="chart-container" style="height: 300px;">
-                        <canvas id="responseTimeChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="glass-card">
-                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
-                            <i class="fa-solid fa-chart-area" style="color: var(--cyan); margin-right: 8px;"></i> Availability Flux
-                        </div>
-                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">UP / 24H</span>
-                    </div>
-                    <div class="chart-container" style="height: 300px;">
-                        <canvas id="uptimeChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Monitor List -->
-            <div class="glass-card" style="margin-top: 2rem; padding: 0;">
-                <div class="card-header" style="padding: 1.5rem; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
-                    <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.5rem;">
-                        <i class="fa-solid fa-satellite-dish" style="color: var(--violet); margin-right: 12px;"></i> Active Monitors
-                    </div>
-                    <div style="display:flex; align-items:center; gap:1.5rem;">
-                        <span style="font-size:0.75rem; color:var(--text-muted); font-family: 'JetBrains Mono';">
-                            <span class="pulse-dot up pulse" style="display:inline-block; margin-right:6px;"></span>SYNCHRONIZED
-                        </span>
-                    </div>
-                </div>
-
-                <!-- Filter bar -->
-                <div class="filter-bar" style="padding: 1rem 1.5rem; display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.01);">
-                    <div class="filter-pills" id="monitor-filter-pills" style="display: flex; gap: 0.5rem;">
-                        <button class="filter-pill active" data-filter="all">All Channels</button>
-                        <button class="filter-pill" data-filter="up">Operational</button>
-                        <button class="filter-pill" data-filter="down">Incident</button>
-                        <button class="filter-pill" data-filter="paused">Halted</button>
-                    </div>
-                    <div class="filter-search" style="position: relative; width: 260px;">
-                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.8rem;"></i>
-                        <input type="text" id="monitor-search" placeholder="Filter monitors..." style="padding-left: 2.5rem; border-radius: 9999px;">
-                    </div>
-                </div>
-
-                <!-- Monitor cards list -->
-                <div class="monitor-list" id="monitor-card-list" style="padding: 1.5rem;">
-                    <div class="empty-state" id="monitor-loading" style="padding: 4rem; text-align: center; color: var(--text-muted);">
-                        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2rem; margin-bottom: 1rem; color: var(--violet);"></i>
-                        <p style="font-weight: 300;">Calibrating neural links...</p>
-                    </div>
-                </div>
-            </div>
-
-
-
-
         </div>
+    </section>
 
-        <!-- Add Endpoint Modal -->
-        <div id="addEndpointModal" class="modal-overlay">
-            <div class="modal-container">
-                <button class="modal-close" id="close-endpoint-modal"><i class="fa-solid fa-xmark"></i></button>
-                <div class="modal-header">
-                    <div class="modal-icon" style="background: rgba(139,92,246,0.1); color: var(--violet);">
-                        <i class="fa-solid fa-plus"></i>
-                    </div>
-                    <h3 class="modal-title">Initialize Monitor</h3>
+    <!-- FEATURES -->
+    <section class="features" id="features">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-sparkles"></i> Features</div>
+                <h2 class="section-title">Everything You Need to<br>Monitor Your APIs</h2>
+                <p class="section-desc">From real-time checks to automated daily reports, we've got your entire API infrastructure covered.</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card"><div class="feature-icon fi-1"><i class="fa-solid fa-bolt"></i></div><h3>Real-Time Monitoring</h3><p>Continuous health checks on all your API endpoints with instant status updates and response time tracking.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-2"><i class="fa-solid fa-bell"></i></div><h3>Instant Email Alerts</h3><p>Get notified the moment an API goes down or exceeds response time thresholds via beautifully formatted emails.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-3"><i class="fa-solid fa-chart-area"></i></div><h3>Advanced Analytics</h3><p>Hourly response time charts, uptime percentages, error breakdowns, and incident timelines at a glance.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-4"><i class="fa-solid fa-envelope-open-text"></i></div><h3>Daily Summary Reports</h3><p>Automated daily reports sent to HR/IT with comprehensive stats on the day's API monitoring data.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-5"><i class="fa-solid fa-user-shield"></i></div><h3>Role-Based Access</h3><p>Separate Company and Employee portals. Admins manage everything; employees see only what they need.</p></div>
+                <div class="feature-card"><div class="feature-icon fi-6"><i class="fa-solid fa-user-plus"></i></div><h3>Employee Invitations</h3><p>Invite team members by email. Secure credentials are auto-generated and sent directly — no manual setup.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- HOW IT WORKS -->
+    <section class="how-it-works" id="how-it-works">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-route"></i> How It Works</div>
+                <h2 class="section-title">Up and Running in Minutes</h2>
+                <p class="section-desc">Three simple steps to full API monitoring coverage for your team.</p>
+            </div>
+            <div class="steps-container">
+                <div class="step-card"><div class="step-number">1</div><h3>Register Your Company</h3><p>Create a company account with OTP-verified email. Set up your admin credentials in under a minute.</p></div>
+                <div class="step-card"><div class="step-number">2</div><h3>Add API Endpoints</h3><p>Enter your API URLs, set monitoring intervals, and configure alert thresholds. We start checking immediately.</p></div>
+                <div class="step-card"><div class="step-number">3</div><h3>Invite Your Team</h3><p>Add employees by email. They receive secure credentials instantly and can start monitoring right away.</p></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CODE INTEGRATION -->
+    <section class="code-section">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-code"></i> Integration</div>
+                <h2 class="section-title">Simple API Integration</h2>
+                <p class="section-desc">Add monitoring to your stack in seconds with our straightforward setup.</p>
+            </div>
+            <div class="code-window">
+                <div class="code-topbar">
+                    <span class="code-dot r"></span><span class="code-dot y"></span><span class="code-dot g"></span>
+                    <span class="code-filename">monitor_setup.py</span>
                 </div>
-                <div class="modal-body">
-                    <form id="add-endpoint-form">
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label>Designation</label>
-                            <input type="text" id="endpoint-name" placeholder="e.g. Gateway Delta" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label>Endpoint Vector (URL)</label>
-                            <input type="url" id="endpoint-url" placeholder="https://api.synapse.com/v1" required>
-                        </div>
-                        <div class="form-group" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
-                            <div style="flex: 1;">
-                                <label>Protocol</label>
-                                <select id="endpoint-method" class="form-control" required style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
-                                    <option value="GET">GET</option>
-                                    <option value="POST">POST</option>
-                                    <option value="PUT">PUT</option>
-                                    <option value="DELETE">DELETE</option>
-                                </select>
-                            </div>
-                            <div style="flex: 1;">
-                                <label>Pulse Rate</label>
-                                <select id="endpoint-interval" class="form-control" required style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
-                                    <option value="60">60s (Live)</option>
-                                    <option value="300">5m (Eco)</option>
-                                    <option value="600">10m (Stable)</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div style="display: flex; justify-content: flex-end; gap: 1rem;">
-                            <button type="button" class="btn-secondary" id="cancel-endpoint-modal">Abort</button>
-                            <div class="btn-shiny" style="padding: 0;">
-                                <button type="submit" class="btn-shiny-inner" style="border:none; cursor:pointer;">Establish Link</button>
-                            </div>
-                        </div>
-                    </form>
+                <div class="code-body">
+<span class="c-violet">import</span> <span class="c-cyan">requests</span><br>
+<span class="c-violet">from</span> <span class="c-cyan">api_monitor</span> <span class="c-violet">import</span> <span class="c-white">APIMonitor</span><br>
+<br>
+<span class="c-gray"># Initialize with your company credentials</span><br>
+<span class="c-white">monitor</span> <span class="c-violet">=</span> <span class="c-cyan">APIMonitor</span>(<br>
+&nbsp;&nbsp;<span class="c-white">api_key</span><span class="c-violet">=</span><span class="c-emerald">"your_api_key_here"</span>,<br>
+&nbsp;&nbsp;<span class="c-white">company_id</span><span class="c-violet">=</span><span class="c-emerald">"acme-corp-001"</span><br>
+)<br>
+<br>
+<span class="c-gray"># Register endpoints to monitor</span><br>
+<span class="c-white">monitor</span>.<span class="c-cyan">add_endpoint</span>({<br>
+&nbsp;&nbsp;<span class="c-emerald">"name"</span>: <span class="c-emerald">"Payment Gateway"</span>,<br>
+&nbsp;&nbsp;<span class="c-emerald">"url"</span>: <span class="c-emerald">"https://api.payments.com/v2/health"</span>,<br>
+&nbsp;&nbsp;<span class="c-emerald">"interval"</span>: <span class="c-violet">60</span>,  <span class="c-gray"># seconds</span><br>
+&nbsp;&nbsp;<span class="c-emerald">"alert_on_down"</span>: <span class="c-violet">True</span><br>
+})<br>
+<br>
+<span class="c-gray"># Start monitoring — alerts fire automatically</span><br>
+<span class="c-white">monitor</span>.<span class="c-cyan">start</span>()
                 </div>
             </div>
         </div>
+    </section>
 
-    </main>    <script src="js/app.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/ai-analyzer.js"></script>
-    <script src="js/synapse.js"></script>
+    <!-- PORTALS -->
+    <section class="portals-section" id="portals">
+        <div class="container">
+            <div class="section-header">
+                <div class="section-label"><i class="fa-solid fa-door-open"></i> Access Portals</div>
+                <h2 class="section-title">Choose Your Portal</h2>
+                <p class="section-desc">Select your role to access the right dashboard for you.</p>
+            </div>
+            <div class="portals-grid">
+                <a href="login.html" class="portal-card company" id="company-portal">
+                    <div class="portal-icon-wrap"><i class="fa-solid fa-building"></i></div>
+                    <h2>Company / Admin</h2>
+                    <p class="portal-desc">For IT teams and HR administrators. Manage APIs, view analytics, and invite employees.</p>
+                    <ul class="portal-features">
+                        <li><i class="fa-solid fa-check-circle"></i> Real-time API analytics dashboard</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Employee invitation & management</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Daily email reports to HR</li>
+                        <li><i class="fa-solid fa-check-circle"></i> API endpoint monitoring setup</li>
+                        <li><i class="fa-solid fa-check-circle"></i> OTP-verified company registration</li>
+                    </ul>
+                    <div class="portal-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Enter Admin Portal</div>
+                </a>
+                <a href="employee-login.html" class="portal-card employee" id="employee-portal">
+                    <div class="portal-icon-wrap"><i class="fa-solid fa-user-tie"></i></div>
+                    <h2>Employee</h2>
+                    <p class="portal-desc">For team members. View your assigned API monitoring data and check endpoint status.</p>
+                    <ul class="portal-features">
+                        <li><i class="fa-solid fa-check-circle"></i> View API monitoring dashboard</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Check endpoint status & logs</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Response time analytics</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Real-time alerts & notifications</li>
+                        <li><i class="fa-solid fa-check-circle"></i> Secure credential-based login</li>
+                    </ul>
+                    <div class="portal-btn"><i class="fa-solid fa-arrow-right-to-bracket"></i> Employee Login</div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-brand">
+                    <a href="#" class="nav-brand" style="margin-bottom:.5rem;">
+                        <div class="nav-brand-dot"></div>
+                        <span class="nav-brand-text">API Monitor</span>
+                    </a>
+                    <p>Real-time API monitoring and analytics platform. Built for teams that demand reliability and visibility.</p>
+                </div>
+                <div class="footer-col">
+                    <h4>Product</h4>
+                    <a href="#features">Features</a>
+                    <a href="#how-it-works">How It Works</a>
+                    <a href="#portals">Portals</a>
+                    <a href="login.html">Admin Login</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Portals</h4>
+                    <a href="login.html">Company Portal</a>
+                    <a href="employee-login.html">Employee Portal</a>
+                </div>
+                <div class="footer-col">
+                    <h4>Tech Stack</h4>
+                    <a href="#">Python & Flask</a>
+                    <a href="#">PostgreSQL</a>
+                    <a href="#">JWT Authentication</a>
+                    <a href="#">SMTP Integration</a>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <span>&copy; 2026 API Monitor SaaS. All rights reserved.</span>
+                <div class="footer-status">
+                    <span class="status-dot"></span>
+                    <span style="color:#10B981;font-weight:600;">All Systems Operational</span>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal-container">
+            <button class="modal-close" id="modal-close">&times;</button>
+            <div class="modal-header">
+                <div class="modal-icon" id="modal-icon"></div>
+                <h2 class="modal-title" id="modal-title"></h2>
+            </div>
+            <div class="modal-body" id="modal-body"></div>
+            <div class="modal-footer">
+                <a href="#" class="btn-shiny" onclick="closeModal(); return false;"><span class="btn-shiny-inner">Got it</span></a>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // Wire up the new shiny button
-        document.getElementById('btn-add-endpoint-shiny').addEventListener('click', () => {
-            const modal = document.getElementById('addEndpointModal');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 10);
-        });
-        
-        document.getElementById('close-endpoint-modal').addEventListener('click', () => {
-            const modal = document.getElementById('addEndpointModal');
-            modal.classList.remove('active');
-            setTimeout(() => modal.style.display = 'none', 300);
-        });
+        const detailsData = {
+            'features': {
+                'Real-Time Monitoring': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(139,92,246,.12)', textColor: '#a78bfa', desc: 'Our system executes concurrent API checks every 60 seconds with sub-millisecond precision. Data is stored in an optimized database with indexing for rapid retrieval.' },
+                'Instant Email Alerts': { icon: '<i class="fa-solid fa-bell"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', desc: 'Leveraging SMTP priority queues, alerts are dispatched within 3 seconds of failure detection. Templates are HTML5-optimized for all modern mail clients.' },
+                'Advanced Analytics': { icon: '<i class="fa-solid fa-chart-area"></i>', color: 'rgba(16,185,129,.12)', textColor: '#10B981', desc: 'We provide rolling 24-hour response time windows with weighted averages. Incident timelines capture precise down/up timestamps with error code logging.' },
+                'Daily Summary Reports': { icon: '<i class="fa-solid fa-envelope-open-text"></i>', color: 'rgba(245,158,11,.12)', textColor: '#fbbf24', desc: 'Aggregated background jobs compile cross-API data at 00:00 UTC. Reports include uptime percentages, total incident counts, and performance deltas.' },
+                'Role-Based Access': { icon: '<i class="fa-solid fa-user-shield"></i>', color: 'rgba(239,68,68,.12)', textColor: '#f87171', desc: 'Secure JWT-based session management separates Company (Admin) and Employee views. Permission layers ensure data isolation and secure portal entry.' },
+                'Employee Invitations': { icon: '<i class="fa-solid fa-user-plus"></i>', color: 'rgba(236,72,153,.12)', textColor: '#f472b6', desc: 'One-click onboarding with secure password derivation. Credentials are sent via TLS-encrypted email directly to the employee\'s inbox.' }
+            },
+            'stats': {
+                '99.9%': { icon: '<i class="fa-solid fa-chart-line"></i>', color: 'rgba(139,92,246,.12)', textColor: '#a78bfa', title: 'Uptime Precision', desc: 'Measured over a 30-day rolling window. We track uptime based on successful HTTP 2xx/3xx responses.' },
+                '<1s': { icon: '<i class="fa-solid fa-bolt"></i>', color: 'rgba(6,182,212,.12)', textColor: '#22d3ee', title: 'Alert Latency', desc: 'Average latency from detection to SMTP dispatch. Our alert engine uses asynchronous task queues to minimize notification delays.' },
+                '30d': { icon: '<i class="fa-solid fa-database"></i>', color: 'rgba(16,185,129,.12)', textColor: '#10B981', title: 'Data Retention', desc: 'Automatic cleanup jobs purge data older than 30 days to maintain dashboard performance and database efficiency.' },
+                '24/7': { icon: '<i class="fa-solid fa-clock"></i>', color: 'rgba(245,158,11,.12)', textColor: '#fbbf24', title: 'Always-On Coverage', desc: 'Redundant monitoring cycles ensure zero-gap coverage. If one monitoring cycle fails, our watchdog process immediately resumes the loop.' }
+            },
+            'steps': {
+                '1': { icon: '1', color: 'rgba(139,92,246,.15)', textColor: '#a78bfa', title: 'Register Your Company', desc: 'Verification is handled via a 6-digit OTP sent to your provided company email. Once verified, you gain full ownership of your monitoring workspace.' },
+                '2': { icon: '2', color: 'rgba(6,182,212,.15)', textColor: '#22d3ee', title: 'Add API Endpoints', desc: 'Support for REST, GraphQL, and SOAP endpoints. Configure custom headers, body payloads, and timeout thresholds for each individual API.' },
+                '3': { icon: '3', color: 'rgba(16,185,129,.15)', textColor: '#10B981', title: 'Invite Your Team', desc: 'Admins can scale their team instantly. Invited employees get immediate access to the dashboard with restricted monitoring-only permissions.' }
+            }
+        };
 
-        document.getElementById('cancel-endpoint-modal').addEventListener('click', () => {
-            const modal = document.getElementById('addEndpointModal');
-            modal.classList.remove('active');
-            setTimeout(() => modal.style.display = 'none', 300);
-        });
+        const modalOverlay = document.getElementById('modal-overlay');
+        const modalIcon = document.getElementById('modal-icon');
+        const modalTitle = document.getElementById('modal-title');
+        const modalBody = document.getElementById('modal-body');
 
-        // ── Monitor card filter pills ──────────────────────────
-        document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(pill => {
-            pill.addEventListener('click', () => {
-                document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                filterMonitorCards();
-            });
-        });
-
-        document.getElementById('monitor-search').addEventListener('input', filterMonitorCards);
-
-        function filterMonitorCards() {
-            const f = document.querySelector('#monitor-filter-pills .filter-pill.active').dataset.filter;
-            const q = document.getElementById('monitor-search').value.toLowerCase();
-            document.querySelectorAll('#monitor-card-list .monitor-card').forEach(card => {
-                const status = card.dataset.status || 'up';
-                const textMatch = card.textContent.toLowerCase().includes(q);
-                const filterMatch = f === 'all' || status === f;
-                card.style.display = (textMatch && filterMatch) ? '' : 'none';
-            });
+        function openModal(type, key) {
+            const data = detailsData[type][key];
+            if (!data) return;
+            modalIcon.innerHTML = data.icon;
+            modalIcon.style.background = data.color;
+            modalIcon.style.color = data.textColor;
+            modalTitle.textContent = data.title || key;
+            modalBody.textContent = data.desc;
+            modalOverlay.classList.add('active');
         }
 
-        // ── Inject monitor cards when dashboard data loads ─────
-        document.addEventListener('DOMContentLoaded', () => {
-            const origLoad = window.loadDashboardData;
-            window.loadDashboardData = async function () {
-                if (typeof origLoad === 'function') await origLoad();
-                await renderMonitorCards();
-            };
-            setTimeout(renderMonitorCards, 1200);
+        function closeModal() { modalOverlay.classList.remove('active'); }
+
+        document.getElementById('modal-close').onclick = closeModal;
+        modalOverlay.onclick = (e) => { if (e.target === modalOverlay) closeModal(); };
+
+        document.querySelectorAll('.feature-card').forEach(card => {
+            const title = card.querySelector('h3').textContent;
+            card.onclick = () => openModal('features', title);
+        });
+        document.querySelectorAll('.stat-card').forEach(card => {
+            const number = card.querySelector('.stat-number').textContent;
+            card.onclick = () => openModal('stats', number);
+        });
+        document.querySelectorAll('.step-card').forEach(card => {
+            const num = card.querySelector('.step-number').textContent;
+            card.onclick = () => openModal('steps', num);
         });
 
-        async function renderMonitorCards() {
-            const list = document.getElementById('monitor-card-list');
-            if (!list) return;
+        document.querySelectorAll('a[href^="#"]').forEach(a => {
+            a.addEventListener('click', e => {
+                e.preventDefault();
+                const t = document.querySelector(a.getAttribute('href'));
+                if (t) t.scrollIntoView({ behavior:'smooth', block:'start' });
+            });
+        });
 
-            const range = document.getElementById('stats-range-selector')?.value || '1d';
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                if (e.isIntersecting) {
+                    e.target.style.opacity = '1';
+                    e.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, { threshold: 0.1 });
+        document.querySelectorAll('.feature-card, .stat-card, .step-card, .portal-card').forEach((el, i) => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = `opacity .6s ease ${i*0.08}s, transform .6s cubic-bezier(0.23,1,0.32,1) ${i*0.08}s`;
+            observer.observe(el);
+        });
 
-            let endpoints = [];
+        (function() {
             try {
-                const data = await apiRequest(`/api/endpoints?range=${range}`);
-                endpoints = data.endpoints || [];
-            } catch (e) {
-                list.innerHTML = `<div class="empty-state">
-                    <i class="fa-solid fa-plug-circle-exclamation" style="font-size:2rem; margin-bottom:1rem; color:#ef4444;"></i>
-                    <p>Neural link failed. Verify credentials and server uplink.</p>
-                </div>`;
-                return;
+                const token = localStorage.getItem('auth_token');
+                const user = JSON.parse(localStorage.getItem('auth_user') || 'null');
+                if (token && user) {
+                    window.location.href = user.role === 'employee' ? 'dashboard.html' : 'company-dashboard.html';
+                }
+            } catch(e) {}
+        })();
+
+        // ── CURSOR ANIMATION ──
+        (function() {
+            // Only run on non-touch devices
+            if (!window.matchMedia('(pointer: fine)').matches) return;
+
+            const spotlight = document.getElementById('cursor-spotlight');
+            const dot       = document.getElementById('cursor-dot');
+            const ring      = document.getElementById('cursor-ring');
+
+            let mouseX = 0, mouseY = 0;
+            let ringX  = 0, ringY  = 0;
+            let isVisible = false;
+
+            // Interactive elements that trigger cursor expansion
+            const interactiveSelectors = 'a, button, .feature-card, .stat-card, .step-card, .portal-card, .btn-shiny, .btn-secondary, .nav-cta';
+
+            function showCursor() {
+                if (!isVisible) {
+                    dot.style.opacity = '1';
+                    ring.style.opacity = '1';
+                    spotlight.style.opacity = '1';
+                    isVisible = true;
+                }
             }
 
-            list.innerHTML = '';
+            document.addEventListener('mousemove', function(e) {
+                mouseX = e.clientX;
+                mouseY = e.clientY;
 
-            if (!endpoints.length) {
-                list.innerHTML = `<div class="empty-state">
-                    <i class="fa-solid fa-satellite-dish" style="font-size:2rem; margin-bottom:1rem; color:var(--text-dim);"></i>
-                    <p>No active monitors. Initialize your first endpoint to begin intelligence gathering.</p>
-                </div>`;
-                return;
+                showCursor();
+
+                // Dot and spotlight snap immediately
+                dot.style.left = mouseX + 'px';
+                dot.style.top  = mouseY + 'px';
+                spotlight.style.left = mouseX + 'px';
+                spotlight.style.top  = mouseY + 'px';
+            }, { passive: true });
+
+            // Ring follows with a smooth lag (rAF lerp)
+            function animateRing() {
+                ringX += (mouseX - ringX) * 0.12;
+                ringY += (mouseY - ringY) * 0.12;
+                ring.style.left = ringX + 'px';
+                ring.style.top  = ringY + 'px';
+                requestAnimationFrame(animateRing);
             }
+            animateRing();
 
-            endpoints.forEach(ep => {
-                const statusClass = ep.is_down ? 'down' : (ep.is_active ? 'up' : 'paused');
-                const statusLabel = statusClass === 'up' ? 'OPERATIONAL' : statusClass === 'down' ? 'INCIDENT' : 'HALTED';
-                const method = (ep.method || 'GET').toUpperCase();
-                const rt = ep.last_response_time ? ep.last_response_time + 'ms' : '—';
-                const uptime = ep.uptime_percentage != null ? ep.uptime_percentage : 100;
-                const lastChecked = ep.last_check ? new Date(ep.last_check).toLocaleTimeString() : '—';
-                const rangeLabel = range === '1d' ? '24H' : (range === '7d' ? '7D' : '30D');
+            // Expand cursor on hover over interactive elements
+            document.addEventListener('mouseover', function(e) {
+                if (e.target.closest(interactiveSelectors)) {
+                    dot.style.width  = '14px';
+                    dot.style.height = '14px';
+                    dot.style.background = '#22d3ee';
+                    dot.style.boxShadow = '0 0 16px rgba(34,211,238,0.9), 0 0 6px rgba(34,211,238,1)';
+                    ring.style.width  = '56px';
+                    ring.style.height = '56px';
+                    ring.style.borderColor = 'rgba(34,211,238,0.5)';
+                    // Shift spotlight to cyan on interactive
+                    spotlight.style.background = 'radial-gradient(circle, rgba(6,182,212,0.1) 0%, rgba(139,92,246,0.05) 30%, transparent 70%)';
+                }
+            }, { passive: true });
 
-                const card = document.createElement('div');
-                card.className = 'monitor-card';
-                card.dataset.status = statusClass;
-                card.innerHTML = `
-                    <div class="monitor-card-left">
-                        <span class="pulse-dot ${statusClass} ${statusClass === 'up' ? 'pulse' : ''}"></span>
-                        <div style="flex: 1;">
-                            <div class="monitor-card-name">${escapeHtml(ep.name || 'Unknown')} <span style="font-size:0.6rem; color:var(--text-dim); font-family:'JetBrains Mono'; margin-left:8px;">${method}</span></div>
-                            <div class="monitor-card-url">${escapeHtml(ep.url || '')}</div>
-                        </div>
-                    </div>
-                    <div class="monitor-card-meta" style="display:flex; gap:2rem; align-items:center;">
-                        <div style="text-align:right;">
-                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Latency</div>
-                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:#fff;">${rt}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Uptime (${rangeLabel})</div>
-                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:${uptime >= 99 ? 'var(--emerald)' : (uptime >= 95 ? '#F59E0B' : '#EF4444')};">${uptime}%</div>
-                        </div>
-                    </div>
-                    <div class="monitor-card-actions" style="display:flex; gap:0.5rem; margin-left:1rem;">
-                        <button class="action-btn" onclick="openEditModal('${ep.id}')" style="background:none; border:1px solid var(--border); color:var(--text-muted); padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-btn" onclick="deleteEndpoint('${ep.id}', '${(ep.name||'').replace(/'/g,"\\'")}')" style="background:none; border:1px solid var(--border); color:#ef4444; padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
-                    </div>
-                `;
-                list.appendChild(card);
+            document.addEventListener('mouseout', function(e) {
+                if (e.target.closest(interactiveSelectors)) {
+                    dot.style.width  = '8px';
+                    dot.style.height = '8px';
+                    dot.style.background = '#a78bfa';
+                    dot.style.boxShadow = '0 0 12px rgba(167,139,250,0.8), 0 0 4px rgba(167,139,250,1)';
+                    ring.style.width  = '36px';
+                    ring.style.height = '36px';
+                    ring.style.borderColor = 'rgba(139,92,246,0.4)';
+                    spotlight.style.background = 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, rgba(6,182,212,0.04) 30%, transparent 70%)';
+                }
+            }, { passive: true });
+
+            // Click burst effect
+            document.addEventListener('mousedown', function() {
+                dot.style.transform = 'translate(-50%, -50%) scale(0.7)';
+                ring.style.transform = 'translate(-50%, -50%) scale(0.85)';
             });
-        }
+            document.addEventListener('mouseup', function() {
+                dot.style.transform = 'translate(-50%, -50%) scale(1)';
+                ring.style.transform = 'translate(-50%, -50%) scale(1)';
+            });
+
+            // Hide when cursor leaves window
+            document.addEventListener('mouseleave', function() {
+                dot.style.opacity = '0';
+                ring.style.opacity = '0';
+                spotlight.style.opacity = '0';
+                isVisible = false;
+            });
+            document.addEventListener('mouseenter', showCursor);
+        })();
     </script>
 </body>
 </html>

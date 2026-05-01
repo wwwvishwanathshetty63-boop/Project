@@ -117,7 +117,7 @@
                 <a href="employee-monitor.html" class="nav-item active">
                     <i class="fa-solid fa-users-viewfinder"></i><span>Entity Registry</span>
                 </a>
-                <a href="index.html" class="nav-item">
+                <a href="dashboard.html" class="nav-item">
                     <i class="fa-solid fa-chart-pie"></i><span>Monitoring</span>
                 </a>
             </div>
@@ -261,7 +261,7 @@
     // ── Auth + role guard ────────────────────────────────────────────────────
     if (!isAuthenticated()) { window.location.href = 'login.html'; }
     const _u = getUser();
-    if (_u && _u.role !== 'company') { window.location.href = 'index.html'; }
+    if (_u && _u.role !== 'company') { window.location.href = 'dashboard.html'; }
 
     // ── Navbar setup ─────────────────────────────────────────────────────────
     (function setupNav() {

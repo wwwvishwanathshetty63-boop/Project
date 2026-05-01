@@ -42,7 +42,7 @@
     <div class="orb orb-3"></div>
 
     <div class="auth-container">
-        <a href="landing.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Home</a>
+        <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Home</a>
 
         <div class="auth-header" style="text-align: center; margin-bottom: 2rem;">
             <div class="auth-logo">
@@ -115,7 +115,7 @@ document.getElementById('employee-login-form').addEventListener('submit', async 
         });
         saveAuth(d.token, d.user);
         showToast('Entity Synchronized');
-        setTimeout(() => window.location.href = 'index.html', 800);
+        setTimeout(() => window.location.href = 'dashboard.html', 800);
     } catch(err) {
         showToast(err.message, 'error');
         btnInner.disabled = false;
@@ -123,7 +123,7 @@ document.getElementById('employee-login-form').addEventListener('submit', async 
     }
 });
 
-if (typeof isAuthenticated === 'function' && isAuthenticated()) window.location.href = 'index.html';
+if (typeof isAuthenticated === 'function' && isAuthenticated()) window.location.href = 'dashboard.html';
 </script>
 </body>
 </html>

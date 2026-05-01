@@ -57,8 +57,9 @@ def create_app() -> Flask:
 
     # Serve frontend pages
     @app.route("/")
+    @app.route("/index.html")
     def serve_landing():
-        return send_from_directory(app.static_folder, "landing.html")
+        return send_from_directory(app.static_folder, "index.html")
 
     @app.route("/login")
     @app.route("/login.html")
@@ -71,10 +72,9 @@ def create_app() -> Flask:
         return send_from_directory(app.static_folder, "employee-login.html")
 
     @app.route("/dashboard")
-    @app.route("/index.html")
     @app.route("/dashboard.html")
     def serve_dashboard():
-        return send_from_directory(app.static_folder, "index.html")
+        return send_from_directory(app.static_folder, "dashboard.html")
 
     @app.route("/company-dashboard")
     @app.route("/company-dashboard.html")

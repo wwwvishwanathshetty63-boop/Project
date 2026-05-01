@@ -89,7 +89,7 @@ function logout() {
     AppState.user = null;
     localStorage.removeItem('auth_token');
     localStorage.removeItem('auth_user');
-    window.location.href = 'landing.html';
+    window.location.href = 'index.html';
 }
 
 function isAuthenticated() {
@@ -128,7 +128,7 @@ function showToast(message, type = 'success', duration = 4000) {
 // ---- Auth Form Handling ----
 function initAuthPage() {
     if (isAuthenticated()) {
-        window.location.href = 'index.html';
+        window.location.href = 'dashboard.html';
         return;
     }
 
@@ -203,7 +203,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Login successful! Redirecting...');
-            setTimeout(() => window.location.href = 'index.html', 800);
+            setTimeout(() => window.location.href = 'dashboard.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -231,7 +231,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Company account created! Redirecting...');
-            setTimeout(() => window.location.href = 'index.html', 800);
+            setTimeout(() => window.location.href = 'dashboard.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
@@ -258,7 +258,7 @@ function initAuthPage() {
 
             saveAuth(data.token, data.user);
             showToast('Login successful! Redirecting...');
-            setTimeout(() => window.location.href = 'index.html', 800);
+            setTimeout(() => window.location.href = 'dashboard.html', 800);
         } catch (error) {
             showToast(error.message, 'error');
         } finally {
