@@ -96,7 +96,5 @@ def convert_md_to_pdf(md_path, pdf_path):
 if __name__ == "__main__":
     md_file = "SRS.md"
     docx_file = "SRS.docx"
-    pdf_file = "SRS.pdf"
     
     convert_md_to_docx(md_file, docx_file)
-    convert_md_to_pdf(md_file, pdf_file)
