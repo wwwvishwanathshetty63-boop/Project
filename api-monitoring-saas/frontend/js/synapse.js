@@ -2,8 +2,13 @@
 
 document.addEventListener('DOMContentLoaded', () => {
     initCursor();
-    initScrollAnimations();
+    // Only apply scroll animations on the landing page — on dashboard pages
+    // cards load dynamically via API and setting opacity:0 breaks them.
+    if (document.body.dataset.page === 'landing' || document.querySelector('.hero-section')) {
+        initScrollAnimations();
+    }
     initPillNav();
+    populateSidebarUser();
 });
 
 // ── CURSOR ANIMATION ──
@@ -28,7 +33,8 @@ function initCursor() {
     let ringX = 0, ringY = 0;
     let isVisible = false;
 
-    const interactiveSelectors = 'a, button, .glass-card, .btn-shiny, .btn-secondary, input, select, textarea';
+    // Interactive selectors for cursor style change (purely cosmetic)
+    const interactiveSelectors = 'a, button, .glass-card, .btn-shiny, .nav-item, .menu-item, input, select, textarea, label';
 
     function showCursor() {
         if (!isVisible) {
@@ -102,21 +108,27 @@ function initCursor() {
     });
 }
 
-// ── SCROLL ANIMATIONS ──
+// ── SCROLL ANIMATIONS (landing page only) ──
 function initScrollAnimations() {
     const observer = new IntersectionObserver((entries) => {
         entries.forEach(entry => {
             if (entry.isIntersecting) {
                 entry.target.classList.add('in-view');
+                observer.unobserve(entry.target); // Stop observing once visible
             }
         });
-    }, { threshold: 0.1 });
+    }, { threshold: 0.05 });
 
+    // Only animate elements that are NOT already in the viewport
     document.querySelectorAll('.glass-card, section, .hero-content').forEach(el => {
-        el.style.opacity = '0';
-        el.style.transform = 'translateY(20px)';
-        el.style.transition = 'opacity 0.8s ease, transform 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
-        observer.observe(el);
+        const rect = el.getBoundingClientRect();
+        // Skip elements already visible on load
+        if (rect.top > window.innerHeight * 0.95) {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(24px)';
+            el.style.transition = 'opacity 0.8s ease, transform 0.8s cubic-bezier(0.23, 1, 0.32, 1)';
+            observer.observe(el);
+        }
     });
 
     // Add a helper class for the CSS
@@ -131,12 +143,47 @@ function initPillNav() {
     if (!nav) return;
 
     window.addEventListener('scroll', () => {
+        const inner = document.querySelector('.nav-inner');
+        if (!inner) return;
         if (window.scrollY > 50) {
             nav.style.top = '1rem';
-            document.querySelector('.nav-inner').style.background = 'rgba(5,5,5,0.9)';
+            inner.style.background = 'rgba(5,5,5,0.9)';
         } else {
             nav.style.top = '1.5rem';
-            document.querySelector('.nav-inner').style.background = 'rgba(10,10,10,0.75)';
+            inner.style.background = 'rgba(10,10,10,0.75)';
         }
     });
+}
+
+// ── SIDEBAR USER POPULATION ──
+// Handles both old (.sidebar-footer) and new (.sidebar-user) class names
+function populateSidebarUser() {
+    try {
+        const auth = localStorage.getItem('auth_user');
+        if (!auth) return;
+        const user = JSON.parse(auth);
+        if (!user) return;
+
+        const initials = (user.name || user.email || 'U')
+            .split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        const displayName = user.name || user.email || 'User';
+        const role = user.role || 'Agent';
+
+        // Avatar
+        document.querySelectorAll('.sidebar-user .user-avatar-small, .sidebar-footer .user-avatar-small').forEach(el => {
+            el.textContent = initials;
+        });
+        // Name
+        document.querySelectorAll('.sidebar-user .user-name, .sidebar-footer .user-name').forEach(el => {
+            el.textContent = displayName;
+        });
+        // Role
+        document.querySelectorAll('.sidebar-user .user-role, .sidebar-footer .user-role').forEach(el => {
+            el.textContent = role;
+        });
+        // Topbar avatar
+        document.querySelectorAll('.topbar-right .user-avatar-small, .top-bar-right .user-avatar-small').forEach(el => {
+            el.textContent = initials;
+        });
+    } catch (e) { /* Ignore parse errors */ }
 }

@@ -26,7 +26,13 @@ body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); 
 
 /* ── CURSOR EFFECTS ── */
 @media (pointer: fine) {
-    * { cursor: none !important; }
+    /* Hide system cursor only on non-interactive body areas */
+    body { cursor: none; }
+    /* Restore normal cursor on interactive elements so clicks always work */
+    a, button, input, select, textarea, label,
+    [role="button"], .nav-item, .menu-item, .filter-pill,
+    .btn-shiny, .btn-secondary, .btn-glass, .topbar-action,
+    .icon-btn, .action-btn, .modal-close { cursor: pointer !important; }
 }
 #cursor-spotlight {
     position: fixed; pointer-events: none; z-index: 9999;
