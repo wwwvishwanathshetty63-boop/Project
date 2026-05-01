@@ -21,46 +21,99 @@ The SaaS application consists of a full-stack web interface with role-based acce
 7. **Background Cron Execution:** Scheduled tasks running at specific intervals (e.g., every 60s) to perform the endpoint checks without blocking the main web server.
 8. **Automated Data Purging:** Regular garbage collection of expired email verification OTPs and old endpoint monitoring logs to preserve database efficiency.
 
-**2.2 Operating Environment**
-- **Backend:** Python (Flask/Gunicorn)
-- **Database:** PostgreSQL (Supabase/Neon)
-- **Frontend:** HTML, CSS, JavaScript (Vanilla/Chart.js)
-- **Deployment:** Vercel (Web Server), Independent Cron/Worker Threads for monitoring tasks.
+**2.2.2 Typical Data Flow**
+1. **User Input:** Company admins or Employees add an API URL and configuration via the frontend dashboard.
+2. **Endpoint Validation:** The backend validates the URL and API key.
+3. **Database Storage:** The Flask backend stores the endpoint details with correct ownership tracking (user_id and created_by) in PostgreSQL.
+4. **Monitoring Cycle:** The background engine fetches active endpoints and pings them at defined intervals.
+5. **Logging:** Results (status code, latency, API key status) are logged into the monitoring_logs table.
+6. **Notification:** If failure criteria are met (consecutive failures or rate limits), the Alert Service triggers an SMTP email to the employee and company admin.
+7. **Visualization:** The dashboard fetches aggregated metrics via the REST API to render Chart.js graphs.
 
----
+**2.2.3 User Classes and Characteristics**
+- **Company Administrators:** Users who own the primary account, have full visibility over all endpoints created by the company and its employees.
+- **Employees:** Sub-accounts invited by the Company Admin. They can add, manage, and monitor only their own specific API endpoints.
 
-### 3. Functional Requirements
-**3.1 Authentication & Authorization**
-- **REQ-1:** The system shall support secure registration via email OTP.
-- **REQ-2:** The system shall authenticate users via JWT tokens.
-- **REQ-3:** Company Admins must be able to invite Employee users.
-- **REQ-4:** Employees shall only access and modify their own endpoints.
-- **REQ-5:** Company Admins shall have read-only access to their employees' endpoints and aggregated statistical data.
+**2.2.4 Operating Environment**
+- **Server Side:** Python 3.10+, Flask, Waitress/Gunicorn, PostgreSQL (Supabase).
+- **Client Side:** Any modern web browser (Chrome, Firefox, Safari, Edge).
+- **Hosting:** Vercel (Web Server), Background Engine Threading.
 
-**3.2 API Endpoint Management**
-- **REQ-6:** Users shall be able to Create, Read, Update, and Delete (CRUD) API configurations (URL, Method, API Key Header, API Key).
-- **REQ-7:** All stored API keys must be encrypted or masked during transmission and retrieval to prevent unauthorized exposure.
+**2.2.5 Design and Implementation Constraints / Assumptions**
+- The system depends on the availability of the PostgreSQL API.
+- Monitoring frequency is fixed at 60 seconds.
+- SMTP delivery depends on the provider (e.g., Gmail) and correct App Password configuration.
+- Serverless scaling on Vercel requires custom DBWrappers to prevent connection pool starvation.
 
-**3.3 Monitoring Engine**
-- **REQ-8:** A background worker thread shall continuously execute HTTP calls based on each endpoint's defined `interval`.
-- **REQ-9:** The engine shall log HTTP status codes, latency, and success booleans into a historical database table.
-- **REQ-10:** Consecutive failures shall be tracked up to a customizable threshold before an alert is escalated.
+**2.2.6 How Dynamic Website Works**
+The system uses a Full-Stack Decoupled Architecture:
+- The **Frontend** (HTML/CSS/JS) is a Single Page Application (SPA) style setup that communicates with the backend via fetch requests.
+- The **Backend** (Flask) acts as a REST API server, handling authentication, data aggregation, and database logic.
+- The **Background Engine** runs asynchronously to ensure monitoring continues even without active user sessions.
 
-**3.4 Analytics & Reporting**
-- **REQ-11:** The system shall aggregate data from `monitoring_logs` to output a total Uptime Percentage per endpoint.
-- **REQ-12:** The analytics engine shall use Redis/in-memory caching to optimize heavy aggregate queries (e.g., P50/P95 latencies).
+**2.2.7 Assumptions and Dependencies**
+- **Assumed Browser:** HTML5 and ES6 compatibility.
+- **Internet Discovery:** Users must have a stable internet connection to access the dashboard.
+- **Email Service:** Assumes the user provides a valid email address for alerts.
 
----
+### 2.3 Functional Requirements
+**2.3.1 Core Functionality Description**
+The system provides a seamless experience for monitoring APIs across a company structure. Users can define endpoints (URL, Method, Interval, API keys), and the system ensures they are reachable and valid. The dashboard provides a "NOC-style" view of all monitored services, isolating data so employees only see their scope, while companies see aggregate overviews.
 
-### 4. Non-Functional Requirements
-**4.1 Performance & Scalability**
-- **NFR-1:** Dashboard statistics must return within 200ms using caching mechanisms.
-- **NFR-2:** The monitoring engine must parallelize HTTP checks using thread pools to ensure large endpoint numbers don't cause drift in polling intervals.
+**2.3.2 External Interface Requirements**
+**2.3.2.1 User Interface**
+- **Landing Page:** Modern centered glassmorphic login/registration card.
+- **Dashboard:** Sidebar navigation with dynamic content area, health status cards, and responsive Chart.js charts.
+- **Modals:** For adding/editing endpoints and inviting employees.
 
-**4.2 Security**
-- **NFR-3:** Passwords must be hashed using `bcrypt` algorithms.
-- **NFR-4:** API requests shall utilize standard HTTPS.
+**2.3.2.2 Hardware Interfaces**
+No specialized hardware required. Standard Server/PC with NIC.
 
-**4.3 Reliability & Availability**
-- **NFR-5:** The core Web API must isolate its PostgreSQL connection pooling to ensure it does not starve connection slots during serverless scaling events (using a custom `DBWrapper`).
-- **NFR-6:** Multi-tenant degradation load test coverage must enforce SLA guarantees on response time spikes.
+**2.3.2.3 Software Interfaces**
+- **Web Browser:** Chrome 90+, Firefox 88+.
+- **Database:** Supabase (PostgreSQL).
+- **Backend Framework:** Flask (Python).
+- **Libraries:** Chart.js for visualization, APScheduler for tasks.
+
+**2.3.2.4 Communication Interfaces**
+- **HTTP/HTTPS:** For client-server communication and API pings.
+- **SMTP:** For sending critical failure alerts.
+
+**2.3.3 Detailed Functional Requirements**
+**2.3.3.1 Web Pages Identified**
+- `login.html`: Entry point for all users.
+- `admin.html`: The main control center showing global stats, charts, and endpoint controls.
+
+### Non-Functional Requirements
+**Security:**
+- Password hashing using bcrypt.
+- Authorization via JWT in headers.
+- Multi-Tenant Isolation using `company_id` and `created_by` attributes.
+- API key masking in all responses (only first 4 and last 4 characters shown).
+- Secure connection pool management.
+
+**Performance:**
+- API health check responses logged in less than 500ms.
+- Dashboard stats aggregation returned in under 200ms using caching.
+
+**Scalability:**
+- PostgreSQL handles concurrent database connections reliably.
+- Flask backend is stateless for horizontal serverless scaling.
+
+**Availability:**
+- Background monitoring engine ensures 24/7 pings.
+
+**Usability:**
+- Clean, premium design with intuitive navigation.
+
+### 2.4 Advantages of the System
+- **Real-time Awareness:** Users know immediately when their API is down or degrading.
+- **Data-Driven Insights:** Uptime and latency charts help identify performance regressions.
+- **Corporate Hierarchy Control:** Perfect data isolation between company admins and employee sub-accounts.
+- **Secure by Design:** Implementation of strict RBAC ensures user data privacy.
+
+### 2.5 Future Enhancements
+- **Multi-region Pings:** Monitor APIs from different global locations.
+- **Slack/Discord Webhooks:** Notification support for dev teams.
+- **AI Diagnostics:** Automatically analyze root causes of failures.
+- **Mobile Application:** Native iOS/Android app for on-the-go alerts.
