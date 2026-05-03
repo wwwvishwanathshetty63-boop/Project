@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>API Monitor — Employee Login</title>
+    <title>API Monitor — Entity Access Terminal</title>
+    
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -15,115 +16,280 @@
     <!-- Synapse Styles -->
     <link rel="stylesheet" href="css/synapse.css">
     <style>
-        body { display:flex; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:1.5rem; overflow-x: hidden; }
-        .auth-container { width:100%; max-width:480px; position: relative; z-index: 10; animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); }
+        body { 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            min-height: 100vh; 
+            margin: 0; 
+            padding: 1.5rem; 
+            overflow: hidden; 
+            background: #030303;
+        }
+
+        .auth-container { 
+            width: 100%; 
+            max-width: 480px; 
+            position: relative; 
+            z-index: 10; 
+            animation: revealUp 0.8s cubic-bezier(0.16, 1, 0.3, 1); 
+        }
         
-        .glass-card-auth { padding: 3rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 24px; backdrop-filter: blur(20px); }
+        @keyframes revealUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .auth-card { 
+            padding: 2.5rem; 
+            background: rgba(10, 10, 10, 0.6); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 28px; 
+            backdrop-filter: blur(30px);
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
         
-        .auth-logo { font-family: 'Instrument Serif', serif; font-size: 2.5rem; color: #fff; margin-bottom: 2rem; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
-        .auth-logo-icon { width: 48px; height: 48px; background: var(--cyan); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; box-shadow: 0 0 20px var(--cyan-glow); }
+        .auth-logo { 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+            gap: 12px; 
+            margin-bottom: 2rem; 
+        }
         
-        .form-group label { display: block; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.15em; color: var(--text-dim); margin-bottom: 0.75rem; font-weight: 700; }
-        .form-group input { width: 100%; background: rgba(255,255,255,0.03); border: 1px solid var(--border); border-radius: 12px; padding: 1rem 1rem 1rem 3rem; color: #fff; font-family: 'Inter', sans-serif; transition: all 0.3s; }
-        .form-group input:focus { border-color: var(--cyan); background: rgba(255,255,255,0.05); outline: none; }
-        .form-group .input-icon { position: absolute; left: 1.25rem; top: 50%; transform: translateY(-50%); color: var(--text-dim); font-size: 0.9rem; }
+        .logo-dot { 
+            width: 42px; 
+            height: 42px; 
+            border-radius: 50%; 
+            background: conic-gradient(from 180deg, var(--cyan), var(--violet), var(--cyan));
+            box-shadow: 0 0 20px var(--cyan-glow);
+            animation: rotateGlow 4s linear infinite;
+        }
         
-        .back-link { color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.05em; display: inline-flex; align-items: center; gap: 0.5rem; transition: color 0.3s; margin-bottom: 2rem; }
-        .back-link:hover { color: #fff; }
+        @keyframes rotateGlow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
         
-        .info-note { background: rgba(6, 182, 212, 0.03); border: 1px solid rgba(6, 182, 212, 0.1); border-radius: 12px; padding: 1rem; margin-bottom: 1.5rem; font-size: 0.75rem; color: var(--text-muted); line-height: 1.5; display: flex; gap: 0.75rem; }
-        .info-note i { color: var(--cyan); margin-top: 2px; }
+        .auth-title {
+            font-family: 'Instrument Serif', serif;
+            font-size: 2.5rem;
+            color: #fff;
+            letter-spacing: -0.02em;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        
+        .auth-subtitle {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            font-weight: 300;
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        
+        .info-panel {
+            background: rgba(6, 182, 212, 0.05);
+            border: 1px solid rgba(6, 182, 212, 0.15);
+            border-radius: 14px;
+            padding: 1rem;
+            margin-bottom: 2rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            display: flex;
+            gap: 12px;
+            line-height: 1.5;
+        }
+        
+        .info-panel i { color: var(--cyan); margin-top: 2px; }
+
+        .form-group { margin-bottom: 1.25rem; position: relative; }
+        .form-group label { 
+            display: block; 
+            font-size: 0.65rem; 
+            text-transform: uppercase; 
+            letter-spacing: 0.15em; 
+            color: var(--text-dim); 
+            margin-bottom: 0.6rem; 
+            font-weight: 800; 
+        }
+        
+        .input-wrapper { position: relative; }
+        .input-wrapper i { 
+            position: absolute; 
+            left: 1.25rem; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            color: var(--text-dim); 
+            font-size: 0.9rem; 
+            transition: color 0.3s;
+        }
+        
+        .form-control { 
+            width: 100%; 
+            background: rgba(255, 255, 255, 0.03); 
+            border: 1px solid rgba(255, 255, 255, 0.08); 
+            border-radius: 14px; 
+            padding: 1.1rem 1rem 1.1rem 3.2rem; 
+            color: #fff; 
+            font-family: 'Inter', sans-serif; 
+            font-size: 0.95rem;
+            transition: all 0.3s; 
+        }
+        
+        .form-control:focus { 
+            border-color: var(--cyan); 
+            background: rgba(255, 255, 255, 0.05); 
+            outline: none; 
+            box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.1);
+        }
+        
+        .form-control:focus + i { color: var(--cyan); }
+
+        .back-nav {
+            position: absolute;
+            top: -3.5rem;
+            left: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.8rem;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        
+        .back-nav:hover { color: #fff; }
+        
+        .footer-link {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 0.85rem;
+            color: var(--text-dim);
+        }
+        
+        .footer-link a {
+            color: var(--violet);
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.3s;
+        }
+        
+        .footer-link a:hover { color: var(--text); }
+
+        .btn-submit {
+            width: 100%;
+            border: none;
+            background: var(--cyan);
+            color: #000;
+            padding: 1.1rem;
+            border-radius: 14px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.23, 1, 0.32, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px var(--cyan-glow);
+        }
+        
+        .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 10px 25px var(--cyan-glow); background: #22d3ee; }
+        .btn-submit:active { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
     </style>
 </head>
-<body>
+<body data-page="auth">
     <!-- Ambient Orbs -->
     <div class="orb orb-1"></div>
     <div class="orb orb-2"></div>
     <div class="orb orb-3"></div>
 
     <div class="auth-container">
-        <a href="index.html" class="back-link"><i class="fa-solid fa-arrow-left"></i> Home</a>
+        <a href="index.html" class="back-nav"><i class="fa-solid fa-arrow-left"></i> RETURN TO HUB</a>
 
-        <div class="auth-header" style="text-align: center; margin-bottom: 2rem;">
+        <div class="auth-card">
             <div class="auth-logo">
-                <div class="auth-logo-icon" style="background: var(--cyan); box-shadow: 0 0 20px var(--cyan-glow);"><i class="fa-solid fa-satellite-dish"></i></div>
-                <span style="font-family: 'Instrument Serif', serif; letter-spacing: -0.02em;">Synapse Portal</span>
+                <div class="logo-dot"></div>
+                <div style="font-family: 'Instrument Serif', serif; font-size: 1.2rem; color: #fff;">Synapse Portal</div>
             </div>
-            <h1 id="auth-title" style="font-family: 'Instrument Serif', serif; font-size: 2.5rem; letter-spacing: -0.02em; margin-bottom: 0.5rem;">Entity Access</h1>
-            <p id="auth-subtitle" style="color: var(--text-muted); font-weight: 300; font-size: 0.9rem;">Establish secure link with provided credentials</p>
-        </div>
 
-        <div class="glass-card-auth">
-            <div class="info-note">
+            <h1 class="auth-title">Entity Access</h1>
+            <p class="auth-subtitle">Synchronize with company resources</p>
+
+            <div class="info-panel">
                 <i class="fa-solid fa-circle-info"></i>
-                <span>Use the <strong>Designation</strong>, <strong>Email</strong>, and <strong>Key</strong> provided to you by your administrator.</span>
+                <span>Enter your assigned <strong>Designation</strong>, <strong>Email</strong>, and <strong>Access Key</strong> provided by your administrator.</span>
             </div>
-
 
             <form id="employee-login-form">
-                <div class="form-group" style="margin-bottom: 1.25rem;">
+                <div class="form-group">
                     <label>Designation (Name)</label>
-                    <div style="position:relative;">
-                        <i class="fa-solid fa-user input-icon"></i>
-                        <input type="text" id="emp-name" placeholder="John Doe" required>
+                    <div class="input-wrapper">
+                        <input type="text" id="emp-name" class="form-control" placeholder="Entity Name" required>
+                        <i class="fa-solid fa-id-badge"></i>
                     </div>
                 </div>
-                <div class="form-group" style="margin-bottom: 1.25rem;">
+                <div class="form-group">
                     <label>Email Vector</label>
-                    <div style="position:relative;">
-                        <i class="fa-solid fa-envelope input-icon"></i>
-                        <input type="email" id="emp-email" placeholder="john@company.com" required>
+                    <div class="input-wrapper">
+                        <input type="email" id="emp-email" class="form-control" placeholder="operative@company.com" required>
+                        <i class="fa-solid fa-envelope"></i>
                     </div>
                 </div>
                 <div class="form-group" style="margin-bottom: 2rem;">
                     <label>Access Key (Password)</label>
-                    <div style="position:relative;">
-                        <i class="fa-solid fa-lock input-icon"></i>
-                        <input type="password" id="emp-password" placeholder="••••••••" required>
+                    <div class="input-wrapper">
+                        <input type="password" id="emp-password" class="form-control" placeholder="••••••••" required>
+                        <i class="fa-solid fa-lock"></i>
                     </div>
                 </div>
-                <div class="btn-shiny" style="width: 100%; padding: 0;">
-                    <button type="submit" class="btn-shiny-inner" style="width:100%; border:none; cursor:pointer; font-weight:700; background: var(--cyan);">
-                        Entity Login
-                    </button>
-                </div>
+                <button type="submit" class="btn-submit">
+                    ESTABLISH LINK <i class="fa-solid fa-arrow-right"></i>
+                </button>
             </form>
+        </div>
 
-        <p style="text-align:center;margin-top:2rem;font-size:0.8rem;color:var(--text-dim); font-weight: 300;">
-            No credentials? Contact your administrator for entity invitation.
+        <p class="footer-link">
+            Are you a Company Administrator? <a href="login.html">Access Command Center</a>
         </p>
     </div>
-</div>
 
-<script src="js/app.js"></script>
-<script src="js/synapse.js"></script>
-<script>
-document.getElementById('employee-login-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const btnInner = this.querySelector('.btn-shiny-inner');
-    btnInner.disabled = true;
-    btnInner.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> SYNCING...';
-    try {
-        const d = await apiRequest('/api/auth/login', {
-            method: 'POST',
-            body: {
-                name: document.getElementById('emp-name').value.trim(),
-                email: document.getElementById('emp-email').value.trim(),
-                password: document.getElementById('emp-password').value,
-                login_type: 'employee'
+    <script src="js/app.js"></script>
+    <script src="js/synapse.js"></script>
+    <script>
+        document.getElementById('employee-login-form').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const btn = this.querySelector('button');
+            const originalText = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> SYNCING...';
+            
+            try {
+                const d = await apiRequest('/api/auth/login', {
+                    method: 'POST',
+                    body: {
+                        name: document.getElementById('emp-name').value.trim(),
+                        email: document.getElementById('emp-email').value.trim(),
+                        password: document.getElementById('emp-password').value,
+                        login_type: 'employee'
+                    }
+                });
+                saveAuth(d.token, d.user);
+                showToast('Entity Synchronized');
+                setTimeout(() => window.location.href = 'dashboard.html', 800);
+            } catch(err) {
+                showToast(err.message, 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalText;
             }
         });
-        saveAuth(d.token, d.user);
-        showToast('Entity Synchronized');
-        setTimeout(() => window.location.href = 'dashboard.html', 800);
-    } catch(err) {
-        showToast(err.message, 'error');
-        btnInner.disabled = false;
-        btnInner.innerHTML = 'Entity Login';
-    }
-});
 
-if (typeof isAuthenticated === 'function' && isAuthenticated()) window.location.href = 'dashboard.html';
-</script>
+        if (typeof isAuthenticated === 'function' && isAuthenticated()) {
+            window.location.href = 'dashboard.html';
+        }
+    </script>
 </body>
 </html>

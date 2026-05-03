@@ -5,7 +5,7 @@
 
 // Auto-detect API base: works both via Flask (localhost:5000) and opened directly (file://)
 const API_BASE = (window.location.protocol === 'file:' || window.location.origin === 'null')
-    ? 'http://localhost:5000'
+    ? 'http://localhost:5001'
     : window.location.origin;
 
 // ---- State ----

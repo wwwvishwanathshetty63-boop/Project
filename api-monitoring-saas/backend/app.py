@@ -17,9 +17,10 @@ logger = logging.getLogger(__name__)
 
 def create_app() -> Flask:
     """Application factory."""
+    static_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
     app = Flask(
         __name__,
-        static_folder=os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend"),
+        static_folder=static_dir,
         static_url_path="",
     )
     app.config.from_object(Config)
@@ -57,52 +58,52 @@ def create_app() -> Flask:
 
     # Serve frontend pages
     @app.route("/")
-    @app.route("/index.html")
+    @app.route("/landing.html")
     def serve_landing():
-        return send_from_directory(app.static_folder, "index.html")
+        return app.send_static_file("index.html")
 
     @app.route("/login")
     @app.route("/login.html")
     def serve_login():
-        return send_from_directory(app.static_folder, "login.html")
+        return app.send_static_file("login.html")
 
     @app.route("/employee-login")
     @app.route("/employee-login.html")
     def serve_employee_login():
-        return send_from_directory(app.static_folder, "employee-login.html")
+        return app.send_static_file("employee-login.html")
 
     @app.route("/dashboard")
     @app.route("/dashboard.html")
     def serve_dashboard():
-        return send_from_directory(app.static_folder, "dashboard.html")
+        return app.send_static_file("dashboard.html")
 
     @app.route("/company-dashboard")
     @app.route("/company-dashboard.html")
     def serve_company_dashboard():
-        return send_from_directory(app.static_folder, "company-dashboard.html")
+        return app.send_static_file("company-dashboard.html")
 
     @app.route("/endpoints")
     @app.route("/api-endpoints")
     @app.route("/api-endpoints.html")
     def serve_endpoints():
-        return send_from_directory(app.static_folder, "api-endpoints.html")
+        return app.send_static_file("api-endpoints.html")
 
     @app.route("/logs")
     @app.route("/logs.html")
     def serve_logs():
-        return send_from_directory(app.static_folder, "logs.html")
+        return app.send_static_file("logs.html")
         
     @app.route("/alerts")
     def serve_alerts():
-        return send_from_directory(app.static_folder, "alerts.html")
+        return app.send_static_file("alerts.html")
         
     @app.route("/admin")
     def serve_admin():
-        return send_from_directory(app.static_folder, "admin.html")
+        return app.send_static_file("admin.html")
         
     @app.route("/profile")
     def serve_profile():
-        return send_from_directory(app.static_folder, "profile.html")
+        return app.send_static_file("profile.html")
 
     # Health check
     @app.route("/api/health")

@@ -11,7 +11,7 @@ class Config:
     # Flask
     SECRET_KEY = os.getenv("SECRET_KEY", "change-me-in-production")
     DEBUG = os.getenv("FLASK_DEBUG", "false").lower() == "true"
-    PORT = int(os.getenv("PORT", 5000))
+    PORT = int(os.getenv("PORT", 5001))
 
     # Database (Supabase PostgreSQL)
     DATABASE_URL = os.getenv(
