@@ -200,30 +200,127 @@
             </div>
         </div>
     </main>
-        </div>
-    </main>
 
     <script src="js/app.js"></script>
     <script src="js/synapse.js"></script>
     <script src="js/main.js"></script>
     <script>
+        async function loadAlerts() {
+            const list = document.getElementById('alert-rule-list');
+            const activeCount = document.getElementById('alert-active-count');
+            const criticalCount = document.getElementById('alert-critical-count');
+            const warningCount = document.getElementById('alert-warning-count');
+            const tbody = document.getElementById('triggers-tbody');
+
+            try {
+                // In this app, alerts are often mock or derived from endpoints
+                // Fetch endpoints to show status as alerts
+                const data = await apiRequest('/api/endpoints');
+                const endpoints = data.endpoints || [];
+
+                let critical = 0;
+                let warning = 0;
+                let active = 0;
+
+                list.innerHTML = '';
+                if (endpoints.length === 0) {
+                    list.innerHTML = `
+                        <div class="empty-state" style="padding: 4rem;">
+                            <i class="fa-solid fa-bell-slash"></i>
+                            <p>No active heuristics detected.</p>
+                        </div>`;
+                } else {
+                    endpoints.forEach(ep => {
+                        const severity = ep.is_down ? 'critical' : (ep.uptime_percentage < 95 ? 'warning' : 'info');
+                        if (severity === 'critical') critical++;
+                        if (severity === 'warning') warning++;
+                        if (ep.is_down) active++;
+
+                        const row = document.createElement('div');
+                        row.className = 'alert-rule-row';
+                        row.dataset.severity = severity;
+                        row.style.padding = '1.25rem';
+                        row.style.borderBottom = '1px solid var(--border)';
+                        row.style.display = 'flex';
+                        row.style.alignItems = 'center';
+                        row.style.justifyContent = 'space-between';
+                        
+                        row.innerHTML = `
+                            <div style="display:flex;align-items:center;gap:1.25rem;">
+                                <div class="severity-indicator ${severity}" style="width:36px;height:36px;font-size:0.9rem;">
+                                    <i class="fa-solid ${severity === 'critical' ? 'fa-triangle-exclamation' : 'fa-circle-exclamation'}"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:700;color:#fff;">${escapeHtml(ep.name)} Monitoring</div>
+                                    <div style="font-size:0.75rem;color:var(--text-dim);">${escapeHtml(ep.url)}</div>
+                                </div>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:2rem;">
+                                <div style="text-align:right;">
+                                    <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;">Uptime</div>
+                                    <div style="font-weight:700;color:${severity === 'critical' ? 'var(--rose)' : (severity === 'warning' ? '#f59e0b' : 'var(--emerald)')}">${ep.uptime_percentage}%</div>
+                                </div>
+                                <span class="status-pill ${ep.is_down ? 'down' : 'up'}">${ep.is_down ? 'Incident' : 'Stable'}</span>
+                            </div>
+                        `;
+                        list.appendChild(row);
+                    });
+                }
+
+                if (activeCount) activeCount.textContent = active;
+                if (criticalCount) criticalCount.textContent = critical;
+                if (warningCount) warningCount.textContent = warning;
+
+                // Fetch recent logs for "Sequence Violation History"
+                const logData = await apiRequest('/api/logs?limit=10');
+                const logs = (logData.logs || []).filter(l => !l.is_success);
+
+                if (logs.length > 0) {
+                    tbody.innerHTML = '';
+                    logs.forEach(log => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td class="log-time">${new Date(log.checked_at).toLocaleString()}</td>
+                            <td><div style="font-weight:700;">${escapeHtml(log.endpoint_name || 'Node ' + log.endpoint_id)}</div></td>
+                            <td>Connectivity Breach</td>
+                            <td><span class="status-pill down">Critical</span></td>
+                            <td>HTTP ${log.status_code} Error</td>
+                            <td><span style="color:var(--rose);">Triggered</span></td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                }
+
+            } catch (err) {
+                console.error('Failed to load alerts:', err);
+            }
+        }
+
         // Filter pills
         document.querySelectorAll('#alert-filter-pills .pill-toggle-btn').forEach(pill => {
             pill.addEventListener('click', () => {
                 document.querySelectorAll('#alert-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
                 pill.classList.add('active');
-                const f = pill.dataset.filter;
-                document.querySelectorAll('#alert-rule-list .alert-rule-row').forEach(row => {
-                    row.style.display = (f === 'all' || row.dataset.severity === f) ? '' : 'none';
-                });
+                applyAlertFilters();
             });
         });
-        document.getElementById('alert-search').addEventListener('input', function () {
-            const q = this.value.toLowerCase();
+
+        document.getElementById('alert-search').addEventListener('input', applyAlertFilters);
+
+        function applyAlertFilters() {
+            const activePill = document.querySelector('#alert-filter-pills .pill-toggle-btn.active');
+            const f = activePill ? activePill.dataset.filter : 'all';
+            const q = (document.getElementById('alert-search').value || '').toLowerCase();
+            
             document.querySelectorAll('#alert-rule-list .alert-rule-row').forEach(row => {
-                row.style.display = row.textContent.toLowerCase().includes(q) ? '' : 'none';
+                const severity = row.dataset.severity;
+                const textMatch = row.textContent.toLowerCase().includes(q);
+                const filterMatch = f === 'all' || severity === f;
+                row.style.display = (textMatch && filterMatch) ? 'flex' : 'none';
             });
-        });
+        }
+
+        document.addEventListener('DOMContentLoaded', loadAlerts);
     </script>
 </body>
 </html>

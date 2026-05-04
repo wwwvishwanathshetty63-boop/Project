@@ -143,22 +143,39 @@ def get_stats():
 @dashboard_bp.route("/response-times", methods=["GET"])
 @token_required
 def get_response_times():
-    """Response time chart data — employees see own endpoints only (cached 15s)."""
+    """Response time chart data — supports from_time/to_time (ISO UTC) or range param."""
     user_id = g.current_user_id
     user_role = g.current_user_role
-    time_range = request.args.get("range", "1d")
 
-    cache_key = build_key("chart", user_id, time_range)
+    # Custom time window takes priority over range
+    from_time = request.args.get("from_time")
+    to_time   = request.args.get("to_time")
+
+    if from_time and to_time:
+        try:
+            since_dt = datetime.datetime.fromisoformat(from_time.replace('Z', '+00:00'))
+            until_dt = datetime.datetime.fromisoformat(to_time.replace('Z', '+00:00'))
+            since  = since_dt.strftime("%Y-%m-%d %H:%M:%S")
+            until  = until_dt.strftime("%Y-%m-%d %H:%M:%S")
+            cache_key = build_key("chart", user_id, from_time, to_time)
+        except Exception:
+            return jsonify({"error": "Invalid from_time/to_time format (use ISO 8601)"}), 400
+        use_until = True
+    else:
+        time_range = request.args.get("range", "1d")
+        days_map = {"1h": 1/24, "1d": 1, "7d": 7, "30d": 30}
+        days = days_map.get(time_range, 1)
+        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
+        until = None
+        cache_key = build_key("chart", user_id, time_range)
+        use_until = False
+
     cached = cache.get(cache_key)
     if cached:
         return jsonify(cached), 200
 
     db = get_db()
     try:
-        days_map = {"1d": 1, "7d": 7, "30d": 30}
-        days = days_map.get(time_range, 1)
-
-        # Employees → only their own; Company → all owned
         if user_role == "employee":
             endpoints = rows_to_list(
                 db.execute("SELECT id, name FROM api_endpoints WHERE created_by = %s", (user_id,)).fetchall()
@@ -171,18 +188,22 @@ def get_response_times():
         if not endpoints:
             return jsonify({"series": []}), 200
 
-        since = (datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(days=days)).strftime(
-            "%Y-%m-%d %H:%M:%S"
-        )
-
         series = []
         for ep in endpoints:
-            logs = rows_to_list(
-                db.execute(
-                    "SELECT response_time, checked_at, is_success, status_code FROM monitoring_logs WHERE endpoint_id = %s AND checked_at >= %s ORDER BY checked_at ASC",
-                    (ep["id"], since),
-                ).fetchall()
-            )
+            if use_until:
+                logs = rows_to_list(
+                    db.execute(
+                        "SELECT response_time, checked_at, is_success, status_code FROM monitoring_logs WHERE endpoint_id = %s AND checked_at >= %s AND checked_at <= %s ORDER BY checked_at ASC",
+                        (ep["id"], since, until),
+                    ).fetchall()
+                )
+            else:
+                logs = rows_to_list(
+                    db.execute(
+                        "SELECT response_time, checked_at, is_success, status_code FROM monitoring_logs WHERE endpoint_id = %s AND checked_at >= %s ORDER BY checked_at ASC",
+                        (ep["id"], since),
+                    ).fetchall()
+                )
 
             data_points = [
                 {
@@ -204,6 +225,7 @@ def get_response_times():
         return jsonify({"error": "Failed to load response times. Please try again."}), 500
     finally:
         release_db(db)
+
 
 
 @dashboard_bp.route("/analytics", methods=["GET"])

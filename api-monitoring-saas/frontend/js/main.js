@@ -114,16 +114,20 @@ document.addEventListener('DOMContentLoaded', () => {
             addEndpointModal.querySelector('h3').textContent = 'Add New Endpoint';
             addEndpointForm.querySelector('button[type="submit"]').textContent = 'Add Endpoint';
             addEndpointForm.reset();
-            document.getElementById('endpoint-error').style.display = 'none';
-            document.querySelector('input[name="monitor_type"][value="url"]').checked = true;
-            document.getElementById('api-key-group').style.display = 'none';
-            document.getElementById('endpoint-api-key').required = false;
-            document.getElementById('url-group-wrapper').style.display = 'block';
-            document.getElementById('endpoint-url').required = true;
-            document.getElementById('ai-detect-badge').style.display = 'none';
-            
+            const errorEl = document.getElementById('endpoint-error');
+            if (errorEl) errorEl.style.display = 'none';
+            const monitorTypeRadio = document.querySelector('input[name="monitor_type"][value="url"]');
+            if (monitorTypeRadio) monitorTypeRadio.checked = true;
+            const apiKeyGroup = document.getElementById('api-key-group');
+            if (apiKeyGroup) apiKeyGroup.style.display = 'none';
             const apiKeyInput = document.getElementById('endpoint-api-key');
-            if (apiKeyInput) apiKeyInput.value = '';
+            if (apiKeyInput) { apiKeyInput.required = false; apiKeyInput.value = ''; }
+            const urlWrapper = document.getElementById('url-group-wrapper');
+            if (urlWrapper) urlWrapper.style.display = 'block';
+            const endpointUrl = document.getElementById('endpoint-url');
+            if (endpointUrl) endpointUrl.required = true;
+            const aiDetectBadge = document.getElementById('ai-detect-badge');
+            if (aiDetectBadge) aiDetectBadge.style.display = 'none';
             addEndpointModal.style.display = 'flex';
         };
 
@@ -279,17 +283,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         window.deleteEndpoint = async function (id, name) {
-            if (!confirm(`Are you sure you want to delete the endpoint "${name}"?`)) return;
+            if (!confirm(`Are you sure you want to delete "${name}"? This cannot be undone.`)) return;
             try {
-                // Assuming backend supports DELETE /api/endpoints/{id}
                 await apiRequest(`/api/endpoints/${id}`, { method: 'DELETE' });
-                window.showNotification(`Endpoint "${name}" deleted.`);
-
-                const tbody = document.querySelector('#all-endpoints-table tbody');
-                if (tbody && typeof loadEndpointsTable === 'function') loadEndpointsTable(tbody);
+                if (typeof showToast === 'function') showToast(`"${name}" deleted`, 'success');
+                else window.showNotification(`Endpoint "${name}" deleted.`);
+                // Reload dashboard data — fires endpointsReady which re-renders cards
                 if (typeof loadDashboardData === 'function') loadDashboardData();
             } catch (err) {
-                if (typeof showToast === 'function') showToast(err.message, 'error');
+                if (typeof showToast === 'function') showToast(err.message || 'Delete failed', 'error');
                 else alert(err.message);
             }
         };
@@ -330,25 +332,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     closeEndpoint();
 
-                    // Refresh tables
-                    const tbody = document.querySelector('#all-endpoints-table tbody');
-                    if (tbody && typeof loadEndpointsTable === 'function') loadEndpointsTable(tbody);
+                    // Reload dashboard which fires endpointsReady → re-renders cards
                     if (typeof loadDashboardData === 'function') loadDashboardData();
 
                 } catch (error) {
                     const errorEl = document.getElementById('endpoint-error');
                     if (errorEl) {
                         let msg = error.message || 'Failed to save endpoint';
-                        if (error.detail) {
-                            msg += `: ${error.detail}`;
-                        }
-                        errorEl.querySelector('.error-message').textContent = msg;
+                        if (error.detail) msg += `: ${error.detail}`;
+                        const msgSpan = errorEl.querySelector('.error-message');
+                        if (msgSpan) msgSpan.textContent = msg;
                         errorEl.style.display = 'flex';
-                        
-                        // Restart animation by cloning and replacing or just re-adding class
                         errorEl.style.animation = 'none';
-                        errorEl.offsetHeight; // trigger reflow
-                        errorEl.style.animation = null; 
+                        errorEl.offsetHeight;
+                        errorEl.style.animation = null;
                     } else {
                         if (typeof showToast === 'function') {
                             showToast(error.message || 'Failed to save endpoint', 'error');

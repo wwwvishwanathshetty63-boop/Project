@@ -67,19 +67,23 @@ async function loadEndpointsTable(tbody, range = '1d') {
             </div>`;
 
             return `
-                <tr>
+                <tr class="interactive-row" onclick="if(event.target.tagName !== 'BUTTON' && event.target.tagName !== 'I') openAIAnalyzer('${api.id}')">
                     <td style="font-weight: 500;">${escapeHtml(api.name)}</td>
                     <td><span class="code-style" style="font-size:0.78rem;">${escapeHtml(api.url)}</span></td>
+                    <td><span class="code-style" style="font-size:0.78rem; opacity:0.6;">${api.api_key_masked || '—'}</span></td>
                     <td>${methodHtml}</td>
                     <td>${statusHtml}</td>
                     <td style="font-weight:600; color: ${api.is_down ? '#EF4444' : 'var(--text-color)'}">${responseTime}</td>
                     <td>${uptimeBarHtml}</td>
                     <td style="color: var(--text-muted); font-size:0.8rem;">${lastChecked}</td>
                     <td class="text-right">
-                        <div class="action-btns">
-                            ${api.is_down ? `<button class="btn-ai-analyze shimmer" title="AI Downtime Analysis" onclick="openAIAnalyzer('${api.id}')"><i class="fa-solid fa-brain"></i><span>AI Analyze</span></button>` : ''}
-                            <button class="action-btn" title="Edit" onclick="openEditModal('${api.id}')"><i class="fa-solid fa-pen"></i></button>
-                            <button class="action-btn delete" title="Delete" onclick="deleteEndpoint('${api.id}', '${escapeHtml(api.name)}')"><i class="fa-solid fa-trash"></i></button>
+                        <div class="action-btns" style="gap: 0.5rem; justify-content: flex-end;">
+                            <button class="btn-ai-analyze ${api.is_down ? 'shimmer' : ''}" title="AI Analysis" onclick="event.stopPropagation(); openAIAnalyzer('${api.id}')">
+                                <i class="fa-solid fa-brain"></i>
+                                <span>Analyze</span>
+                            </button>
+                            <button class="action-btn" title="Edit" onclick="event.stopPropagation(); openEditModal('${api.id}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="action-btn delete" title="Delete" onclick="event.stopPropagation(); deleteEndpoint('${api.id}', '${escapeHtml(api.name)}')"><i class="fa-solid fa-trash"></i></button>
                         </div>
                     </td>
                 </tr>

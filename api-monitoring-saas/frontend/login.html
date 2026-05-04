@@ -295,7 +295,7 @@
 
             <div class="tab-switcher">
                 <div class="tab-btn active" onclick="switchMode('login')">Log In</div>
-                <div class="tab-btn" onclick="switchMode('register')">Join Nexus</div>
+                <div class="tab-btn" onclick="switchMode('register')">Register</div>
             </div>
 
             <!-- LOGIN FORM -->
@@ -359,6 +359,9 @@
                         VERIFY ACCESS <i class="fa-solid fa-shield-check"></i>
                     </button>
                     <div class="resend-timer">Expires in <span id="reg-timer">10:00</span></div>
+                    <div style="text-align:center; margin-top: 1rem;">
+                        <button type="button" id="reg-resend-btn" onclick="sendOTP()" style="background:none; border:none; color:var(--violet); font-size:0.8rem; font-weight:600; cursor:pointer; opacity:0.5;" disabled>Resend Pulse Code</button>
+                    </div>
                 </div>
 
                 <!-- Step 3: Finalize -->
@@ -422,6 +425,10 @@
                     <button type="button" class="btn-submit" onclick="verifyResetOTP()">
                         CONTINUE <i class="fa-solid fa-arrow-right"></i>
                     </button>
+                    <div class="resend-timer" style="text-align:center; margin-top:1rem; font-size:0.8rem; color:var(--text-dim);">Expires in <span id="for-timer">10:00</span></div>
+                    <div style="text-align:center; margin-top: 1rem;">
+                        <button type="button" id="for-resend-btn" onclick="sendResetOTP()" style="background:none; border:none; color:var(--violet); font-size:0.8rem; font-weight:600; cursor:pointer; opacity:0.5;" disabled>Resend Pulse Code</button>
+                    </div>
                 </div>
 
                 <!-- Step 3: New Password -->
@@ -458,6 +465,30 @@
         // ─── STATE & UTILS ──────────────────────────────────────────────────
         let currentMode = 'login';
         let verifiedEmail = '';
+        let timerInterval = null;
+
+        function startTimer(durationSeconds, displayId, resendBtnId) {
+            if (timerInterval) clearInterval(timerInterval);
+            const display = document.getElementById(displayId);
+            const resendBtn = document.getElementById(resendBtnId);
+            let timer = durationSeconds;
+            
+            resendBtn.disabled = true;
+            resendBtn.style.opacity = '0.5';
+
+            timerInterval = setInterval(() => {
+                const minutes = Math.floor(timer / 60);
+                const seconds = timer % 60;
+                display.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+
+                if (--timer < 0) {
+                    clearInterval(timerInterval);
+                    display.textContent = "EXPIRED";
+                    resendBtn.disabled = false;
+                    resendBtn.style.opacity = '1';
+                }
+            }, 1000);
+        }
 
         function switchMode(mode) {
             currentMode = mode;
@@ -475,7 +506,7 @@
             } else if (mode === 'register') {
                 document.getElementById('register-flow').classList.add('active');
                 document.querySelectorAll('.tab-btn')[1].classList.add('active');
-                title.textContent = 'Join Nexus';
+                title.textContent = 'Register';
                 sub.textContent = 'Register your node to begin monitoring';
                 goToStep('reg', 1);
             } else if (mode === 'forgot') {
@@ -564,6 +595,9 @@
                 verifiedEmail = email;
                 if (res.dev_otp) showToast('DEV CODE: ' + res.dev_otp, 'warning', 10000);
                 goToStep('reg', 2);
+                startTimer(600, 'reg-timer', 'reg-resend-btn');
+                // Clear OTP inputs
+                document.querySelectorAll('#reg-otp-container input').forEach(i => i.value = '');
             } catch (err) {
                 showToast(err.message, 'error');
             } finally {
@@ -576,6 +610,10 @@
             const otp = getOTPValue('reg-otp-container');
             if (otp.length < 6) return showToast('Enter full 6-digit code', 'error');
 
+            const btn = document.querySelector('#reg-step-2 .btn-submit');
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> VERIFYING...';
+
             try {
                 await apiRequest('/api/auth/verify-otp', {
                     method: 'POST',
@@ -585,6 +623,8 @@
                 goToStep('reg', 3);
             } catch (err) {
                 showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = originalText;
             }
         }
 
@@ -628,6 +668,9 @@
                 verifiedEmail = email;
                 if (res.dev_otp) showToast('DEV CODE: ' + res.dev_otp, 'warning', 10000);
                 goToStep('for', 2);
+                startTimer(600, 'for-timer', 'for-resend-btn');
+                // Clear OTP inputs
+                document.querySelectorAll('#for-otp-container input').forEach(i => i.value = '');
             } catch (err) {
                 showToast(err.message, 'error');
                 btn.disabled = false;
@@ -638,7 +681,24 @@
         async function verifyResetOTP() {
             const otp = getOTPValue('for-otp-container');
             if (otp.length < 6) return showToast('Enter full code', 'error');
-            goToStep('for', 3);
+            
+            const btn = document.querySelector('#for-step-2 .btn-submit');
+            const originalText = btn.innerHTML;
+            btn.disabled = true; btn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> VERIFYING...';
+            
+            try {
+                // Pre-verify OTP before showing password fields
+                await apiRequest('/api/auth/verify-otp', {
+                    method: 'POST',
+                    body: { email: verifiedEmail, otp }
+                });
+                showToast('Identity Confirmed');
+                goToStep('for', 3);
+            } catch (err) {
+                showToast(err.message, 'error');
+            } finally {
+                btn.disabled = false; btn.innerHTML = originalText;
+            }
         }
 
         // Forgot: Finalize

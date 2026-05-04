@@ -26,11 +26,14 @@ async function apiRequest(endpoint, options = {}) {
         headers['Authorization'] = `Bearer ${AppState.token}`;
     }
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), options.timeout || 15000);
+
     try {
         const response = await fetch(url, {
             ...options,
             headers,
-            body: options.body ? JSON.stringify(options.body) : undefined,
+            body: options.body ? JSON.stringify(options.body) : undefined, signal: controller.signal,
         });
 
         // Handle 401 immediately — redirect to login for any auth failure
@@ -66,6 +69,11 @@ async function apiRequest(endpoint, options = {}) {
 
         return data;
     } catch (error) {
+        if (error.name === "AbortError") {
+            const timeoutErr = new Error("Request timed out. Server took too long to respond.");
+            timeoutErr.isNetworkError = true;
+            throw timeoutErr;
+        }
         // Tag network-level failures for callers to distinguish
         if (error instanceof TypeError && error.message === 'Failed to fetch') {
             const netError = new Error('Cannot reach server. Please check your connection.');
@@ -73,6 +81,8 @@ async function apiRequest(endpoint, options = {}) {
             throw netError;
         }
         throw error;
+    } finally {
+        clearTimeout(timeoutId);
     }
 }
 
@@ -314,3 +324,56 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+window.escapeHtml = escapeHtml;
+
+window.showToast = function(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div style="display:flex; align-items:center; gap:0.75rem;">
+            <i class="fa-solid ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-triangle-exclamation' : 'fa-circle-info'}"></i>
+            <span>${escapeHtml(message)}</span>
+        </div>
+    `;
+    Object.assign(toast.style, {
+        position: 'fixed',
+        bottom: '20px',
+        right: '20px',
+        background: type === 'error' ? '#ef4444' : type === 'success' ? '#10b981' : '#3b82f6',
+        color: '#fff',
+        padding: '12px 24px',
+        borderRadius: '8px',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        zIndex: 9999,
+        animation: 'slideInRight 0.3s ease forwards',
+        fontFamily: "'Inter', sans-serif",
+        fontSize: '0.9rem',
+        fontWeight: '500'
+    });
+    
+    // Add CSS animations if not present
+    if (!document.getElementById('toast-styles')) {
+        const style = document.createElement('style');
+        style.id = 'toast-styles';
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            @keyframes fadeOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+    }
+    
+    document.body.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'fadeOutRight 0.3s ease forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+};
+
+window.showNotification = function(msg) { window.showToast(msg, 'info'); };

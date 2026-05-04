@@ -67,13 +67,78 @@
         .hero-actions { display:flex; gap:1rem; justify-content:center; flex-wrap:wrap; animation:fadeUp .7s .3s ease-out both; }
 
         /* Shiny Border Button */
-        .btn-shiny { position:relative; padding:1px; border-radius:9999px; overflow:hidden; display:inline-block; cursor:pointer; }
-        .btn-shiny::before { content:''; position:absolute; inset:-50%; width:200%; height:200%; background:conic-gradient(from 0deg, transparent 0%, #8B5CF6 40%, #06B6D4 50%, transparent 60%); animation:spinGrad 4s linear infinite; }
+        .btn-shiny { 
+            position:relative; 
+            padding:1px; 
+            border-radius:9999px; 
+            overflow:hidden; 
+            display:inline-block; 
+            cursor:pointer;
+            text-decoration:none;
+            isolation: isolate; /* Create new stacking context */
+        }
+        .btn-shiny::before { 
+            content:''; 
+            position:absolute; 
+            inset:-200%; /* Larger inset to prevent edge artifacts */
+            background:conic-gradient(from 0deg, transparent 0%, #8B5CF6 40%, #06B6D4 50%, transparent 60%); 
+            animation:spinGrad 4s linear infinite; 
+            z-index: -1;
+        }
         @keyframes spinGrad { to { transform:rotate(360deg); } }
-        .btn-shiny-inner { position:relative; z-index:1; background:#0a0a0a; border-radius:9999px; padding:0.85rem 2.5rem; font-weight:600; font-size:.95rem; color:#fff; display:flex; align-items:center; gap:8px; transition:background .3s; }
+        .btn-shiny-inner { 
+            position:relative; 
+            z-index:1; 
+            background:#0a0a0a; 
+            border-radius:9999px; 
+            padding:0.85rem 2.5rem; 
+            font-weight:600; 
+            font-size:.95rem; 
+            color:#fff; 
+            display:flex; 
+            align-items:center; 
+            gap:8px; 
+            transition:background .3s; 
+        }
         .btn-shiny:hover .btn-shiny-inner { background:#111; }
-        .btn-secondary { padding:0.85rem 2rem; border-radius:9999px; background:transparent; border:1px solid rgba(255,255,255,0.1); color:var(--text-muted); font-size:.95rem; font-weight:500; text-decoration:none; display:inline-flex; align-items:center; gap:8px; transition:all .3s cubic-bezier(0.23,1,0.32,1); cursor:pointer; }
-        .btn-secondary:hover { border-color:rgba(255,255,255,0.2); color:var(--text); }
+
+        /* Secondary Shiny Variant */
+        .btn-secondary-shiny {
+            position:relative;
+            padding:1px;
+            border-radius:9999px;
+            overflow:hidden;
+            display:inline-block;
+            cursor:pointer;
+            text-decoration:none;
+            isolation: isolate;
+        }
+        .btn-secondary-shiny::before {
+            content:'';
+            position:absolute;
+            inset:-200%;
+            background:conic-gradient(from 0deg, transparent 0%, rgba(255,255,255,0.1) 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+            animation:spinGrad 6s linear infinite;
+            z-index: -1;
+        }
+        .btn-secondary-shiny-inner {
+            position:relative;
+            z-index:1;
+            background:#0a0a0a;
+            border-radius:9999px;
+            padding:0.85rem 2rem;
+            font-weight:500;
+            font-size:.95rem;
+            color:var(--text-muted);
+            display:flex;
+            align-items:center;
+            gap:8px;
+            transition:all 0.3s;
+        }
+        .btn-secondary-shiny:hover .btn-secondary-shiny-inner {
+            background:#111;
+            color:#fff;
+        }
 
         /* ── TICKER ── */
         .ticker-section { width:100%; background:rgba(0,0,0,0.5); border-top:1px solid rgba(255,255,255,0.05); border-bottom:1px solid rgba(255,255,255,0.05); overflow:hidden; height:56px; display:flex; align-items:center; position:relative; z-index:1; }
@@ -326,7 +391,7 @@
             <p class="hero-desc">Monitor every API endpoint in real-time. Get instant alerts, deep analytics, and automated daily reports — so your team can focus on building, not firefighting.</p>
             <div class="hero-actions">
                 <a href="#portals" class="btn-shiny"><span class="btn-shiny-inner"><i class="fa-solid fa-bolt"></i> Start Monitoring</span></a>
-                <a href="#features" class="btn-secondary"><i class="fa-solid fa-play"></i> See Features</a>
+                <a href="#features" class="btn-secondary-shiny"><span class="btn-secondary-shiny-inner"><i class="fa-solid fa-play"></i> See Features</span></a>
             </div>
         </div>
     </section>

@@ -165,8 +165,6 @@
             </div>
         </div>
     </main>
-        </div>
-    </main>
 
     <script src="js/app.js"></script>
     <script src="js/synapse.js"></script>
@@ -224,7 +222,7 @@
                         <i class="fa-solid fa-list-check"></i>
                         <p>No monitoring logs found for this period.<br>Try selecting a longer time range.</p>
                     </div>`;
-                    countEl.textContent = '0 entries';
+                    const ce = document.getElementById('log-count'); if (ce) ce.textContent = '0 entries';
                     return;
                 }
 
@@ -268,42 +266,43 @@
         }
 
         // Initialize
-        document.addEventListener('DOMContentLoaded', loadLogs);
+        document.addEventListener('DOMContentLoaded', () => {
+            loadLogs();
 
-        // Filter pills
-        document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(pill => {
-            pill.addEventListener('click', () => {
-                document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                applyLogFilters();
+            // Filter pills — must be registered after DOM is ready
+            document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(pill => {
+                pill.addEventListener('click', () => {
+                    document.querySelectorAll('#log-filter-pills .pill-toggle-btn').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    applyLogFilters();
+                });
+            });
+
+            document.getElementById('log-range-filter').addEventListener('change', loadLogs);
+            document.getElementById('log-endpoint-filter').addEventListener('change', loadLogs);
+            document.getElementById('log-search').addEventListener('input', applyLogFilters);
+            document.getElementById('btn-export').addEventListener('click', () => {
+                if (typeof showToast === 'function') showToast('Logs exported to CSV.', 'success');
             });
         });
-
-        // Trigger reload on range or endpoint change
-        document.getElementById('log-range-filter').addEventListener('change', loadLogs);
-        document.getElementById('log-endpoint-filter').addEventListener('change', loadLogs);
-        document.getElementById('log-search').addEventListener('input', applyLogFilters);
 
         function applyLogFilters() {
             const pill = document.querySelector('#log-filter-pills .pill-toggle-btn.active');
             const activeType = pill ? pill.dataset.filter : 'all';
-            const q = document.getElementById('log-search').value.toLowerCase();
+            const searchEl = document.getElementById('log-search');
+            const q = searchEl ? searchEl.value.toLowerCase() : '';
             let count = 0;
-            
-            document.querySelectorAll('#incident-list .incident-row').forEach(row => {
+            // Rows are rendered with class 'log-entry', not 'incident-row'
+            document.querySelectorAll('#incident-list .log-entry').forEach(row => {
                 const typeMatch = activeType === 'all' || row.dataset.type === activeType;
-                const textMatch = row.dataset.search.includes(q);
+                const textMatch = (row.dataset.search || row.textContent).toLowerCase().includes(q);
                 const show = typeMatch && textMatch;
                 row.style.display = show ? '' : 'none';
                 if (show) count++;
             });
-            document.getElementById('log-count').textContent = `${count} entries`;
+            const countEl = document.getElementById('log-count');
+            if (countEl) countEl.textContent = `${count} entries`;
         }
-
-        // Export Logs
-        document.getElementById('btn-export').addEventListener('click', () => {
-            if (typeof showToast === 'function') showToast('Logs exported to CSV.', 'success');
-        });
     </script>
 </body>
 </html>

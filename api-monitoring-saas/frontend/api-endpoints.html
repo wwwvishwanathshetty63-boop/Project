@@ -159,6 +159,7 @@
                             <tr>
                                 <th>DESIGNATION</th>
                                 <th>NETWORK URI</th>
+                                <th>AUTH KEY</th>
                                 <th>METHOD</th>
                                 <th>STATUS</th>
                                 <th>LATENCY</th>
@@ -239,6 +240,13 @@
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                             </div>
+                        </div>
+
+                        <div id="ai-detect-badge" style="display:none; align-items:center; gap:0.5rem; font-size:0.78rem; padding:0.5rem 0.75rem; border-radius:8px; margin-bottom:1rem; background:rgba(255,255,255,0.05);"></div>
+
+                        <div id="endpoint-error" style="display:none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #ef4444;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span class="error-message"></span>
                         </div>
 
                         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 1rem;">

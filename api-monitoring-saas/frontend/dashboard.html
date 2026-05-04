@@ -156,6 +156,8 @@
                         <option value="7d">T-7 Days</option>
                         <option value="30d">T-30 Days</option>
                     </select>
+                    <!-- Hidden trigger button wired by main.js -->
+                    <button id="btn-add-endpoint" style="display:none;"></button>
                     <div class="btn-shiny" id="btn-add-endpoint-shiny">
                         <div class="btn-shiny-inner">
                             <i class="fa-solid fa-plus"></i> Initialize API
@@ -179,7 +181,7 @@
                 </a>
 
                 <!-- Active APIs -->
-                <a href="api-endpoints.html?filter=active" class="glass-card stat-card" title="View active APIs">
+                <div class="glass-card stat-card" title="View active APIs" onclick="document.querySelector('.filter-pill[data-filter=\'up\']').click()">
                     <div class="stat-icon-wrapper stat-icon-success">
                         <i class="fa-solid fa-check-circle"></i>
                     </div>
@@ -187,10 +189,10 @@
                         <div class="stat-label">Operational</div>
                         <div class="stat-value" id="stat-active" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
                     </div>
-                </a>
+                </div>
 
                 <!-- Down APIs -->
-                <a href="api-endpoints.html?filter=down" class="glass-card stat-card" title="View down APIs">
+                <div class="glass-card stat-card" title="View down APIs" onclick="document.querySelector('.filter-pill[data-filter=\'down\']').click()">
                     <div class="stat-icon-wrapper stat-icon-danger">
                         <i class="fa-solid fa-circle-exclamation"></i>
                     </div>
@@ -198,7 +200,7 @@
                         <div class="stat-label">Incidents</div>
                         <div class="stat-value" id="stat-down" style="font-family: 'Instrument Serif'; font-size: 3rem;">0</div>
                     </div>
-                </a>
+                </div>
 
                 <!-- Avg Response Time -->
                 <a href="logs.html" class="glass-card stat-card" title="View monitoring logs">
@@ -237,31 +239,73 @@
 
 
             <!-- Charts Section -->
-            <div class="charts-grid" style="margin-top: 2rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                <div class="glass-card">
-                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
-                            <i class="fa-solid fa-chart-line" style="color: var(--violet); margin-right: 8px;"></i> Latency Matrix
+            <div style="margin-top: 2rem; display: grid; grid-template-columns: 3fr 2fr; gap: 1.5rem; align-items: start;">
+
+                <!-- Response Time Breakdown Chart -->
+                <div class="glass-card" style="padding: 1.75rem;">
+                    <!-- Header row -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <i class="fa-solid fa-earth-americas" style="color:var(--violet); font-size:0.9rem;"></i>
+                            <span style="font-size:0.75rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.12em;">Response times · All Endpoints</span>
                         </div>
-                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">RT / 24H</span>
+                        <span id="chart-fetch-status" style="font-size:0.68rem; color:rgba(255,255,255,0.3); font-family:'JetBrains Mono';"></span>
                     </div>
-                    <div class="chart-container" style="height: 300px;">
+
+                    <!-- Time range picker -->
+                    <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:4px 10px;">
+                            <i class="fa-solid fa-clock" style="font-size:0.7rem; color:var(--text-dim);"></i>
+                            <input type="datetime-local" id="chart-from-time"
+                                style="background:none; border:none; color:rgba(255,255,255,0.7); font-size:0.75rem; font-family:'JetBrains Mono'; outline:none; cursor:pointer;">
+                        </div>
+                        <span style="color:var(--text-dim); font-size:0.75rem;">→</span>
+                        <div style="display:flex; align-items:center; gap:6px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.07); border-radius:10px; padding:4px 10px;">
+                            <i class="fa-solid fa-clock" style="font-size:0.7rem; color:var(--text-dim);"></i>
+                            <input type="datetime-local" id="chart-to-time"
+                                style="background:none; border:none; color:rgba(255,255,255,0.7); font-size:0.75rem; font-family:'JetBrains Mono'; outline:none; cursor:pointer;">
+                        </div>
+                        <button onclick="applyChartTimeRange()"
+                            style="background:var(--violet); color:#fff; border:none; border-radius:8px; padding:5px 14px; font-size:0.75rem; font-weight:600; cursor:pointer; transition:opacity 0.2s;"
+                            onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">
+                            Apply
+                        </button>
+                        <button onclick="resetChartTimeRange()"
+                            style="background:rgba(255,255,255,0.05); color:var(--text-dim); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:5px 14px; font-size:0.75rem; cursor:pointer;"
+                            title="Reset to last 24 hours">
+                            <i class="fa-solid fa-rotate-left"></i>
+                        </button>
+                    </div>
+
+                    <!-- Canvas -->
+                    <div style="height:260px; position:relative;">
                         <canvas id="responseTimeChart"></canvas>
+                    </div>
+
+                    <!-- Legend -->
+                    <div style="display:flex; gap:1.25rem; margin-top:1.25rem; font-size:0.68rem; font-family:'JetBrains Mono'; flex-wrap:wrap;">
+                        <div style="display:flex; align-items:center; gap:5px; color:rgba(255,255,255,0.45);"><div style="width:8px;height:8px;border-radius:2px;background:#4f46e5;"></div> Name lookup</div>
+                        <div style="display:flex; align-items:center; gap:5px; color:rgba(255,255,255,0.45);"><div style="width:8px;height:8px;border-radius:2px;background:#06b6d4;"></div> Connection</div>
+                        <div style="display:flex; align-items:center; gap:5px; color:rgba(255,255,255,0.45);"><div style="width:8px;height:8px;border-radius:2px;background:#8b5cf6;"></div> TLS handshake</div>
+                        <div style="display:flex; align-items:center; gap:5px; color:rgba(255,255,255,0.45);"><div style="width:8px;height:8px;border-radius:2px;background:#10b981;"></div> Data transfer</div>
                     </div>
                 </div>
 
-                <div class="glass-card">
-                    <div class="card-header" style="margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center;">
-                        <div class="card-title" style="font-family: 'Instrument Serif', serif; font-size: 1.25rem;">
-                            <i class="fa-solid fa-chart-area" style="color: var(--cyan); margin-right: 8px;"></i> Availability Flux
-                        </div>
-                        <span style="font-size: 0.65rem; color: var(--text-muted); font-family: 'JetBrains Mono'; letter-spacing: 0.1em;">UP / 24H</span>
+                <!-- Uptime/Availability Chart -->
+                <div class="glass-card" style="padding: 1.75rem;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <span style="font-size:0.75rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.12em;">Availability</span>
+                        <span style="font-size:0.65rem; color:#10b981; font-family:'JetBrains Mono'; background:rgba(16,185,129,0.1); padding:3px 10px; border-radius:6px; border:1px solid rgba(16,185,129,0.2);">LIVE</span>
                     </div>
-                    <div class="chart-container" style="height: 300px;">
+                    <div style="height:260px; position:relative;">
                         <canvas id="uptimeChart"></canvas>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:6px; margin-top:1.25rem; font-size:0.68rem; font-family:'JetBrains Mono'; color:rgba(255,255,255,0.45);">
+                        <div style="width:8px;height:8px;border-radius:50%;background:#10b981;"></div> Uptime %
                     </div>
                 </div>
             </div>
+
 
             <!-- Monitor List -->
             <div class="glass-card" style="margin-top: 2rem; padding: 0;">
@@ -317,14 +361,30 @@
                 <div class="modal-body">
                     <form id="add-endpoint-form">
                         <div class="form-group" style="margin-bottom: 1.5rem;">
+                            <label style="margin-bottom: 0.75rem; display: block;">Access Strategy</label>
+                            <div style="display: flex; gap: 1.5rem;">
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #fff; font-size: 0.8rem;">
+                                    <input type="radio" name="monitor_type" value="url" checked style="accent-color: var(--violet);">
+                                    Public URL
+                                </label>
+                                <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; color: #fff; font-size: 0.8rem;">
+                                    <input type="radio" name="monitor_type" value="api_key" style="accent-color: var(--violet);">
+                                    Secured API
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group" style="margin-bottom: 1.5rem;">
                             <label>Designation</label>
                             <input type="text" id="endpoint-name" placeholder="e.g. Gateway Delta" required>
                         </div>
-                        <div class="form-group" style="margin-bottom: 1.5rem;">
-                            <label>Endpoint Vector (URL)</label>
-                            <input type="url" id="endpoint-url" placeholder="https://api.synapse.com/v1" required>
+                        <div id="url-group-wrapper" style="margin-bottom: 1.5rem;">
+                            <div class="form-group">
+                                <label>Endpoint Vector (URL)</label>
+                                <input type="url" id="endpoint-url" placeholder="https://api.synapse.com/v1" required>
+                            </div>
                         </div>
-                        <div class="form-group" style="display: flex; gap: 1rem; margin-bottom: 2rem;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                             <div style="flex: 1;">
                                 <label>Protocol</label>
                                 <select id="endpoint-method" class="form-control" required style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
@@ -343,6 +403,14 @@
                                 </select>
                             </div>
                         </div>
+                        <div class="form-group" id="api-key-group" style="margin-bottom: 2rem;">
+                            <label>Authentication Key / Token</label>
+                            <input type="password" id="endpoint-api-key" placeholder="Bearer Token or API Key" style="background:rgba(255,255,255,0.03); border:1px solid var(--border); color:#fff; border-radius:12px; padding:0.8rem; width:100%;">
+                        </div>
+                        <div id="endpoint-error" style="display:none; background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 0.75rem 1rem; margin-bottom: 1.5rem; align-items: center; gap: 0.5rem; font-size: 0.82rem; color: #ef4444;">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                            <span class="error-message"></span>
+                        </div>
                         <div style="display: flex; justify-content: flex-end; gap: 1rem;">
                             <button type="button" class="btn-secondary" id="cancel-endpoint-modal">Abort</button>
                             <div class="btn-shiny" style="padding: 0;">
@@ -354,18 +422,143 @@
             </div>
         </div>
 
-    </main>    <script src="js/app.js"></script>
-    <script src="js/main.js"></script>
-    <script src="js/dashboard.js"></script>
-    <script src="js/charts.js"></script>
-    <script src="js/ai-analyzer.js"></script>
-    <script src="js/synapse.js"></script>
+    </main>
+
+    <!-- FULL-PAGE ENDPOINT DETAIL VIEW -->
+    <div id="ep-detail-view" style="display:none; position:fixed; inset:0; z-index:3000; background:#0f111a; overflow-y:auto; padding:2rem; animation:fadeIn 0.3s ease;">
+        <!-- Top Toolbar -->
+        <div style="max-width:1200px; margin:0 auto; display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:2.5rem;">
+            <div>
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:8px;">
+                    <div id="ep-detail-dot" style="width:12px; height:12px; border-radius:50%; background:#10b981; box-shadow:0 0 12px rgba(16,185,129,0.5);"></div>
+                    <h1 id="ep-detail-name" style="font-size:1.75rem; font-weight:800; color:#fff; margin:0;">json-placeholder.typicode.com</h1>
+                </div>
+                <div id="ep-detail-subtitle" style="font-size:0.9rem; color:var(--text-dim); display:flex; align-items:center; gap:8px;">
+                    <span id="ep-detail-status-text" style="color:#10b981; font-weight:600;">Up</span> · <span id="ep-detail-interval-text">Checked every 5 minutes</span> <i class="fa-solid fa-circle-info" style="font-size:0.75rem; cursor:pointer;"></i>
+                </div>
+            </div>
+            <button onclick="closeEndpointDetail()" style="background:rgba(255,255,255,0.05); border:1px solid var(--border); color:#fff; width:40px; height:40px; border-radius:12px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all 0.2s;">
+                <i class="fa-solid fa-xmark" style="font-size:1.2rem;"></i>
+            </button>
+        </div>
+
+        <div style="max-width:1200px; margin:0 auto;">
+            <!-- Action Bar -->
+            <div style="display:flex; gap:1.5rem; margin-bottom:2.5rem; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:1.5rem; flex-wrap:wrap; align-items:center;">
+                <button class="ep-action-link" onclick="showToast('Test alert sent!', 'success')" style="cursor:pointer; background:none; border:none; color:var(--text-dim); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; padding:0;">
+                    <i class="fa-solid fa-paper-plane"></i> Send test alert
+                </button>
+                <button class="ep-action-link" onclick="document.getElementById('ep-avail-tbody').scrollIntoView({behavior:'smooth'})" style="cursor:pointer; background:none; border:none; color:var(--text-dim); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; padding:0;">
+                    <i class="fa-solid fa-shield-halved"></i> Incidents
+                </button>
+                <button id="ep-action-pause" class="ep-action-link" onclick="_epDetailTogglePause()" style="cursor:pointer; background:none; border:none; color:var(--text-dim); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; padding:0;">
+                    <i class="fa-solid fa-pause"></i> Pause
+                </button>
+                <button class="ep-action-link" onclick="_epDetailEdit()" style="cursor:pointer; background:none; border:none; color:var(--text-dim); font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; padding:0;">
+                    <i class="fa-solid fa-gear"></i> Configure
+                </button>
+                <button class="ep-action-link" onclick="_epDetailDelete()" style="cursor:pointer; background:none; border:none; color:#ef4444; font-size:0.85rem; font-weight:600; display:flex; align-items:center; gap:8px; padding:0;">
+                    <i class="fa-solid fa-trash"></i> Delete
+                </button>
+                <button class="ep-action-link" onclick="_epDetailAIAnalyze()" style="cursor:pointer; background:none; border:none; color:#a78bfa; font-size:0.85rem; font-weight:700; display:flex; align-items:center; gap:8px; padding:0; margin-left:auto;">
+                    <i class="fa-solid fa-brain"></i> AI Diagnose
+                </button>
+            </div>
+
+            <!-- Stats Grid -->
+            <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:1.5rem; margin-bottom:2.5rem;">
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:1.5rem;">
+                    <div style="color:var(--text-dim); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1rem;">Currently up for</div>
+                    <div id="ep-stat-uptime" style="font-size:1.5rem; font-weight:800; color:#fff;">1 hour 27 mins</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:0;">
+                    <div style="background:rgba(255,255,255,0.05); padding:4px 12px; display:inline-block; border-radius:6px; margin:1.5rem 1.5rem 0.5rem; font-size:0.65rem; font-weight:800; color:rgba(255,255,255,0.8); font-family:'JetBrains Mono'; text-transform:uppercase;" id="ep-stat-lastcheck-abs">May 3 at 5:08pm IST</div>
+                    <div id="ep-stat-lastcheck" style="font-size:1.5rem; font-weight:800; color:#fff; padding:0 1.5rem 1.5rem;">3 minutes ago</div>
+                </div>
+                <div style="background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:1.5rem;">
+                    <div style="color:var(--text-dim); font-size:0.75rem; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; margin-bottom:1rem;">Incidents</div>
+                    <div id="ep-stat-incidents" style="font-size:1.5rem; font-weight:800; color:#fff;">0</div>
+                </div>
+            </div>
+
+            <!-- Chart Box -->
+            <div style="background:rgba(255,255,255,0.015); border:1px solid rgba(255,255,255,0.05); border-radius:16px; padding:2rem; margin-bottom:2.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
+                    <h3 style="margin:0; font-size:0.9rem; font-weight:700; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Response times</h3>
+                    <div class="ep-range-pills" style="display:flex; background:rgba(255,255,255,0.03); border-radius:10px; padding:3px; border:1px solid rgba(255,255,255,0.05);">
+                        <button class="ep-range-btn" data-range="1h" onclick="_epDetailSetRange('1h', this)">Hour</button>
+                        <button class="ep-range-btn active" data-range="1d" onclick="_epDetailSetRange('1d', this)">Day</button>
+                        <button class="ep-range-btn" data-range="7d" onclick="_epDetailSetRange('7d', this)">Week</button>
+                        <button class="ep-range-btn" data-range="30d" onclick="_epDetailSetRange('30d', this)">Month</button>
+                    </div>
+                </div>
+                
+                <div style="display:flex; align-items:center; gap:12px; margin-bottom:2rem; color:var(--text-dim); font-size:0.85rem; font-weight:600;">
+                    <i class="fa-solid fa-earth-europe" style="color:var(--violet);"></i> 
+                    <span>Global Node (Primary)</span>
+                    <i class="fa-solid fa-chevron-down" style="font-size:0.7rem; margin-left:4px;"></i>
+                </div>
+
+                <div style="position:relative; height:320px;">
+                    <div id="ep-chart-loading" style="position:absolute; inset:0; background:rgba(15,17,26,0.5); display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:0.9rem; z-index:10;">
+                        <i class="fa-solid fa-spinner fa-spin" style="margin-right:12px;"></i> Syncing historical metrics...
+                    </div>
+                    <canvas id="ep-detail-chart"></canvas>
+                </div>
+
+                <!-- Chart Legend -->
+                <div style="display:flex; gap:1.5rem; margin-top:2rem; font-size:0.75rem; font-family:'JetBrains Mono';">
+                    <div style="display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.6);"><div style="width:8px; height:8px; border-radius:2px; background:#4f46e5;"></div> Name lookup</div>
+                    <div style="display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.6);"><div style="width:8px; height:8px; border-radius:2px; background:#0ea5e9;"></div> Connection</div>
+                    <div style="display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.6);"><div style="width:8px; height:8px; border-radius:2px; background:#8b5cf6;"></div> TLS handshake</div>
+                    <div style="display:flex; align-items:center; gap:6px; color:rgba(255,255,255,0.6);"><div style="width:8px; height:8px; border-radius:2px; background:#10b981;"></div> Data transfer</div>
+                </div>
+            </div>
+
+            <!-- Availability Table -->
+            <div style="background:rgba(255,255,255,0.015); border:1px solid rgba(255,255,255,0.05); border-radius:16px; overflow:hidden;">
+                <table style="width:100%; border-collapse:collapse;">
+                    <thead>
+                        <tr style="border-bottom:1px solid rgba(255,255,255,0.05); background:rgba(255,255,255,0.02);">
+                            <th style="text-align:left; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Time period</th>
+                            <th style="text-align:right; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Availability</th>
+                            <th style="text-align:right; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Downtime</th>
+                            <th style="text-align:right; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Incidents</th>
+                            <th style="text-align:right; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Longest incident</th>
+                            <th style="text-align:right; padding:1.25rem 1.5rem; font-size:0.7rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em;">Avg. incident</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ep-avail-tbody">
+                        <tr><td colspan="6" style="text-align:center; padding:3rem; color:var(--text-dim);"><i class="fa-solid fa-spinner fa-spin"></i> Processing logs...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Bottom Margin -->
+            <div style="height:4rem;"></div>
+        </div>
+    </main>
+
+    <script src="js/app.js?v=5"></script>
+    <script src="js/charts.js?v=5"></script>
+    <script src="js/main.js?v=5"></script>
+    <script src="js/dashboard.js?v=5"></script>
+    <script src="js/endpoint-detail.js?v=5"></script>
+    <script src="js/ai-analyzer.js?v=5"></script>
+    <script src="js/synapse.js?v=5"></script>
     <script>
-        // Wire up the new shiny button
+        // Wire up the shiny button — triggers openModalForAdd via the hidden btn-add-endpoint
         document.getElementById('btn-add-endpoint-shiny').addEventListener('click', () => {
-            const modal = document.getElementById('addEndpointModal');
-            modal.style.display = 'flex';
-            setTimeout(() => modal.classList.add('active'), 10);
+            // If main.js wired up openModalForAdd to btn-add-endpoint, use it
+            const hiddenBtn = document.getElementById('btn-add-endpoint');
+            if (hiddenBtn) {
+                hiddenBtn.click();
+            } else {
+                // Fallback: just show the modal
+                const modal = document.getElementById('addEndpointModal');
+                modal.style.display = 'flex';
+                setTimeout(() => modal.classList.add('active'), 10);
+            }
         });
         
         document.getElementById('close-endpoint-modal').addEventListener('click', () => {
@@ -381,100 +574,123 @@
         });
 
         // ── Monitor card filter pills ──────────────────────────
-        document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(pill => {
-            pill.addEventListener('click', () => {
-                document.querySelectorAll('#monitor-filter-pills .filter-pill').forEach(p => p.classList.remove('active'));
-                pill.classList.add('active');
-                filterMonitorCards();
-            });
-        });
-
-        document.getElementById('monitor-search').addEventListener('input', filterMonitorCards);
-
-        function filterMonitorCards() {
-            const f = document.querySelector('#monitor-filter-pills .filter-pill.active').dataset.filter;
-            const q = document.getElementById('monitor-search').value.toLowerCase();
-            document.querySelectorAll('#monitor-card-list .monitor-card').forEach(card => {
-                const status = card.dataset.status || 'up';
-                const textMatch = card.textContent.toLowerCase().includes(q);
-                const filterMatch = f === 'all' || status === f;
-                card.style.display = (textMatch && filterMatch) ? '' : 'none';
+        const filterPills = document.querySelectorAll('#monitor-filter-pills .filter-pill');
+        if (filterPills.length > 0) {
+            filterPills.forEach(pill => {
+                pill.addEventListener('click', () => {
+                    filterPills.forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
+                    filterMonitorCards();
+                });
             });
         }
 
-        // ── Inject monitor cards when dashboard data loads ─────
-        document.addEventListener('DOMContentLoaded', () => {
-            const origLoad = window.loadDashboardData;
-            window.loadDashboardData = async function () {
-                if (typeof origLoad === 'function') await origLoad();
-                await renderMonitorCards();
-            };
-            setTimeout(renderMonitorCards, 1200);
+        const monitorSearch = document.getElementById('monitor-search');
+        if (monitorSearch) {
+            monitorSearch.addEventListener('input', filterMonitorCards);
+        }
+
+        function filterMonitorCards() {
+            const activePill = document.querySelector('#monitor-filter-pills .filter-pill.active');
+            const f = activePill ? activePill.dataset.filter : 'all';
+            const q = (document.getElementById('monitor-search').value || '').toLowerCase();
+            document.querySelectorAll('#monitor-card-list .monitor-card').forEach(card => {
+                const status    = card.dataset.status || 'up';
+                const textMatch = card.textContent.toLowerCase().includes(q);
+                const filtMatch = f === 'all' || status === f;
+                card.style.display = (textMatch && filtMatch) ? '' : 'none';
+            });
+        }
+
+        // ── Render cards from the endpointsReady event (fired by dashboard.js) ──
+        document.addEventListener('endpointsReady', (e) => {
+            renderMonitorCards(e.detail.endpoints || []);
+            // Force a slight delay to ensure DOM has updated before filtering
+            setTimeout(filterMonitorCards, 50);
         });
 
-        async function renderMonitorCards() {
+        function renderMonitorCards(endpoints) {
             const list = document.getElementById('monitor-card-list');
             if (!list) return;
 
-            const range = document.getElementById('stats-range-selector')?.value || '1d';
-
-            let endpoints = [];
-            try {
-                const data = await apiRequest(`/api/endpoints?range=${range}`);
-                endpoints = data.endpoints || [];
-            } catch (e) {
-                list.innerHTML = `<div class="empty-state">
-                    <i class="fa-solid fa-plug-circle-exclamation" style="font-size:2rem; margin-bottom:1rem; color:#ef4444;"></i>
-                    <p>Neural link failed. Verify credentials and server uplink.</p>
-                </div>`;
-                return;
-            }
-
-            list.innerHTML = '';
-
-            if (!endpoints.length) {
-                list.innerHTML = `<div class="empty-state">
-                    <i class="fa-solid fa-satellite-dish" style="font-size:2rem; margin-bottom:1rem; color:var(--text-dim);"></i>
+            if (!endpoints || endpoints.length === 0) {
+                list.innerHTML = `
+                <div class="empty-state" style="padding: 5rem; grid-column: 1/-1;">
+                    <i class="fa-solid fa-ghost" style="font-size: 3rem; margin-bottom: 1.5rem; opacity: 0.3;"></i>
                     <p>No active monitors. Initialize your first endpoint to begin intelligence gathering.</p>
                 </div>`;
                 return;
             }
 
+            list.innerHTML = '';
             endpoints.forEach(ep => {
                 const statusClass = ep.is_down ? 'down' : (ep.is_active ? 'up' : 'paused');
-                const statusLabel = statusClass === 'up' ? 'OPERATIONAL' : statusClass === 'down' ? 'INCIDENT' : 'HALTED';
-                const method = (ep.method || 'GET').toUpperCase();
-                const rt = ep.last_response_time ? ep.last_response_time + 'ms' : '—';
-                const uptime = ep.uptime_percentage != null ? ep.uptime_percentage : 100;
-                const lastChecked = ep.last_check ? new Date(ep.last_check).toLocaleTimeString() : '—';
-                const rangeLabel = range === '1d' ? '24H' : (range === '7d' ? '7D' : '30D');
+                const method      = (ep.method || 'GET').toUpperCase();
+                const rt          = ep.last_response_time != null ? ep.last_response_time + 'ms' : '—';
+                const uptime      = ep.uptime_percentage != null ? ep.uptime_percentage : 100;
 
                 const card = document.createElement('div');
-                card.className = 'monitor-card';
+                card.className      = 'monitor-card';
                 card.dataset.status = statusClass;
+                card.dataset.id     = ep.id;
+                card.style.cursor   = 'pointer';
+
+                card.onmousemove = (e) => {
+                    const rect = card.getBoundingClientRect();
+                    card.style.setProperty('--mouse-x', `${e.clientX - rect.left}px`);
+                    card.style.setProperty('--mouse-y', `${e.clientY - rect.top}px`);
+                };
+
+                const uptimeColor = uptime >= 99 ? 'var(--emerald)' : (uptime >= 95 ? '#F59E0B' : '#EF4444');
+                const dotCls      = statusClass === 'up' ? 'pulse' : '';
+
                 card.innerHTML = `
-                    <div class="monitor-card-left">
-                        <span class="pulse-dot ${statusClass} ${statusClass === 'up' ? 'pulse' : ''}"></span>
-                        <div style="flex: 1;">
-                            <div class="monitor-card-name">${escapeHtml(ep.name || 'Unknown')} <span style="font-size:0.6rem; color:var(--text-dim); font-family:'JetBrains Mono'; margin-left:8px;">${method}</span></div>
-                            <div class="monitor-card-url">${escapeHtml(ep.url || '')}</div>
+                    <div class="monitor-card-clickable" style="display:flex;align-items:center;flex:1;min-width:0;gap:1rem;overflow:hidden;cursor:pointer;">
+                        <span class="pulse-dot ${statusClass} ${dotCls}"></span>
+                        <div style="flex:1;min-width:0;">
+                            <div class="monitor-card-name" style="font-weight:700;color:#fff;font-size:1.1rem;letter-spacing:-0.01em;">
+                                ${escapeHtml(ep.name || 'Unknown')}
+                                <span style="font-size:0.6rem;color:var(--text-dim);font-family:'JetBrains Mono';margin-left:8px;text-transform:uppercase;">${method}</span>
+                            </div>
+                            <div class="monitor-card-url" style="font-family:'JetBrains Mono',monospace;font-size:0.75rem;color:var(--text-dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(ep.url || '')}</div>
+                        </div>
+                        <div style="display:flex;gap:2rem;align-items:center;flex-shrink:0;margin:0 1rem;">
+                            <div style="text-align:right;">
+                                <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">Latency</div>
+                                <div style="font-family:'JetBrains Mono';font-size:0.9rem;color:#fff;font-weight:700;">${rt}</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.6rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.1em;margin-bottom:2px;">Uptime</div>
+                                <div style="font-family:'JetBrains Mono';font-size:0.9rem;color:${uptimeColor};font-weight:700;">${uptime}%</div>
+                            </div>
                         </div>
                     </div>
-                    <div class="monitor-card-meta" style="display:flex; gap:2rem; align-items:center;">
-                        <div style="text-align:right;">
-                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Latency</div>
-                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:#fff;">${rt}</div>
-                        </div>
-                        <div style="text-align:right;">
-                            <div style="font-size:0.6rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:0.1em; margin-bottom:2px;">Uptime (${rangeLabel})</div>
-                            <div style="font-family:'JetBrains Mono'; font-size:0.9rem; color:${uptime >= 99 ? 'var(--emerald)' : (uptime >= 95 ? '#F59E0B' : '#EF4444')};">${uptime}%</div>
-                        </div>
-                    </div>
-                    <div class="monitor-card-actions" style="display:flex; gap:0.5rem; margin-left:1rem;">
-                        <button class="action-btn" onclick="openEditModal('${ep.id}')" style="background:none; border:1px solid var(--border); color:var(--text-muted); padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
-                        <button class="action-btn" onclick="deleteEndpoint('${ep.id}', '${(ep.name||'').replace(/'/g,"\\'")}')" style="background:none; border:1px solid var(--border); color:#ef4444; padding:8px; border-radius:8px; cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
+                    <div class="monitor-card-actions" style="display:flex;gap:0.5rem;margin-left:1rem;flex-shrink:0;position:relative;z-index:10;">
+                        <button class="action-btn ai-btn"  title="AI Analyze" style="background:none;border:1px solid rgba(139,92,246,0.3);color:#a78bfa;padding:8px;border-radius:8px;cursor:pointer;"><i class="fa-solid fa-brain"></i></button>
+                        <button class="action-btn edit-btn" title="Edit"       style="background:none;border:1px solid var(--border);color:var(--text-muted);padding:8px;border-radius:8px;cursor:pointer;"><i class="fa-solid fa-pen"></i></button>
+                        <button class="action-btn del-btn"  title="Delete"     style="background:none;border:1px solid rgba(239,68,68,0.3);color:#ef4444;padding:8px;border-radius:8px;cursor:pointer;"><i class="fa-solid fa-trash"></i></button>
                     </div>
                 `;
+
+                // Bind buttons AFTER innerHTML
+                card.querySelector('.ai-btn').addEventListener('click',  (e) => { 
+                    e.stopPropagation(); 
+                    if (window.openAIAnalyzer) openAIAnalyzer(ep.id); 
+                });
+                card.querySelector('.edit-btn').addEventListener('click', (e) => { 
+                    e.stopPropagation(); 
+                    if (window.openEditModal) openEditModal(ep.id); 
+                });
+                card.querySelector('.del-btn').addEventListener('click',  (e) => { 
+                    e.stopPropagation(); 
+                    if (window.deleteEndpoint) deleteEndpoint(ep.id, ep.name || ''); 
+                });
+
+                // Clickable body opens detail view
+                card.querySelector('.monitor-card-clickable').addEventListener('click', () => {
+                    if (window.openEndpointDetail) openEndpointDetail(ep.id);
+                });
+
                 list.appendChild(card);
             });
         }
